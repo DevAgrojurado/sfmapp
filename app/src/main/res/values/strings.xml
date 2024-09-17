@@ -57,4 +57,6 @@
     <string name="email">Email</string>
     <string name="cedula">Cedula</string>
     <string name="nombre">Nombre</string>
+    <string name="contrase_aa">Contraseña</string>
+    <string name="email1">Email</string>
 </resources>

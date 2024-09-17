@@ -26,7 +26,8 @@ object RoomModule {
         context,
         AppDatabase::class.java,
         DATABASE_NAME
-    ).build()
+    ).fallbackToDestructiveMigration()
+        .build()
 
     //**** Proveer el DAO **** //
     @Singleton
@@ -39,5 +40,6 @@ object RoomModule {
     fun provideUsuarioRepository(dao: UsuarioDao) : UsuarioRepository {
         return UsuarioRepositoryImpl(dao)
     }
+
 
 }

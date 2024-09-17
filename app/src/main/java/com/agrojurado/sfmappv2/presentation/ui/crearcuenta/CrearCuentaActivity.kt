@@ -33,7 +33,7 @@ class CrearCuentaActivity : AppCompatActivity() {
     private fun initListener(){
 
         binding.includeEditar.toolbar.title="Crear Usuario"
-        binding.includeEditar.toolbar.subtitle="Ingresa lod datos del usuario"
+        binding.includeEditar.toolbar.subtitle="Ingresa los datos del usuario"
 
         binding.includeEditar.toolbar.setNavigationOnClickListener{
             onBackPressedDispatcher.onBackPressed()

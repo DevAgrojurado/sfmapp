@@ -54,7 +54,8 @@
                 android:id="@+id/et_email1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Email" />
+                android:inputType="textEmailAddress"
+                android:hint="@string/email1" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -73,7 +74,7 @@
                 android:id="@+id/et_clave"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Contraseña"
+                android:hint="@string/contrase_aa"
                 android:inputType="textPassword"
                 android:maxLength="20" />
         </com.google.android.material.textfield.TextInputLayout>

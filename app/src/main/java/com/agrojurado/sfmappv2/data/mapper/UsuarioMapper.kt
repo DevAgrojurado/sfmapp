@@ -14,7 +14,7 @@ object UsuarioMapper {
             email = entity.email,
             clave = entity.clave,
             vigente = entity.vigente,
-            idcargo = entity.idcargo
+            //idcargo = entity.idcargo
         )
     }
 
@@ -27,7 +27,7 @@ object UsuarioMapper {
             email = model.email,
             clave = model.clave,
             vigente = model.vigente,
-            idcargo = model.idcargo
+            //idcargo = model.idcargo
         )
     }
 
