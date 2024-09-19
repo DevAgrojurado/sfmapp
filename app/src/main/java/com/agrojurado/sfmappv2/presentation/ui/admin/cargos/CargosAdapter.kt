@@ -38,22 +38,22 @@ class CargosAdapter(val c: Context,val cargosList:ArrayList<Cargo>):RecyclerView
                         val v = LayoutInflater.from(c).inflate(R.layout.add_item, null)
                         val cargo = v.findViewById<EditText>(R.id.et_cargo)
 
-                            AlertDialog.Builder(c)
-                                .setView(v)
-                                .setPositiveButton("OK"){
+                        AlertDialog.Builder(c)
+                            .setView(v)
+                            .setPositiveButton("OK"){
                                     dialog,_->
-                                    position.descripcion = cargo.text.toString()
-                                        notifyDataSetChanged()
-                                    Toast.makeText(c,"Actualizado exitosamente",Toast.LENGTH_SHORT).show()
-                                    dialog.dismiss()
-                                }
-                                .setNegativeButton("Cancelar"){
+                                position.descripcion = cargo.text.toString()
+                                notifyDataSetChanged()
+                                Toast.makeText(c,"Actualizado exitosamente",Toast.LENGTH_SHORT).show()
+                                dialog.dismiss()
+                            }
+                            .setNegativeButton("Cancelar"){
                                     dialog,_->
-                                    dialog.dismiss()
+                                dialog.dismiss()
 
-                                }
-                                .create()
-                                .show()
+                            }
+                            .create()
+                            .show()
 
                         true
                     }
@@ -63,14 +63,14 @@ class CargosAdapter(val c: Context,val cargosList:ArrayList<Cargo>):RecyclerView
                             .setIcon(R.drawable.ic_warning)
                             .setMessage("¿Estas seguro que deseas realizar esta acción?")
                             .setPositiveButton("Si"){
-                                dialog,_->
+                                    dialog,_->
                                 cargosList.removeAt(adapterPosition)
                                 notifyDataSetChanged()
                                 Toast.makeText(c, "Eliminado exitosamente", Toast.LENGTH_SHORT).show()
                                 dialog.dismiss()
                             }
                             .setNegativeButton("No"){
-                                dialog,_->
+                                    dialog,_->
                                 dialog.dismiss()
                             }
                             .create()
