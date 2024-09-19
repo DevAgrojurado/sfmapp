@@ -1,37 +1,37 @@
 package com.agrojurado.sfmappv2.data.dao
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.Query
-import androidx.room.Transaction
-import androidx.room.Update
+import androidx.room.*
 import com.agrojurado.sfmappv2.data.entity.CargoEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CargoDao {
 
-    @Insert
-    suspend fun insertar(cargo: CargoEntity): Long
+    // Inserta un nuevo Cargo. Si ya existe, lo reemplaza.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCargo(cargo: CargoEntity): Long
 
-    @Insert
-    suspend fun insertarCargo(cargos: List<CargoEntity>)
+    // Obtiene todos los Cargos como un flujo reactivo.
+    @Query("SELECT * FROM cargo")
+    fun getAllCargos(): Flow<List<CargoEntity>>
 
+    // Obtiene un Cargo por su ID.
+    @Query("SELECT * FROM cargo WHERE id = :id")
+    suspend fun getCargoById(id: Int): CargoEntity?
+
+    // Actualiza un Cargo existente.
     @Update
-    suspend fun actualizar(cargo: CargoEntity): Int
+    suspend fun updateCargo(cargo: CargoEntity)
 
+    // Elimina un Cargo específico.
     @Delete
-    suspend fun eliminar(cargo: CargoEntity): Int
+    suspend fun deleteCargo(cargo: CargoEntity)
 
-    @Query("SELECT * FROM cargo WHERE descripcion LIKE '%' || :descripcion || '%'")
-    fun listarPorDescripcion(descripcion: String): Flow<List<CargoEntity>>
+    // Elimina todos los Cargos de la base de datos.
+    @Query("DELETE FROM cargo")
+    suspend fun deleteAllCargos()
 
-    @Query("SELECT * FROM cargo WHERE id=:id")
-    suspend fun obtenerCargoPorId(id: Int): CargoEntity?
-
-    @Transaction
-    suspend fun grabarCargo(cargo: CargoEntity): CargoEntity? {
-        return obtenerCargoPorId(insertar(cargo).toInt())
-    }
+    // Verifica si existe algún Cargo (puedes agregar esto si es necesario).
+    @Query("SELECT COUNT(*) FROM cargo")
+    suspend fun countCargos(): Int
 }

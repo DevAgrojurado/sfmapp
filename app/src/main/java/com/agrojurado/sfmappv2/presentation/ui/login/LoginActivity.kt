@@ -65,7 +65,8 @@ class LoginActivity : AppCompatActivity() {
                 is UiState.Success -> {
                     binding.progressBar.isVisible = false
 
-                    if(it.data > 0){
+                    //Validacion para saber si hay un usuario creado
+                    if(it.data >0){
                         UtilsMessage.showAlertOk("ERROR", "Ya existe una cuenta", this)
                         return@observe
                     }

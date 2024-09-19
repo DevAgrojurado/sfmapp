@@ -1,0 +1,52 @@
+package com.agrojurado.sfmappv2.presentation.ui.admin
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import com.agrojurado.sfmappv2.R
+import com.agrojurado.sfmappv2.presentation.ui.admin.cargos.CargosActivity
+
+class AdminFragment : Fragment() {
+
+    private lateinit var viewModel: AdminViewModel
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_admin, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        viewModel = ViewModelProvider(this).get(AdminViewModel::class.java)
+
+        // Encuentra tus TextViews
+        val tvOperario: TextView = view.findViewById(R.id.tv_operario)
+        val tvCargo: TextView = view.findViewById(R.id.tv_cargo)
+        val tvUsuarios: TextView = view.findViewById(R.id.tv_usuarios)
+
+        // Configura los OnClickListener
+        tvCargo.setOnClickListener {
+            val intent = Intent(activity, CargosActivity::class.java)
+            startActivity(intent)
+        }
+
+        //tvCargo.setOnClickListener {
+            //val intent = Intent(activity, CargosActivity::class.java)
+            //startActivity(intent)
+        //}
+
+        //tvUsuarios.setOnClickListener {
+            //val intent = Intent(activity, UsuariosActivity::class.java)
+            //startActivity(intent)
+        //}
+    }
+}

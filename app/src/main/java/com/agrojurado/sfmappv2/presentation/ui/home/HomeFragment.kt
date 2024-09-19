@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.agrojurado.sfmappv2.databinding.FragmentHomeBinding
 import dagger.hilt.android.AndroidEntryPoint
+import presentation.viewmodel.HomeViewModel
 
 @AndroidEntryPoint
 class HomeFragment : Fragment() {

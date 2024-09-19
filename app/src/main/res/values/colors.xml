@@ -9,7 +9,8 @@
     <color name="secondary">#E63946</color>
     <color name="accent">#ff7071</color>
     <color name="darkGreen">#2D572C</color>
-    <color name="green">#008000</color>"
+    <color name="green">#008000</color>
+    <color name="transparentGreen">#2F3FAD38</color>
 
     <color name="transparentColor_90">#E6FFFFFF</color>
     <color name="transparentColor_80">#CCFFFFFF</color>

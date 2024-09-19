@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home
+package presentation.viewmodel
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData

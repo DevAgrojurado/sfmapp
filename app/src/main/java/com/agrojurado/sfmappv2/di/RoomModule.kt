@@ -2,9 +2,12 @@ package com.agrojurado.sfmappv2.di
 
 import android.content.Context
 import androidx.room.Room
+import com.agrojurado.sfmappv2.data.dao.CargoDao
 import com.agrojurado.sfmappv2.data.dao.UsuarioDao
 import com.agrojurado.sfmappv2.data.database.AppDatabase
+import com.agrojurado.sfmappv2.data.repository.CargoRepositoryImpl
 import com.agrojurado.sfmappv2.data.repository.UsuarioRepositoryImpl
+import com.agrojurado.sfmappv2.domain.repository.CargoRepository
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import dagger.Module
 import dagger.Provides
@@ -41,5 +44,17 @@ object RoomModule {
         return UsuarioRepositoryImpl(dao)
     }
 
+    // Proveer los DAOs
+    @Singleton
+    @Provides
+    fun provideCargoDao(db: AppDatabase): CargoDao {
+        return db.cargoDao()
+    }
 
+    // Proveer el Repositorio
+    @Singleton
+    @Provides
+    fun provideCargoRepository(dao: CargoDao): CargoRepository {
+        return CargoRepositoryImpl(dao)
+    }
 }
