@@ -13,25 +13,25 @@ class CargoRepositoryImpl @Inject constructor(
 ) : CargoRepository {
 
     override suspend fun insertCargo(cargo: Cargo): Long {
-        return cargoDao.insertCargo(CargoMapper.mapToEntity(cargo))
+        return cargoDao.insertCargo(CargoMapper.toDatabase(cargo))
     }
 
     override fun getAllCargos(): Flow<List<Cargo>> {
         return cargoDao.getAllCargos().map { entities ->
-            entities.map { CargoMapper.mapToDomain(it) }
+            entities.map { CargoMapper.toDomain(it) }
         }
     }
 
     override suspend fun getCargoById(id: Int): Cargo? {
-        return cargoDao.getCargoById(id)?.let { CargoMapper.mapToDomain(it) }
+        return cargoDao.getCargoById(id)?.let { CargoMapper.toDomain(it) }
     }
 
     override suspend fun updateCargo(cargo: Cargo) {
-        cargoDao.updateCargo(CargoMapper.mapToEntity(cargo))
+        cargoDao.updateCargo(CargoMapper.toDatabase(cargo))
     }
 
     override suspend fun deleteCargo(cargo: Cargo) {
-        cargoDao.deleteCargo(CargoMapper.mapToEntity(cargo))
+        cargoDao.deleteCargo(CargoMapper.toDatabase(cargo))
     }
 
     override suspend fun deleteAllCargos() {

@@ -26,7 +26,7 @@ object UsuarioMapper {
             cedula = model.cedula,
             email = model.email,
             clave = model.clave,
-            vigente = model.vigente,
+            vigente = model.vigente
             //idcargo = model.idcargo
         )
     }

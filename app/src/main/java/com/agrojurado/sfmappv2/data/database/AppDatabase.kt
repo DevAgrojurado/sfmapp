@@ -3,6 +3,7 @@ package com.agrojurado.sfmappv2.data.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.agrojurado.sfmappv2.data.dao.CargoDao
+import com.agrojurado.sfmappv2.data.dao.OperarioDao
 import com.agrojurado.sfmappv2.data.dao.UsuarioDao
 import com.agrojurado.sfmappv2.data.entity.AsistenciaEntity
 import com.agrojurado.sfmappv2.data.entity.CargoEntity
@@ -26,4 +27,5 @@ import com.agrojurado.sfmappv2.data.entity.OperarioEntity
 abstract class AppDatabase : RoomDatabase() {
     abstract fun usuarioDao(): UsuarioDao
     abstract fun cargoDao(): CargoDao
+    abstract fun operarioDao(): OperarioDao
 }

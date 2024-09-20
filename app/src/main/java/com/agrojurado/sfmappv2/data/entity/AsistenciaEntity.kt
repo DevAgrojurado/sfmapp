@@ -8,20 +8,20 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "asistencia",
-    indices = [Index(value = ["codigooperario"])],
-    foreignKeys = [
-        ForeignKey(
-            entity = OperarioEntity::class,
-            parentColumns = ["codigo"],
-            childColumns = ["codigooperario"],
-            onDelete = ForeignKey.NO_ACTION
-        )
-    ]
+    //indices = [Index(value = ["codigooperario"])],
+    //foreignKeys = [
+        //ForeignKey(
+            //entity = OperarioEntity::class,
+            //parentColumns = ["codigo"],
+            //childColumns = ["codigooperario"],
+            //onDelete = ForeignKey.NO_ACTION
+        //)
+    //]
 )
 data class AsistenciaEntity(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id") val id: Int = 0,
-    @ColumnInfo(name = "codigooperario") val codigooperario: String,
+   // @ColumnInfo(name = "codigooperario") val codigooperario: String,
     @ColumnInfo(name = "fecha") val fecha: String,
     @ColumnInfo(name = "hora") val hora: String,
     @ColumnInfo(name = "tipo") val tipo: String
