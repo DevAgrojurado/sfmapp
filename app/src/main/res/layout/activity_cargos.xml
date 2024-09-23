@@ -8,11 +8,6 @@
     android:orientation="vertical"
     tools:context=".presentation.ui.admin.cargos.CargosActivity">
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/mRecycler"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
@@ -29,6 +24,11 @@
             app:title="Cargos"
             app:titleCentered="true"
             app:titleTextColor="@color/white" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/mRecycler"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
     </LinearLayout>
 

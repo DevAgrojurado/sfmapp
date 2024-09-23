@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.presentation.ui.admin.cargos.CargosActivity
+import com.agrojurado.sfmappv2.presentation.ui.admin.operarios.OperariosActivity
 
 class AdminFragment : Fragment() {
 
@@ -36,6 +37,11 @@ class AdminFragment : Fragment() {
         // Configura los OnClickListener
         tvCargo.setOnClickListener {
             val intent = Intent(activity, CargosActivity::class.java)
+            startActivity(intent)
+        }
+
+        tvOperario.setOnClickListener {
+            val intent = Intent(activity, OperariosActivity::class.java)
             startActivity(intent)
         }
 

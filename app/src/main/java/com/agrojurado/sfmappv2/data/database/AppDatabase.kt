@@ -21,7 +21,7 @@ import com.agrojurado.sfmappv2.data.entity.OperarioEntity
         LoteEntity::class,
         OperarioEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
