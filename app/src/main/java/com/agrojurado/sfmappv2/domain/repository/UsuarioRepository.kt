@@ -19,6 +19,8 @@ interface UsuarioRepository {
 
     suspend fun grabarCuenta(usuario: Usuario): Usuario?
 
+    suspend fun crearUsuarioPredeterminado()
+
     fun listar(dato: String): Flow<List<Usuario>>
 
 }

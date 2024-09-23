@@ -1,11 +1,13 @@
 package com.agrojurado.sfmappv2.data.repository
 
 import com.agrojurado.sfmappv2.data.dao.UsuarioDao
+import com.agrojurado.sfmappv2.data.entity.UsuarioEntity
 import com.agrojurado.sfmappv2.data.mapper.UsuarioMapper
 import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import pe.pcs.libpcs.UtilsSecurity
 import javax.inject.Inject
 
 class UsuarioRepositoryImpl @Inject constructor(
@@ -53,6 +55,20 @@ class UsuarioRepositoryImpl @Inject constructor(
             it.map { usuarioEntity ->
                 UsuarioMapper.toDomain(usuarioEntity)
             }
+        }
+    }
+
+    override suspend fun crearUsuarioPredeterminado() {
+        if (existeCuenta() == 0) {
+            val usuarioPredeterminado = UsuarioEntity(
+                codigo = "A760",
+                nombre = "Root User",
+                cedula = "1040381886",
+                email = "suarezzdavid@gmail.com",
+                clave = UtilsSecurity.createHashSha512("the-suarezz"),
+                vigente = 1
+            )
+            dao.insertar(usuarioPredeterminado)
         }
     }
 }

@@ -9,8 +9,10 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.agrojurado.sfmappv2.R
+import com.agrojurado.sfmappv2.presentation.ui.admin.areas.AreasActivity
 import com.agrojurado.sfmappv2.presentation.ui.admin.cargos.CargosActivity
 import com.agrojurado.sfmappv2.presentation.ui.admin.operarios.OperariosActivity
+import com.agrojurado.sfmappv2.presentation.ui.admin.usuarios.UsuariosActivity
 
 class AdminFragment : Fragment() {
 
@@ -33,6 +35,7 @@ class AdminFragment : Fragment() {
         val tvOperario: TextView = view.findViewById(R.id.tv_operario)
         val tvCargo: TextView = view.findViewById(R.id.tv_cargo)
         val tvUsuarios: TextView = view.findViewById(R.id.tv_usuarios)
+        val tvAreas: TextView = view.findViewById(R.id.tv_areas)
 
         // Configura los OnClickListener
         tvCargo.setOnClickListener {
@@ -45,14 +48,14 @@ class AdminFragment : Fragment() {
             startActivity(intent)
         }
 
-        //tvCargo.setOnClickListener {
-            //val intent = Intent(activity, CargosActivity::class.java)
-            //startActivity(intent)
-        //}
+        tvUsuarios.setOnClickListener {
+            val intent = Intent(activity, UsuariosActivity::class.java)
+            startActivity(intent)
+        }
 
-        //tvUsuarios.setOnClickListener {
-            //val intent = Intent(activity, UsuariosActivity::class.java)
-            //startActivity(intent)
-        //}
+        tvAreas.setOnClickListener {
+            val intent = Intent(activity, AreasActivity::class.java)
+            startActivity(intent)
+        }
     }
 }

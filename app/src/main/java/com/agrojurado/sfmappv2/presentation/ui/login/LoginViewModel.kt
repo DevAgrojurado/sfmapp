@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.agrojurado.sfmappv2.domain.model.Usuario
+import com.agrojurado.sfmappv2.domain.usecase.usuario.CrearUsuarioPredeterminadoUseCase
 import com.agrojurado.sfmappv2.domain.usecase.usuario.ExisteCuentaUsuarioUseCase
 import com.agrojurado.sfmappv2.domain.usecase.usuario.ObtenerUsuarioUseCase
 import com.agrojurado.sfmappv2.presentation.common.UiState
@@ -16,8 +17,15 @@ import javax.inject.Inject
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val obtenerUsuarioUseCase: ObtenerUsuarioUseCase,
-    private val existeCuentaUsuarioUseCase: ExisteCuentaUsuarioUseCase
+    private val existeCuentaUsuarioUseCase: ExisteCuentaUsuarioUseCase,
+    private val crearUsuarioPredeterminadoUseCase: CrearUsuarioPredeterminadoUseCase
 ): ViewModel() {
+
+    init {
+        viewModelScope.launch {
+            crearUsuarioPredeterminadoUseCase() // Crear el usuario predeterminado
+        }
+    }
 
     private val _uiStateLogin = MutableLiveData<UiState<Usuario?>?>()
     val UiStateLogin: LiveData<UiState<Usuario?>?> = _uiStateLogin

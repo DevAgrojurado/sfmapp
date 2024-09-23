@@ -27,7 +27,7 @@ import androidx.room.PrimaryKey
         )
     ]
 )
-data class EvaluacionPolinizacion(
+data class EvaluacionPolinizacionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "fecha") val fecha: Long,
     @ColumnInfo(name = "hora") val hora: String,
