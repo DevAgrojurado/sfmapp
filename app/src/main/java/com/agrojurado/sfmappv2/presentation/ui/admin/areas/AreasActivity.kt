@@ -2,6 +2,7 @@ package com.agrojurado.sfmappv2.presentation.ui.admin.areas
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MenuItem
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -86,6 +87,16 @@ class AreasActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.deleteArea(area)
             Toast.makeText(this@AreasActivity, "Area eliminada", Toast.LENGTH_SHORT).show()
+        }
+    }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                true
+            }
+
+            else -> super.onOptionsItemSelected(item)
         }
     }
 }

@@ -3,8 +3,8 @@ package com.agrojurado.sfmappv2.domain.usecase.usuario
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import javax.inject.Inject
 
-class ObtenerUsuarioPorIdUseCase @Inject constructor(
+class GetUserUseCase @Inject constructor(
     private val usuarioRepository: UsuarioRepository
 ){
-    suspend operator fun invoke(id: Int) = usuarioRepository.obtenerUsuarioPorId(id)
+    suspend operator fun invoke(email: String, clave: String) = usuarioRepository.getUser(email, clave)
 }

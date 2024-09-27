@@ -13,8 +13,8 @@ object UsuarioMapper {
             cedula = entity.cedula,
             email = entity.email,
             clave = entity.clave,
-            vigente = entity.vigente,
-            //idcargo = entity.idcargo
+            vigente = entity.vigente
+            //idCargo = entity.idCargo
         )
     }
 
@@ -27,7 +27,7 @@ object UsuarioMapper {
             email = model.email,
             clave = model.clave,
             vigente = model.vigente
-            //idcargo = model.idcargo
+            //idCargo = model.idCargo
         )
     }
 

@@ -6,8 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.usecase.usuario.CrearUsuarioPredeterminadoUseCase
-import com.agrojurado.sfmappv2.domain.usecase.usuario.ExisteCuentaUsuarioUseCase
-import com.agrojurado.sfmappv2.domain.usecase.usuario.ObtenerUsuarioUseCase
+import com.agrojurado.sfmappv2.domain.usecase.usuario.ExistsUserAccountUseCase
+import com.agrojurado.sfmappv2.domain.usecase.usuario.GetUserUseCase
 import com.agrojurado.sfmappv2.presentation.common.UiState
 import com.agrojurado.sfmappv2.presentation.common.makeCall
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,8 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val obtenerUsuarioUseCase: ObtenerUsuarioUseCase,
-    private val existeCuentaUsuarioUseCase: ExisteCuentaUsuarioUseCase,
+    private val GetUserUseCase: GetUserUseCase,
+    private val existsUserAccountUseCase: ExistsUserAccountUseCase,
     private val crearUsuarioPredeterminadoUseCase: CrearUsuarioPredeterminadoUseCase
 ): ViewModel() {
 
@@ -44,7 +44,7 @@ class LoginViewModel @Inject constructor(
     fun login(email: String, clave: String) = viewModelScope.launch {
         _uiStateLogin.value = UiState.Loading
 
-        makeCall { obtenerUsuarioUseCase(email, clave) }.let {
+        makeCall { GetUserUseCase(email, clave) }.let {
             _uiStateLogin.value = it
         }
     }
@@ -52,7 +52,7 @@ class LoginViewModel @Inject constructor(
     fun existeCuenta() = viewModelScope.launch {
         _uiStateExisteCuenta.value = UiState.Loading
 
-        makeCall { existeCuentaUsuarioUseCase() }.let {
+        makeCall { existsUserAccountUseCase() }.let {
             _uiStateExisteCuenta.value = it
         }
     }

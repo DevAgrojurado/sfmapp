@@ -4,11 +4,11 @@ import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import javax.inject.Inject
 
-class GrabarUsuarioUseCase @Inject constructor(
+class DeleteUserUseCase @Inject constructor(
     private val usuarioRepository: UsuarioRepository
-){
-    suspend operator fun invoke(usuario: Usuario): Int{
-        return usuarioRepository.grabar(usuario)
+) {
+    suspend operator fun invoke(usuario: Usuario): Int {
+        return usuarioRepository.delete(usuario)
     }
 
 }

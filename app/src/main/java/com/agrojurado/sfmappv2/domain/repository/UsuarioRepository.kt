@@ -5,22 +5,24 @@ import kotlinx.coroutines.flow.Flow
 
 interface UsuarioRepository {
 
-    suspend fun grabar(usuario: Usuario): Int
+    suspend fun insert(usuario: Usuario): Int
 
-    suspend fun eliminar(usuario: Usuario): Int
+    suspend fun delete(usuario: Usuario): Int
 
-    suspend fun actualizarClave(id: Int, clave: String): Int
+    suspend fun updateKey(id: Int, clave: String): Int
 
-    suspend fun obtenerUsuario(email: String, clave: String): Usuario?
+    suspend fun getUser(email: String, clave: String): Usuario?
 
-    suspend fun obtenerUsuarioPorId(id: Int): Usuario?
+    suspend fun getUserById(id: Int): Usuario?
 
-    suspend fun existeCuenta(): Int
+    suspend fun existsAccount(): Int
 
-    suspend fun grabarCuenta(usuario: Usuario): Usuario?
+    suspend fun insertAccount(usuario: Usuario): Usuario?
 
     suspend fun crearUsuarioPredeterminado()
 
-    fun listar(dato: String): Flow<List<Usuario>>
+    fun getAllUsersUseCase(): Flow<List<Usuario>>
+
+    fun list(dato: String): Flow<List<Usuario>>
 
 }

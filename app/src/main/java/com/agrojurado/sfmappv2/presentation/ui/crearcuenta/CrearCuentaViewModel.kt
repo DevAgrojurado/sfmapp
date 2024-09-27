@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.agrojurado.sfmappv2.domain.model.Usuario
-import com.agrojurado.sfmappv2.domain.usecase.usuario.GrabarCuentaUsuarioUseCase
+import com.agrojurado.sfmappv2.domain.usecase.usuario.InsertUserAccountUseCase
 import com.agrojurado.sfmappv2.presentation.common.UiState
 import com.agrojurado.sfmappv2.presentation.common.makeCall
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +14,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CrearCuentaViewModel @Inject constructor(
-    private val useCase: GrabarCuentaUsuarioUseCase
+    private val useCase: InsertUserAccountUseCase
 ) : ViewModel() {
 
     private val _uiStateGrabar = MutableLiveData<UiState<Usuario?>?>()

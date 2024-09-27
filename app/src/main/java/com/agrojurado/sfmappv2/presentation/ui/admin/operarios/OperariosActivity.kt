@@ -2,6 +2,7 @@ package com.agrojurado.sfmappv2.presentation.ui.admin.operarios
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MenuItem
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Spinner
@@ -145,6 +146,16 @@ class OperariosActivity : AppCompatActivity() {
         lifecycleScope.launch {
             viewModel.deleteOperario(operario)
             Toast.makeText(this@OperariosActivity, "Operario eliminado", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 }

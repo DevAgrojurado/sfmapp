@@ -21,7 +21,6 @@ class CrearCuentaActivity : AppCompatActivity() {
     private val viewModel: CrearCuentaViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
         binding = ActivityCrearCuentaBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -30,23 +29,23 @@ class CrearCuentaActivity : AppCompatActivity() {
         initObserver()
     }
 
-    private fun initListener(){
+    private fun initListener() {
+        binding.includeEditar.toolbar.title = "Crear Usuario"
+        binding.includeEditar.toolbar.subtitle = "Ingresa los datos del usuario"
 
-        binding.includeEditar.toolbar.title="Crear Usuario"
-        binding.includeEditar.toolbar.subtitle="Ingresa los datos del usuario"
-
-        binding.includeEditar.toolbar.setNavigationOnClickListener{
+        binding.includeEditar.toolbar.setNavigationOnClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
 
-        binding.fabGrabar.setOnClickListener{
+        binding.fabGrabar.setOnClickListener {
             UtilsCommon.hideKeyboard(this, it)
 
-            if(binding.etContraseA.text.toString().trim().isEmpty() ||
+            if (binding.etContraseA.text.toString().trim().isEmpty() ||
                 binding.etEmail.text.toString().trim().isEmpty() ||
                 binding.etCedula.text.toString().trim().isEmpty() ||
                 binding.etNombre.text.toString().trim().isEmpty() ||
-                binding.etCodigo.text.toString().trim().isEmpty()){
+                binding.etCodigo.text.toString().trim().isEmpty()
+            ) {
                 UtilsMessage.showAlertOk("Advertencia", "Todos los campos son obligatorios", this)
                 return@setOnClickListener
             }
@@ -62,25 +61,23 @@ class CrearCuentaActivity : AppCompatActivity() {
                     vigente = 1
                 }
             )
-
         }
-
     }
 
-    private fun initObserver(){
-        viewModel.uiStateGrabar.observe(this){
-            when(it){
+    private fun initObserver() {
+        viewModel.uiStateGrabar.observe(this) {
+            when (it) {
                 is UiState.Error -> {
-                    binding.progressBar.isVisible=false
+                    binding.progressBar.isVisible = false
                     UtilsMessage.showAlertOk("Error", it.message, this)
                     viewModel.resetUiStateGrabar()
                 }
-                UiState.Loading -> binding.progressBar.isVisible=true
+                UiState.Loading -> binding.progressBar.isVisible = true
                 is UiState.Success -> {
-                    binding.progressBar.isVisible=false
+                    binding.progressBar.isVisible = false
 
-                    if(it.data == null) return@observe
-                    //registrar usuario
+                    if (it.data == null) return@observe
+                    // registrar usuario
                     MainActivity.mUsuario = it.data
 
                     UtilsMessage.showToast(this, "Usuario creado con exito")
