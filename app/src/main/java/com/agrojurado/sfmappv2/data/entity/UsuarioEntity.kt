@@ -8,13 +8,13 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "usuario",
- //   foreignKeys = [ForeignKey(
- //       entity = CargoEntity::class,
- //       parentColumns = ["id"],
- //       childColumns = ["idCargo"],
- //       onDelete = ForeignKey.NO_ACTION
- //   )],
- //   indices = [Index(value = ["idCargo"])]
+    foreignKeys = [ForeignKey(
+        entity = CargoEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["idCargo"],
+        onDelete = ForeignKey.NO_ACTION
+    )],
+    indices = [Index(value = ["idCargo"])]
 )
 data class UsuarioEntity(
     @PrimaryKey(autoGenerate = true)
@@ -24,6 +24,6 @@ data class UsuarioEntity(
     @ColumnInfo(name = "cedula") val cedula: String,
     @ColumnInfo(name = "email") val email: String,
     @ColumnInfo(name = "clave") val clave: String,
-   // @ColumnInfo(name = "idCargo") val idCargo: Int = 0,
+    @ColumnInfo(name = "idCargo") val idCargo: Int,
     @ColumnInfo(name = "vigente") val vigente: Int = 0
 )

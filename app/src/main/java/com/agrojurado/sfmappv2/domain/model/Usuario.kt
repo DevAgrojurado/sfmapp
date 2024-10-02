@@ -7,6 +7,6 @@ data class Usuario(
     var cedula: String="",
     var email: String="",
     var clave: String="",
-    //var idCargo: Int,
+    var idCargo: Int,
     var vigente: Int=0
 )

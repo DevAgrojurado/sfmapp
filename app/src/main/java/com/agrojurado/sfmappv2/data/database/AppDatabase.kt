@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.agrojurado.sfmappv2.data.dao.AreaDao
 import com.agrojurado.sfmappv2.data.dao.CargoDao
+import com.agrojurado.sfmappv2.data.dao.EvaluacionPolinizacionDao
 import com.agrojurado.sfmappv2.data.dao.OperarioDao
 import com.agrojurado.sfmappv2.data.dao.UsuarioDao
 import com.agrojurado.sfmappv2.data.entity.AreaEntity
@@ -24,7 +25,7 @@ import com.agrojurado.sfmappv2.data.entity.OperarioEntity
         OperarioEntity::class,
         AreaEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -32,4 +33,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cargoDao(): CargoDao
     abstract fun operarioDao(): OperarioDao
     abstract fun areaDao(): AreaDao
+    abstract fun evaluacionDao(): EvaluacionPolinizacionDao
 }

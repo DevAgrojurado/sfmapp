@@ -7,10 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
-import com.agrojurado.sfmappv2.data.entity.AreaEntity
-import com.agrojurado.sfmappv2.data.entity.CargoEntity
 import com.agrojurado.sfmappv2.data.entity.UsuarioEntity
-import com.agrojurado.sfmappv2.domain.model.Usuario
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -43,6 +40,9 @@ interface UsuarioDao {
 
     @Query("UPDATE usuario SET clave=:clave WHERE id=:id")
     suspend fun updateKey(id: Int, clave: String): Int
+
+    @Query("SELECT COUNT(*) FROM usuario")
+    suspend fun countUsuario(): Int
 
     @Transaction
     suspend fun setAccount(usuario: UsuarioEntity): UsuarioEntity?{

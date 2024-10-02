@@ -39,7 +39,6 @@ data class EvaluacionPolinizacionEntity(
     @ColumnInfo(name = "inflorescencia") val inflorescencia: String,
     @ColumnInfo(name = "antesis") val antesis: Int,
     @ColumnInfo(name = "postantesis") val postantesis: Int,
-    @ColumnInfo(name = "calidadpolinizacion") val calidadPolinizacion: Int,
     @ColumnInfo(name = "espate") val espate: Int,
     @ColumnInfo(name = "aplicacion") val aplicacion: Int,
     @ColumnInfo(name = "marcacion") val marcacion: Int,

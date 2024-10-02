@@ -23,12 +23,18 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-       binding = ActivityLoginBinding.inflate(layoutInflater)
+        // Verificar si la sesión ya está iniciada
+        if (viewModel.isSessionStarted()) {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+            return
+        }
+
+        binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         initListener()
         initObserver()
-
     }
 
     private fun initListener() {
@@ -40,8 +46,9 @@ class LoginActivity : AppCompatActivity() {
         binding.btAcceder.setOnClickListener {
             UtilsCommon.hideKeyboard(this, it)
 
-            if(binding.etEmail1.text.toString().trim().isEmpty() ||
-                binding.etClave.text.toString().trim().isEmpty()){
+            if (binding.etEmail1.text.toString().trim().isEmpty() ||
+                binding.etClave.text.toString().trim().isEmpty()
+            ) {
                 UtilsMessage.showAlertOk("ADVERTENCIA", "Todos los campos son obligatorios", this)
                 return@setOnClickListener
             }
@@ -52,8 +59,8 @@ class LoginActivity : AppCompatActivity() {
             )
         }
     }
-    private fun initObserver() {
 
+    private fun initObserver() {
         viewModel.uiStateExisteCuenta.observe(this) {
             when (it) {
                 is UiState.Error -> {
@@ -65,20 +72,18 @@ class LoginActivity : AppCompatActivity() {
                 is UiState.Success -> {
                     binding.progressBar.isVisible = false
 
-                    //Validacion para saber si hay un usuario creado
-                    if(it.data >0){
+                    if (it.data > 0) {
                         UtilsMessage.showAlertOk("ERROR", "Ya existe una cuenta", this)
                         return@observe
                     }
 
                     startActivity(Intent(this, CrearCuentaActivity::class.java))
-
                 }
                 null -> Unit
             }
         }
 
-        viewModel.UiStateLogin.observe(this){
+        viewModel.uiStateLogin.observe(this) {
             when (it) {
                 is UiState.Error -> {
                     binding.progressBar.isVisible = false
@@ -89,16 +94,14 @@ class LoginActivity : AppCompatActivity() {
                 is UiState.Success -> {
                     binding.progressBar.isVisible = false
 
-                    if(it.data == null) {
+                    if (it.data == null) {
                         UtilsMessage.showAlertOk(
                             "ADVERTENCIA",
-                            "El email y/o la clave no son correcto",
+                            "El email y/o la clave no son correctos",
                             this
                         )
                         return@observe
                     }
-
-                    MainActivity.mUsuario = it.data
 
                     startActivity(Intent(this, MainActivity::class.java))
                     finish()
@@ -106,7 +109,5 @@ class LoginActivity : AppCompatActivity() {
                 null -> Unit
             }
         }
-
     }
-
 }

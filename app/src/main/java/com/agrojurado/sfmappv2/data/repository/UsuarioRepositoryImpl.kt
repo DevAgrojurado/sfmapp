@@ -2,9 +2,9 @@ package com.agrojurado.sfmappv2.data.repository
 
 import com.agrojurado.sfmappv2.data.dao.UsuarioDao
 import com.agrojurado.sfmappv2.data.entity.UsuarioEntity
-import com.agrojurado.sfmappv2.data.mapper.CargoMapper
 import com.agrojurado.sfmappv2.data.mapper.UsuarioMapper
 import com.agrojurado.sfmappv2.domain.model.Usuario
+import com.agrojurado.sfmappv2.domain.repository.CargoRepository
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -12,7 +12,7 @@ import pe.pcs.libpcs.UtilsSecurity
 import javax.inject.Inject
 
 class UsuarioRepositoryImpl @Inject constructor(
-    private val dao: UsuarioDao
+    private val dao: UsuarioDao,
 ): UsuarioRepository {
     override suspend fun insert(usuario: Usuario): Int {
         return if(usuario.id == 0)
@@ -59,18 +59,29 @@ class UsuarioRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun deleteUsuario(usuario: Usuario) {
+        dao.delete(UsuarioMapper.toDatabase(usuario))
+    }
+
     override suspend fun crearUsuarioPredeterminado() {
-        if (existsAccount() == 0) {
-            val usuarioPredeterminado = UsuarioEntity(
-                codigo = "A760",
-                nombre = "Root User",
-                cedula = "1040381886",
-                email = "suarezzdavid@gmail.com",
-                clave = UtilsSecurity.createHashSha512("the-suarezz"),
-                //idCargo = 1,
-                vigente = 1
-            )
-            dao.insert(usuarioPredeterminado)
+        try {
+            if (existsAccount() == 0) {
+                val usuarioPredeterminado = UsuarioEntity(
+                    codigo = "A760",
+                    nombre = "Root User",
+                    cedula = "1040381886",
+                    email = "suarezzdavid@gmail.com",
+                    clave = UtilsSecurity.createHashSha512("the-suarezz"),
+                    idCargo = 0,
+                    vigente = 1
+                )
+                dao.insert(usuarioPredeterminado)
+                println("Usuario predeterminado creado con éxito.")
+            } else {
+                println("El usuario predeterminado ya existe.")
+            }
+        } catch (e: Exception) {
+            println("Error al crear usuario predeterminado: ${e.message}")
         }
     }
 

@@ -12,3 +12,4 @@ data class CargoEntity(
     @ColumnInfo(name = "id") var id: Int = 0,
     @ColumnInfo(name = "descripcion") var descripcion: String = ""
 )
+

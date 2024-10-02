@@ -1,6 +1,7 @@
 package com.agrojurado.sfmappv2.data.repository
 
 import com.agrojurado.sfmappv2.data.dao.CargoDao
+import com.agrojurado.sfmappv2.data.entity.CargoEntity
 import com.agrojurado.sfmappv2.data.mapper.CargoMapper
 import com.agrojurado.sfmappv2.domain.model.Cargo
 import com.agrojurado.sfmappv2.domain.repository.CargoRepository
@@ -36,5 +37,19 @@ class CargoRepositoryImpl @Inject constructor(
 
     override suspend fun deleteAllCargos() {
         cargoDao.deleteAllCargos()
+    }
+
+    override suspend fun crearCargoPredeterminado() {
+        val cargoExistente = cargoDao.getCargoPredeterminado()
+        if (cargoExistente == null) {
+            val cargoPredeterminado = CargoEntity(
+                id = 0,
+                descripcion = "Cargo Predeterminado"
+            )
+            cargoDao.insertCargo(cargoPredeterminado)
+            println("Cargo predeterminado creado con éxito.")
+        } else {
+            println("El cargo predeterminado ya existe.")
+        }
     }
 }

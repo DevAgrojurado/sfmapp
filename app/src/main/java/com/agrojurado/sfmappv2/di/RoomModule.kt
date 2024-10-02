@@ -50,6 +50,7 @@ object RoomModule {
         return UsuarioRepositoryImpl(dao)
     }
 
+
     // Proveer los DAOs
     @Singleton
     @Provides

@@ -3,12 +3,16 @@ package com.agrojurado.sfmappv2.presentation.ui.admin.usuarios
 import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.agrojurado.sfmappv2.databinding.ActivityUsuariosBinding
+import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.presentation.ui.crearcuenta.CrearCuentaActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class UsuariosActivity : AppCompatActivity() {
@@ -27,13 +31,17 @@ class UsuariosActivity : AppCompatActivity() {
 
         initRecyclerView()
         initListeners()
-        observeViewModel() // Observa el ViewModel
-        //viewModel.usuarios // Llama a la función para obtener usuarios
+        observeViewModel()
     }
 
     private fun initRecyclerView() {
         binding.uRecycler.layoutManager = LinearLayoutManager(this)
-        adapter = UsuariosAdapter(listOf())
+        adapter = UsuariosAdapter(this, listOf()) { usuario, action ->
+            when (action) {
+                //"update" -> updateUsuario(usuario)
+                "delete" -> deleteUsuario(usuario)
+            }
+        }
         binding.uRecycler.adapter = adapter
     }
 
@@ -45,7 +53,21 @@ class UsuariosActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         viewModel.usuarios.observe(this) { usuarios ->
-            adapter.updateUsuarios(usuarios) // Actualiza el adaptador con la nueva lista
+            adapter.updateUsuarios(usuarios)
+        }
+    }
+
+    //private fun updateUsuario(usuario: Usuario) {
+       // lifecycleScope.launch {
+         //   viewModel.updateUsuario(usuario)
+           // Toast.makeText(this@UsuariosActivity, "Usuario actualizado", Toast.LENGTH_SHORT).show()
+        //}
+    //}
+
+    private fun deleteUsuario(usuario: Usuario) {
+        lifecycleScope.launch {
+            viewModel.deleteUsuario(usuario)
+            Toast.makeText(this@UsuariosActivity, "Usuario eliminado", Toast.LENGTH_SHORT).show()
         }
     }
 

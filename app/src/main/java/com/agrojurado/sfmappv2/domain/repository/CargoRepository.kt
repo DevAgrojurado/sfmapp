@@ -15,4 +15,6 @@ interface CargoRepository {
     suspend fun deleteCargo(cargo: Cargo)
 
     suspend fun deleteAllCargos()
+
+    suspend fun crearCargoPredeterminado()
 }
