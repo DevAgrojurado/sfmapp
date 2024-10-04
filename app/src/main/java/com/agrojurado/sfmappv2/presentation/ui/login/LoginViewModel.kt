@@ -72,6 +72,7 @@ class LoginViewModel @Inject constructor(
             putBoolean("sesion_iniciada", true)
             putString("email_usuario", usuario.email)
             putString("nombre_usuario", usuario.nombre)
+            putString("codigo_usuario", usuario.codigo)
             // Añade otros detalles del usuario según sea necesario
             apply()
         }

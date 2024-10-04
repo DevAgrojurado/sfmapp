@@ -34,4 +34,7 @@ interface OperarioDao {
     // Verifica si existe algún Cargo
     @Query("SELECT COUNT(*) FROM operario")
     suspend fun countOperario(): Int
+
+    @Query("SELECT * FROM operario WHERE nombre LIKE '%' || :query || '%' OR codigo LIKE '%' || :query || '%'")
+    fun searchOperarios(query: String): Flow<List<OperarioEntity>>
 }

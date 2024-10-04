@@ -26,4 +26,7 @@ interface UsuarioRepository {
     fun list(dato: String): Flow<List<Usuario>>
 
     suspend fun deleteUsuario(usuario: Usuario)
+
+    suspend fun getLoggedInUserEmail(): String?
+    fun getUserByEmail(email: String): Flow<Usuario?>
 }

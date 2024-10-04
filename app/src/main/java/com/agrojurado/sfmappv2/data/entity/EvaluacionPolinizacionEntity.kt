@@ -33,7 +33,6 @@ data class EvaluacionPolinizacionEntity(
     @ColumnInfo(name = "hora") val hora: String,
     @ColumnInfo(name = "semana") val semana: Int,
     @ColumnInfo(name = "idevaluador") val idevaluador: String,
-    @ColumnInfo(name = "codigoevaluador") val codigoevaluador: String,
     @ColumnInfo(name = "idpolinizador") val idpolinizador: String,
     @ColumnInfo(name = "lote") val lote: Int,
     @ColumnInfo(name = "inflorescencia") val inflorescencia: String,

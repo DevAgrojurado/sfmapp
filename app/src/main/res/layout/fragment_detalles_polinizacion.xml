@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:tools="http://schemas.android.com/tools"
     tools:context=".presentation.ui.home.evaluacion.DetallesPolinizacionFragment">
 
     <LinearLayout
@@ -11,64 +12,257 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Inflorescencia -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Inflorescencia"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp"/>
+
+        <RadioGroup
+            android:id="@+id/rgInflorescencia"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rb1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1" />
+
+            <RadioButton
+                android:id="@+id/rb2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2" />
+
+            <RadioButton
+                android:id="@+id/rb3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3" />
+
+            <RadioButton
+                android:id="@+id/rb4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="4" />
+
+            <RadioButton
+                android:id="@+id/rb5"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="5" />
+        </RadioGroup>
+
+        <!-- Antesis -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Antesis"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Infloresencia">
+            app:boxBackgroundColor="@android:color/transparent"
+            app:boxStrokeWidth="0dp"
+            app:boxStrokeWidthFocused="0dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etInflorescencia"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="text" />
+                android:orientation="horizontal"
+                android:background="@android:color/white"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnAntesisMinus"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Decrease"
+                    android:src="@drawable/ic_decrease" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etAntesis"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="0"
+                    android:textAlignment="center"
+                    android:background="@null" />
+
+                <ImageButton
+                    android:id="@+id/btnAntesisPlus"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Increase"
+                    android:src="@android:drawable/ic_input_add" />
+            </LinearLayout>
+
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Post-Antesis -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Post-Antesis"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Antesis">
+            app:boxBackgroundColor="@android:color/transparent"
+            app:boxStrokeWidth="0dp"
+            app:boxStrokeWidthFocused="0dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etAntesis"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number" />
+                android:orientation="horizontal"
+                android:background="@android:color/white"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnPostAntesisMinus"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Decrease"
+                    android:src="@drawable/ic_decrease" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPostAntesis"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="0"
+                    android:textAlignment="center"
+                    android:background="@null" />
+
+                <ImageButton
+                    android:id="@+id/btnPostAntesisPlus"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Increase"
+                    android:src="@android:drawable/ic_input_add" />
+            </LinearLayout>
+
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Antesis Dejadas -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Antesis Dejadas"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Post Antesis">
+            app:boxBackgroundColor="@android:color/transparent"
+            app:boxStrokeWidth="0dp"
+            app:boxStrokeWidthFocused="0dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etPostAntesis"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number" />
+                android:orientation="horizontal"
+                android:background="@android:color/white"
+                android:padding="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnAntesisDejadasMinus"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Decrease"
+                    android:src="@drawable/ic_decrease" />
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etAntesisDejadas"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="0"
+                    android:textAlignment="center"
+                    android:background="@null" />
+
+                <ImageButton
+                    android:id="@+id/btnAntesisDejadasPlus"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Increase"
+                    android:src="@android:drawable/ic_input_add" />
+            </LinearLayout>
+
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Post-Antesis Dejadas -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Post-Antesis Dejadas"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
+
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Espate">
+            app:boxBackgroundColor="@android:color/transparent"
+            app:boxStrokeWidth="0dp"
+            app:boxStrokeWidthFocused="0dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etEspate"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number"/>
-        </com.google.android.material.textfield.TextInputLayout>
+                android:orientation="horizontal"
+                android:background="@android:color/white"
+                android:padding="8dp">
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Aplicacion">
+                <ImageButton
+                    android:id="@+id/btnPostAntesisDejadasMinus"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Decrease"
+                    android:src="@drawable/ic_decrease" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etAplicacion"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="number"/>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etPostAntesisDejadas"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="0"
+                    android:textAlignment="center"
+                    android:background="@null" />
+
+                <ImageButton
+                    android:id="@+id/btnPostAntesisDejadasPlus"
+                    android:layout_width="52dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Increase"
+                    android:src="@android:drawable/ic_input_add" />
+            </LinearLayout>
+
         </com.google.android.material.textfield.TextInputLayout>
 
     </LinearLayout>

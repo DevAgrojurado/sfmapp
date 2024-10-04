@@ -44,6 +44,9 @@ interface UsuarioDao {
     @Query("SELECT COUNT(*) FROM usuario")
     suspend fun countUsuario(): Int
 
+    @Query("SELECT * FROM usuario WHERE email = :email")
+    fun getUserByEmail(email: String): Flow<UsuarioEntity?>
+
     @Transaction
     suspend fun setAccount(usuario: UsuarioEntity): UsuarioEntity?{
         return getUserById(

@@ -9,7 +9,9 @@ import androidx.viewpager2.widget.ViewPager2
 import com.agrojurado.sfmappv2.R
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class EvaluacionActivity : AppCompatActivity() {
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout

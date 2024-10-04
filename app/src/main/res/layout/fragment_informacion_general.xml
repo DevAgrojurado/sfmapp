@@ -47,27 +47,34 @@
                 android:inputType="number" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.textfield.TextInputLayout
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="ID Evaluador">
+            android:text="Evaluador"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etIdEvaluador"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
+        <TextView
+            android:id="@+id/tvEvaluador"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Código Evaluador">
+            android:layout_marginBottom="16dp"
+            android:textSize="16sp" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etCodigoEvaluador"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Polinizador"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
+
+        <Spinner
+            android:id="@+id/spinnerPolinizador"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"/>
+
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"

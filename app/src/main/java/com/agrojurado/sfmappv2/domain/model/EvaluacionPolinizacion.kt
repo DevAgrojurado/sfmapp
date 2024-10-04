@@ -6,7 +6,7 @@ data class EvaluacionPolinizacion(
     val hora: String,
     val semana: Int,
     val idEvaluador: String,
-    val codigoEvaluador: String,
+    //val codigoEvaluador: String,
     val idPolinizador: String,
     val lote: Int,
     val inflorescencia: String,

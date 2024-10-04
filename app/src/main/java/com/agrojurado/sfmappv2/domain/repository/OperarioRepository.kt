@@ -17,4 +17,6 @@ interface OperarioRepository {
 
     suspend fun deleteAllOperarios()
 
+    fun searchOperarios(query: String): Flow<List<Operario>>
+
 }

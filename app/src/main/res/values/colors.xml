@@ -28,4 +28,6 @@
     <color name="grayColor">#d2dbe0</color>
     <color name="darkGrayColor">#82929a</color>
 
+    <color name="toggle_text_color">#FFFFFF</color>
+
 </resources>

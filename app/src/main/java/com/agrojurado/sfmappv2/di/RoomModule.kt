@@ -46,8 +46,11 @@ object RoomModule {
     //**** Proveer el Repository **** //
     @Singleton
     @Provides
-    fun provideUsuarioRepository(dao: UsuarioDao) : UsuarioRepository {
-        return UsuarioRepositoryImpl(dao)
+    fun provideUsuarioRepository(
+        dao: UsuarioDao,
+        @ApplicationContext context: Context
+    ): UsuarioRepository {
+        return UsuarioRepositoryImpl(dao, context)
     }
 
 

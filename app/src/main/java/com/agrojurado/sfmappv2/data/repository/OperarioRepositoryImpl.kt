@@ -37,5 +37,16 @@ class OperarioRepositoryImpl @Inject constructor(
         operarioDao.deleteAllOperarios()
     }
 
+    override fun searchOperarios(query: String): Flow<List<Operario>> {
+        return operarioDao.searchOperarios(query).map { list ->
+            list.map { OperarioMapper.toDomain(it) }
+        }
+    }
+
+    fun getAllOperariosUseCase(): Flow<List<Operario>> {
+        return operarioDao.getAllOperarios().map { list ->
+            list?.map { OperarioMapper.toDomain(it) } ?: emptyList()
+        }
+    }
 
 }
