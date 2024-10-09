@@ -28,15 +28,17 @@ import androidx.room.PrimaryKey
     ]
 )
 data class EvaluacionPolinizacionEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "fecha") val fecha: Long,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(name = "fecha") val fecha: String,
     @ColumnInfo(name = "hora") val hora: String,
     @ColumnInfo(name = "semana") val semana: Int,
-    @ColumnInfo(name = "idevaluador") val idevaluador: String,
-    @ColumnInfo(name = "idpolinizador") val idpolinizador: String,
+    @ColumnInfo(name = "idevaluador") val idevaluador: Int,
+    @ColumnInfo(name = "idpolinizador") val idpolinizador: Int,
     @ColumnInfo(name = "lote") val lote: Int,
-    @ColumnInfo(name = "inflorescencia") val inflorescencia: String,
+    @ColumnInfo(name = "inflorescencia") val inflorescencia: Int,
     @ColumnInfo(name = "antesis") val antesis: Int,
+    @ColumnInfo(name = "antesisDejadas") val antesisDejadas: Int,
+    @ColumnInfo(name = "postantesisDejadas") val postantesisDejadas: Int,
     @ColumnInfo(name = "postantesis") val postantesis: Int,
     @ColumnInfo(name = "espate") val espate: Int,
     @ColumnInfo(name = "aplicacion") val aplicacion: Int,

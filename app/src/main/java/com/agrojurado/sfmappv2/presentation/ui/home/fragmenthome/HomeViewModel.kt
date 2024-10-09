@@ -20,8 +20,8 @@ class HomeViewModel @Inject constructor() : ViewModel() {
     private fun loadItems() {
         val sampleItems = listOf(
             HomeItem("Evaluacion Polinización", "Agregar una evaluación", R.drawable.evaluacion_img),
-            //HomeItem("Null", "Null", R.drawable.agro_jurado),
-            //HomeItem("Evaluación 3", "Descripción de la evaluación 3", R.drawable.agro_jurado)
+            HomeItem("Sanidad", "Agregar formulario", R.drawable.agro_jurado),
+            HomeItem("Talento Humano", "Agregar formulario", R.drawable.agro_jurado)
         )
         _items.value = sampleItems
     }

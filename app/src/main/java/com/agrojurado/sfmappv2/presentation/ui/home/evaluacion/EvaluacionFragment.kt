@@ -5,26 +5,32 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ToggleButton
 import com.agrojurado.sfmappv2.R
 import com.google.android.material.textfield.TextInputEditText
 
 class EvaluacionFragment : Fragment() {
 
+    private lateinit var etMarcacion: TextInputEditText
     private lateinit var toggleEspateBueno: ToggleButton
     private lateinit var toggleEspateMalo: ToggleButton
     private lateinit var toggleAplicacionBueno: ToggleButton
     private lateinit var toggleAplicacionMalo: ToggleButton
     private lateinit var toggleMarcacionBueno: ToggleButton
     private lateinit var toggleMarcacionMalo: ToggleButton
-    private lateinit var etMarcacion: TextInputEditText
-    private lateinit var etRepaso1: TextInputEditText
-    private lateinit var etRepaso2: TextInputEditText
+    private lateinit var toggleRepaso1Bueno: ToggleButton
+    private lateinit var toggleRepaso1Malo: ToggleButton
+    private lateinit var toggleRepaso2Bueno: ToggleButton
+    private lateinit var toggleRepaso2Malo: ToggleButton
     private lateinit var etObservaciones: TextInputEditText
+    private lateinit var btnSave: Button
 
     private var espateValue = -1
     private var aplicacionValue = -1
     private var marcacionValue = -1
+    private var repaso1Value = -1
+    private var repaso2Value = -1
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_evaluacion, container, false)
@@ -35,27 +41,36 @@ class EvaluacionFragment : Fragment() {
 
         initializeViews(view)
         setupListeners()
+
+        btnSave = view.findViewById(R.id.btnSave)
+        btnSave.setOnClickListener {
+            (activity as? EvaluacionActivity)?.saveAllData()
+        }
     }
 
-        private fun initializeViews(view: View) {
-
-            etMarcacion = view.findViewById(R.id.etMarcacion)
-            etRepaso1 = view.findViewById(R.id.etRepaso1)
-            etRepaso2 = view.findViewById(R.id.etRepaso2)
-            etObservaciones = view.findViewById(R.id.etObservaciones)
-            toggleEspateBueno = view.findViewById(R.id.toggleEspateBueno)
-            toggleEspateMalo = view.findViewById(R.id.toggleEspateMalo)
-            toggleAplicacionBueno = view.findViewById(R.id.toggleAplicacionBueno)
-            toggleAplicacionMalo = view.findViewById(R.id.toggleAplicacionMalo)
-            toggleMarcacionBueno = view.findViewById(R.id.toggleMarcacionBueno)
-            toggleMarcacionMalo = view.findViewById(R.id.toggleMarcacionMalo)
-
+    private fun initializeViews(view: View) {
+        etMarcacion = view.findViewById(R.id.etMarcacion)
+        etObservaciones = view.findViewById(R.id.etObservaciones)
+        toggleEspateBueno = view.findViewById(R.id.toggleEspateBueno)
+        toggleEspateMalo = view.findViewById(R.id.toggleEspateMalo)
+        toggleAplicacionBueno = view.findViewById(R.id.toggleAplicacionBueno)
+        toggleAplicacionMalo = view.findViewById(R.id.toggleAplicacionMalo)
+        toggleMarcacionBueno = view.findViewById(R.id.toggleMarcacionBueno)
+        toggleMarcacionMalo = view.findViewById(R.id.toggleMarcacionMalo)
+        toggleRepaso1Bueno = view.findViewById(R.id.toggleRepaso1Bueno)
+        toggleRepaso1Malo = view.findViewById(R.id.toggleRepaso1Malo)
+        toggleRepaso2Bueno = view.findViewById(R.id.toggleRepaso2Bueno)
+        toggleRepaso2Malo = view.findViewById(R.id.toggleRepaso2Malo)
     }
 
-    private fun setupListeners(){
+    private fun setupListeners() {
         setupToggleButtons(toggleEspateBueno, toggleEspateMalo) { espateValue = it }
         setupToggleButtons(toggleAplicacionBueno, toggleAplicacionMalo) { aplicacionValue = it }
         setupToggleButtons(toggleMarcacionBueno, toggleMarcacionMalo) { marcacionValue = it }
+
+        // Aquí ajusto los valores de repaso1 y repaso2
+        setupToggleButtons(toggleRepaso1Bueno, toggleRepaso1Malo) { repaso1Value = if (it == 0) 1 else 0 }
+        setupToggleButtons(toggleRepaso2Bueno, toggleRepaso2Malo) { repaso2Value = if (it == 0) 1 else 0 }
     }
 
     private fun setupToggleButtons(toggleBueno: ToggleButton, toggleMalo: ToggleButton, updateValue: (Int) -> Unit) {
@@ -80,10 +95,12 @@ class EvaluacionFragment : Fragment() {
 
     fun getValues(): Map<String, Any> {
         return mapOf(
-
             "espate" to espateValue,
             "aplicacion" to aplicacionValue,
-            "marcacion" to marcacionValue
+            "marcacion" to marcacionValue,
+            "repaso1" to repaso1Value,
+            "repaso2" to repaso2Value,
+            "observaciones" to etObservaciones.text.toString()
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.agrojurado.sfmappv2.presentation.ui.main
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
@@ -49,7 +50,7 @@ class MainActivity : AppCompatActivity() {
         navView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_logout -> {
-                    cerrarSesion()
+                    showAlertLogout()
                     true
                 }
                 else -> {
@@ -61,6 +62,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun showAlertLogout() {
+        AlertDialog.Builder(this)
+            .setTitle("Cerrar sesión")
+            .setIcon(R.drawable.ic_warning)
+            .setMessage("¿Está seguro que desea cerrar sesión?")
+            .setPositiveButton("Sí") { _, _ ->
+                cerrarSesion()
+            }
+            .setNegativeButton("No", null)
+            .show()
     }
 
     private fun cerrarSesion() {

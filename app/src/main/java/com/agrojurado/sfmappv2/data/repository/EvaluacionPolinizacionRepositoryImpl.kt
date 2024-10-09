@@ -9,29 +9,28 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
-    private val dao: EvaluacionPolinizacionDao,
-    private val mapper: EvaluacionPolinizacionMapper
+    private val dao: EvaluacionPolinizacionDao
 ) : EvaluacionPolinizacionRepository {
 
     override suspend fun insertEvaluacion(evaluacion: EvaluacionPolinizacion): Long {
-        return dao.insertEvaluacion(mapper.toEntity(evaluacion))
+        return dao.insertEvaluacion(EvaluacionPolinizacionMapper.toEntity(evaluacion))
     }
 
     override suspend fun updateEvaluacion(evaluacion: EvaluacionPolinizacion) {
-        dao.updateEvaluacion(mapper.toEntity(evaluacion))
+        dao.updateEvaluacion(EvaluacionPolinizacionMapper.toEntity(evaluacion))
     }
 
     override suspend fun deleteEvaluacion(evaluacion: EvaluacionPolinizacion) {
-        dao.deleteEvaluacion(mapper.toEntity(evaluacion))
+        dao.deleteEvaluacion(EvaluacionPolinizacionMapper.toEntity(evaluacion))
     }
 
     override fun getEvaluaciones(): Flow<List<EvaluacionPolinizacion>> {
         return dao.getEvaluaciones().map { entities ->
-            entities.map { mapper.toDomain(it) }
+            entities.map { EvaluacionPolinizacionMapper.toDomain(it) }
         }
     }
 
     override suspend fun getEvaluacionById(id: Long): EvaluacionPolinizacion? {
-        return dao.getEvaluacionById(id)?.let { mapper.toDomain(it) }
+        return dao.getEvaluacionById(id)?.let { EvaluacionPolinizacionMapper.toDomain(it) }
     }
 }

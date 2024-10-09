@@ -2,19 +2,10 @@ package com.agrojurado.sfmappv2.di
 
 import android.content.Context
 import androidx.room.Room
-import com.agrojurado.sfmappv2.data.dao.AreaDao
-import com.agrojurado.sfmappv2.data.dao.CargoDao
-import com.agrojurado.sfmappv2.data.dao.OperarioDao
-import com.agrojurado.sfmappv2.data.dao.UsuarioDao
+import com.agrojurado.sfmappv2.data.dao.*
 import com.agrojurado.sfmappv2.data.database.AppDatabase
-import com.agrojurado.sfmappv2.data.repository.AreaRepositoryImpl
-import com.agrojurado.sfmappv2.data.repository.CargoRepositoryImpl
-import com.agrojurado.sfmappv2.data.repository.OperarioRepositoryImpl
-import com.agrojurado.sfmappv2.data.repository.UsuarioRepositoryImpl
-import com.agrojurado.sfmappv2.domain.repository.AreaRepository
-import com.agrojurado.sfmappv2.domain.repository.CargoRepository
-import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
-import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
+import com.agrojurado.sfmappv2.data.repository.*
+import com.agrojurado.sfmappv2.domain.repository.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -28,22 +19,40 @@ object RoomModule {
 
     private const val DATABASE_NAME = "sfmdb"
 
-    //**** Proveer la db **** //
+    // Proveer la base de datos
     @Singleton
     @Provides
-    fun provideDatabase(@ApplicationContext context: Context) = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java,
-        DATABASE_NAME
-    ).fallbackToDestructiveMigration()
-        .build()
+    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
+        return Room.databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            DATABASE_NAME
+        ).fallbackToDestructiveMigration()
+            .build()
+    }
 
-    //**** Proveer el DAO **** //
+    // Proveer DAOs
     @Singleton
     @Provides
-    fun provideUsuarioDao(db: AppDatabase) = db.usuarioDao()
+    fun provideUsuarioDao(db: AppDatabase): UsuarioDao = db.usuarioDao()
 
-    //**** Proveer el Repository **** //
+    @Singleton
+    @Provides
+    fun provideCargoDao(db: AppDatabase): CargoDao = db.cargoDao()
+
+    @Singleton
+    @Provides
+    fun provideOperarioDao(db: AppDatabase): OperarioDao = db.operarioDao()
+
+    @Singleton
+    @Provides
+    fun provideAreaDao(db: AppDatabase): AreaDao = db.areaDao()
+
+    @Singleton
+    @Provides
+    fun provideEvaluacionDao(db: AppDatabase): EvaluacionPolinizacionDao = db.evaluacionDao()
+
+    // Proveer Repositorios
     @Singleton
     @Provides
     fun provideUsuarioRepository(
@@ -53,46 +62,29 @@ object RoomModule {
         return UsuarioRepositoryImpl(dao, context)
     }
 
-
-    // Proveer los DAOs
-    @Singleton
-    @Provides
-    fun provideCargoDao(db: AppDatabase): CargoDao {
-        return db.cargoDao()
-    }
-
-    // Proveer el Repositorio
     @Singleton
     @Provides
     fun provideCargoRepository(dao: CargoDao): CargoRepository {
         return CargoRepositoryImpl(dao)
     }
 
-    // Proveer los DAOs
-    @Singleton
-    @Provides
-    fun provideOperarioDao(db: AppDatabase): OperarioDao {
-        return db.operarioDao()
-    }
-
-    // Proveer el Repositorio
     @Singleton
     @Provides
     fun provideOperarioRepository(dao: OperarioDao): OperarioRepository {
         return OperarioRepositoryImpl(dao)
     }
 
-    // Proveer los DAOs
-    @Singleton
-    @Provides
-    fun provideAreaDao(db: AppDatabase): AreaDao {
-        return db.areaDao()
-    }
-
-    // Proveer el Repositorio
     @Singleton
     @Provides
     fun provideAreaRepository(dao: AreaDao): AreaRepository {
         return AreaRepositoryImpl(dao)
+    }
+
+    @Singleton
+    @Provides
+    fun provideEvaluacionPolinizacionRepository(
+        dao: EvaluacionPolinizacionDao
+    ): EvaluacionPolinizacionRepository {
+        return EvaluacionPolinizacionRepositoryImpl(dao)
     }
 }

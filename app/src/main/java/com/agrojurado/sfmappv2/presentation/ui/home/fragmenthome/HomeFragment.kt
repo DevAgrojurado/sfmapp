@@ -9,7 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.agrojurado.sfmappv2.databinding.FragmentHomeBinding
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionActivity
+import com.agrojurado.sfmappv2.presentation.ui.home.listaevaluacion.ListaEvaluacionActivity
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -41,7 +41,7 @@ class HomeFragment : Fragment() {
             // Handle item click here
             when (item.title) {
                 "Evaluacion Polinización" -> {
-                    val intent = Intent(requireContext(), EvaluacionActivity::class.java)
+                    val intent = Intent(requireContext(), ListaEvaluacionActivity::class.java)
                     startActivity(intent)
                 }
                 // Add more cases for other items if needed

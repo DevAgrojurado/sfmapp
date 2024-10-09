@@ -1,20 +1,16 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.ImageButton
-import android.widget.RadioGroup
 import com.google.android.material.textfield.TextInputEditText
 import androidx.fragment.app.Fragment
 import com.agrojurado.sfmappv2.R
 
 class DetallesPolinizacionFragment : Fragment() {
 
-    private lateinit var rgInflorescencia: RadioGroup
     private lateinit var etAntesis: TextInputEditText
     private lateinit var etPostAntesis: TextInputEditText
     private lateinit var btnAntesisMinus: ImageButton
@@ -40,7 +36,6 @@ class DetallesPolinizacionFragment : Fragment() {
     }
 
     private fun initializeViews(view: View) {
-        rgInflorescencia = view.findViewById(R.id.rgInflorescencia)
         etAntesis = view.findViewById(R.id.etAntesis)
         etPostAntesis = view.findViewById(R.id.etPostAntesis)
         btnAntesisMinus = view.findViewById(R.id.btnAntesisMinus)
@@ -53,7 +48,6 @@ class DetallesPolinizacionFragment : Fragment() {
         btnAntesisDejadasPlus = view.findViewById(R.id.btnAntesisDejadasPlus)
         btnPostAntesisDejadasMinus = view.findViewById(R.id.btnPostAntesisDejadasMinus)
         btnPostAntesisDejadasPlus = view.findViewById(R.id.btnPostAntesisDejadasPlus)
-
     }
 
     private fun setupListeners() {
@@ -65,8 +59,6 @@ class DetallesPolinizacionFragment : Fragment() {
         btnAntesisDejadasPlus.setOnClickListener { updateCount(etAntesisDejadas, true) }
         btnPostAntesisDejadasMinus.setOnClickListener { updateCount(etPostAntesisDejadas, false) }
         btnPostAntesisDejadasPlus.setOnClickListener { updateCount(etPostAntesisDejadas, true) }
-
-
     }
 
     private fun updateCount(editText: TextInputEditText, isIncrement: Boolean) {
@@ -75,14 +67,12 @@ class DetallesPolinizacionFragment : Fragment() {
         editText.setText(count.toString())
     }
 
-
     fun getValues(): Map<String, Any> {
         return mapOf(
-            "inflorescencia" to (rgInflorescencia.checkedRadioButtonId - R.id.rb1 + 1),
             "antesis" to (etAntesis.text.toString().toIntOrNull() ?: 0),
             "postAntesis" to (etPostAntesis.text.toString().toIntOrNull() ?: 0),
             "antesisDejadas" to (etAntesisDejadas.text.toString().toIntOrNull() ?: 0),
-            "postAntesis" to (etPostAntesisDejadas.text.toString().toIntOrNull() ?: 0)
+            "postAntesisDejadas" to (etPostAntesisDejadas.text.toString().toIntOrNull() ?: 0)
         )
     }
 }
