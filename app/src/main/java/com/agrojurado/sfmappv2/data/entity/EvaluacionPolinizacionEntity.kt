@@ -35,6 +35,7 @@ data class EvaluacionPolinizacionEntity(
     @ColumnInfo(name = "idevaluador") val idevaluador: Int,
     @ColumnInfo(name = "idpolinizador") val idpolinizador: Int,
     @ColumnInfo(name = "lote") val lote: Int,
+    @ColumnInfo(name = "seccion") val seccion: Int,
     @ColumnInfo(name = "inflorescencia") val inflorescencia: Int,
     @ColumnInfo(name = "antesis") val antesis: Int,
     @ColumnInfo(name = "antesisDejadas") val antesisDejadas: Int,

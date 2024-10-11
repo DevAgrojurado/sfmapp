@@ -38,6 +38,12 @@
             android:textSize="16sp" />
 
         <TextView
+            android:id="@+id/tvEvaluador"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp" />
+
+        <TextView
             android:id="@+id/tvPolinizador"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -45,6 +51,12 @@
 
         <TextView
             android:id="@+id/tvLote"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tvSeccion"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="16sp" />

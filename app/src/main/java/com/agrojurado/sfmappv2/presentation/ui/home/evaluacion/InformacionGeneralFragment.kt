@@ -28,6 +28,7 @@ class InformacionGeneralFragment : Fragment() {
     private lateinit var tvEvaluador: TextView
     private lateinit var spinnerPolinizador: Spinner
     private lateinit var etLote: TextInputEditText
+    private lateinit var etSeccion: TextInputEditText
 
     private val viewModel: EvaluacionViewModel by activityViewModels()
     private var operarios: List<Pair<String, Operario>> = emptyList()
@@ -46,6 +47,7 @@ class InformacionGeneralFragment : Fragment() {
         tvEvaluador = view.findViewById(R.id.tvEvaluador)
         spinnerPolinizador = view.findViewById(R.id.spinnerPolinizador)
         etLote = view.findViewById(R.id.etLote)
+        etSeccion = view.findViewById(R.id.etSeccion)
 
         // Initialize date and time
         val currentDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
@@ -98,7 +100,9 @@ class InformacionGeneralFragment : Fragment() {
             "etSemana" to (etSemana.text.toString().toIntOrNull() ?: throw IllegalArgumentException("La semana debe ser un número")),
             "tvEvaluador" to tvEvaluador.text.toString().ifEmpty { throw IllegalArgumentException("El evaluador no puede estar vacío") },
             "spinnerPolinizador" to operarios[spinnerPolinizador.selectedItemPosition].second.id,
-            "etLote" to (etLote.text.toString().toIntOrNull() ?: throw IllegalArgumentException("El lote debe ser un número"))
+            "etLote" to (etLote.text.toString().toIntOrNull() ?: throw IllegalArgumentException("El lote debe ser un número")),
+            "etSeccion" to (etSeccion.text.toString().toIntOrNull() ?: throw IllegalArgumentException("La sección debe ser un número")),
+
         )
     }
 }

@@ -10,7 +10,11 @@ import androidx.fragment.app.DialogFragment
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 
-class EvaluacionDetalleDialog(private val evaluacion: EvaluacionPolinizacion, private val nombrePolinizador: String) : DialogFragment() {
+class EvaluacionDetalleDialog(
+    private val evaluacion: EvaluacionPolinizacion,
+    private val nombrePolinizador: String,
+    private val nombreEvaluador: String
+) : DialogFragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.dialog_evaluacion_detalle, container, false)
@@ -22,8 +26,10 @@ class EvaluacionDetalleDialog(private val evaluacion: EvaluacionPolinizacion, pr
         view.findViewById<TextView>(R.id.tvFecha).text = "Fecha: ${evaluacion.fecha}"
         view.findViewById<TextView>(R.id.tvHora).text = "Hora: ${evaluacion.hora}"
         view.findViewById<TextView>(R.id.tvSemana).text = "Semana: ${evaluacion.semana}"
+        view.findViewById<TextView>(R.id.tvEvaluador).text = "Evaluador: $nombreEvaluador"
         view.findViewById<TextView>(R.id.tvPolinizador).text = "Polinizador: $nombrePolinizador"
         view.findViewById<TextView>(R.id.tvLote).text = "Lote: ${evaluacion.lote}"
+        view.findViewById<TextView>(R.id.tvSeccion).text = "Sección: ${evaluacion.seccion}"
         view.findViewById<TextView>(R.id.tvInflorescencia).text = "Inflorescencia: ${evaluacion.inflorescencia}"
         view.findViewById<TextView>(R.id.tvAntesis).text = "Antesis: ${evaluacion.antesis}"
         view.findViewById<TextView>(R.id.tvPostAntesis).text = "Post Antesis: ${evaluacion.postAntesis}"

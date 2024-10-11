@@ -23,11 +23,17 @@ class EvaluacionViewModel @Inject constructor(
     private val evaluacionRepository: EvaluacionPolinizacionRepository
 ) : ViewModel() {
 
+    private val _evaluacionesPorSemana = MutableLiveData<Map<Int, List<EvaluacionPolinizacion>>>()
+    val evaluacionesPorSemana: LiveData<Map<Int, List<EvaluacionPolinizacion>>> = _evaluacionesPorSemana
+
     private val _errorMessage = MutableLiveData<String>()
     val errorMessage: LiveData<String> = _errorMessage
 
     private val _loggedInUser = MutableLiveData<Usuario?>()
     val loggedInUser: LiveData<Usuario?> = _loggedInUser
+
+    private val _evaluador = MutableLiveData<Map<Int, String>>()
+    val evaluador: LiveData<Map<Int, String>> = _evaluador
 
     private val _operarios = MutableLiveData<List<Pair<String, Operario>>>()
     val operarios: LiveData<List<Pair<String, Operario>>> = _operarios
@@ -42,11 +48,11 @@ class EvaluacionViewModel @Inject constructor(
     val operarioMap: LiveData<Map<Int, String>> = _operarioMap
 
     private val _inflorescencia = MutableLiveData<Int>()
-    val inflorescencia: LiveData<Int> = _inflorescencia
 
     init {
         loadLoggedInUser()
         loadOperarioMap()
+        loadEvaluadorMap()
     }
 
     fun loadEvaluaciones() {
@@ -85,10 +91,27 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
+    fun loadEvaluacionesPorSemana() {
+        viewModelScope.launch {
+            evaluacionRepository.getEvaluaciones().collectLatest { evaluacionesList ->
+                val groupedEvaluaciones = evaluacionesList.groupBy { it.semana }
+                _evaluacionesPorSemana.value = groupedEvaluaciones
+            }
+        }
+    }
+
     private fun loadOperarioMap() {
         viewModelScope.launch {
             operarioRepository.getAllOperarios().collectLatest { operariosList ->
                 _operarioMap.value = operariosList.associate { it.id to it.nombre }
+            }
+        }
+    }
+
+    private fun loadEvaluadorMap() {
+        viewModelScope.launch {
+            usuarioRepository.getAllUsersUseCase().collectLatest { usuariosList ->
+                _evaluador.value = usuariosList.associate { it.id to it.nombre }
             }
         }
     }
@@ -111,6 +134,7 @@ class EvaluacionViewModel @Inject constructor(
                     idEvaluador = _loggedInUser.value?.id ?: throw IllegalArgumentException("ID del evaluador no disponible"),
                     idPolinizador = informacionGeneral["spinnerPolinizador"] as Int,
                     lote = informacionGeneral["etLote"] as Int,
+                    seccion = informacionGeneral["etSeccion"] as Int,
                     inflorescencia = _inflorescencia.value ?: 0,
                     antesis = detallesPolinizacion["antesis"] as Int,
                     postAntesis = detallesPolinizacion["postAntesis"] as Int,
