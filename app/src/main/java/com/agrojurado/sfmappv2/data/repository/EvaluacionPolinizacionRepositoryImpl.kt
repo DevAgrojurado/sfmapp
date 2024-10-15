@@ -33,4 +33,12 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
     override suspend fun getEvaluacionById(id: Long): EvaluacionPolinizacion? {
         return dao.getEvaluacionById(id)?.let { EvaluacionPolinizacionMapper.toDomain(it) }
     }
+
+    override suspend fun getLastEvaluacion(): EvaluacionPolinizacion? {
+        return dao.getLastEvaluacion()?.let { EvaluacionPolinizacionMapper.toDomain(it) }
+    }
+
+    override suspend fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int): Boolean {
+        return dao.checkPalmExists(semana, lote, palma, idPolinizador) > 0
+    }
 }

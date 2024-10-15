@@ -50,37 +50,52 @@ class EvaluacionActivity : AppCompatActivity() {
     fun saveAllData() {
         val adapter = viewPager.adapter as EvaluacionPagerAdapter
         val informacionGeneralFragment = adapter.getFragment(0) as InformacionGeneralFragment
-        val detallesPolinizacionFragment = adapter.getFragment(1) as DetallesPolinizacionFragment
-        val evaluacionFragment = adapter.getFragment(2) as EvaluacionFragment
 
-        val informacionGeneral = informacionGeneralFragment.getValues().toMutableMap()
-        val detallesPolinizacion = detallesPolinizacionFragment.getValues()
-        val evaluacion = evaluacionFragment.getValues()
+        val informacionGeneral = informacionGeneralFragment.getValues()
 
-        // Procesar el spinnerPolinizador para extraer solo el ID
-        val spinnerPolinizador = informacionGeneral["spinnerPolinizador"] as? String
-        if (spinnerPolinizador != null) {
-            val parts = spinnerPolinizador.split(" - ")
-            if (parts.size == 2) {
-                informacionGeneral["spinnerPolinizador"] = parts[0] // Guardamos solo el ID
-            }
+        // Check if palm exists before saving
+        val semana = informacionGeneral["etSemana"] as? Int
+        val lote = informacionGeneral["etLote"] as? Int
+        val palma = informacionGeneral["etPalma"] as? Int
+        val idPolinizador = informacionGeneral["spinnerPolinizador"] as? Int
+
+        if (semana != null && lote != null && palma != null && idPolinizador != null) {
+            viewModel.checkPalmExists(semana, lote, palma, idPolinizador)
+        } else {
+            // If any required field is null, show an error message
+            Toast.makeText(this, "Por favor, complete todos los campos obligatorios", Toast.LENGTH_LONG).show()
         }
-
-        viewModel.saveAllData(informacionGeneral, detallesPolinizacion, evaluacion)
     }
 
     private fun setupObservers() {
         viewModel.saveResult.observe(this) { success ->
-            if (success) {
-                Toast.makeText(this, "Evaluación guardada exitosamente", Toast.LENGTH_SHORT).show()
-                finish()
-            } else {
-                Toast.makeText(this, "Error al guardar la evaluación", Toast.LENGTH_SHORT).show()
-            }
+            val message = if (success) "Evaluación guardada exitosamente" else "Error al guardar la evaluación"
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            if (success) finish()
         }
 
         viewModel.errorMessage.observe(this) { errorMessage ->
-            Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
+            errorMessage?.let {
+                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+            }
+        }
+
+        viewModel.palmExists.observe(this) { exists ->
+            if (exists) {
+                Toast.makeText(this, "Esta palma ya ha sido registrada", Toast.LENGTH_LONG).show()
+            } else {
+                // If palm doesn't exist, proceed with saving
+                val adapter = viewPager.adapter as EvaluacionPagerAdapter
+                val informacionGeneralFragment = adapter.getFragment(0) as InformacionGeneralFragment
+                val detallesPolinizacionFragment = adapter.getFragment(1) as DetallesPolinizacionFragment
+                val evaluacionFragment = adapter.getFragment(2) as EvaluacionFragment
+
+                val informacionGeneral = informacionGeneralFragment.getValues()
+                val detallesPolinizacion = detallesPolinizacionFragment.getValues()
+                val evaluacion = evaluacionFragment.getValues()
+
+                viewModel.saveAllData(informacionGeneral, detallesPolinizacion, evaluacion)
+            }
         }
     }
 }

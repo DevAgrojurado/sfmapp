@@ -24,14 +24,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
+
             <ToggleButton
                 android:id="@+id/toggleEspateBueno"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="wrap_content"
-                android:textOn="Bueno"
+                android:layout_weight="1"
+                android:background="@drawable/toggle_button_good"
                 android:textOff="Bueno"
-                android:background="@drawable/toggle_button_good"/>
+                android:textOn="Bueno" />
             <ToggleButton
                 android:id="@+id/toggleEspateMalo"
                 android:layout_width="0dp"

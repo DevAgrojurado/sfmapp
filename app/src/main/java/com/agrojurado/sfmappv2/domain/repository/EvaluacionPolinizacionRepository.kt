@@ -14,4 +14,8 @@ interface EvaluacionPolinizacionRepository {
     fun getEvaluaciones(): Flow<List<EvaluacionPolinizacion>>
 
     suspend fun getEvaluacionById(id: Long): EvaluacionPolinizacion?
+
+    suspend fun getLastEvaluacion(): EvaluacionPolinizacion?
+
+    suspend fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int): Boolean
 }

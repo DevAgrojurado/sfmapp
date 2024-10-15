@@ -20,4 +20,10 @@ interface EvaluacionPolinizacionDao {
 
     @Query("SELECT * FROM evaluacionpolinizacion WHERE id = :id")
     suspend fun getEvaluacionById(id: Long): EvaluacionPolinizacionEntity?
+
+    @Query("SELECT * FROM evaluacionpolinizacion ORDER BY id DESC LIMIT 1")
+    suspend fun getLastEvaluacion(): EvaluacionPolinizacionEntity?
+
+    @Query("SELECT COUNT(*) FROM evaluacionpolinizacion WHERE semana = :semana AND lote = :lote AND palma = :palma AND idPolinizador = :idPolinizador")
+    suspend fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int): Int
 }

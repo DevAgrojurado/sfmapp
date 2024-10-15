@@ -37,9 +37,11 @@ class EvaluacionAdapter(private val onItemClick: (EvaluacionPolinizacion, String
     class EvaluacionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val tvPolinizador: TextView = itemView.findViewById(R.id.tvPolinizador)
         private val tvLote: TextView = itemView.findViewById(R.id.tvLote)
+        private val tvFecha: TextView = itemView.findViewById(R.id.tvFecha)
 
         fun bind(evaluacion: EvaluacionPolinizacion, nombrePolinizador: String) {
             tvPolinizador.text = "$nombrePolinizador"
+            tvFecha.text = "${evaluacion.fecha}"
             tvLote.text = "Lote: ${evaluacion.lote}"
         }
     }

@@ -16,6 +16,7 @@ navigationUiKtx = "2.7.7"
 
 playServicesAds = "23.1.0"
 firebaseAnalytics = "22.0.1"
+playServicesLocation = "21.3.0"
 roomKtx = "2.6.1"
 hiltAndroid = "2.51"
 mpandroidchart = "3.1.0"
@@ -57,6 +58,7 @@ hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hil
 #mpandroidchart = { module = "com.github.PhilJay:MPAndroidChart", version.ref = "mpandroidchart" }
 
 # Realizar lectura de codigo de barras, qr
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 zxing-android-embedded = { module = "com.journeyapps:zxing-android-embedded", version.ref = "zxingAndroidEmbedded" }
 core = { module = "com.google.zxing:core", version.ref = "core" }
 

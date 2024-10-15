@@ -77,6 +77,8 @@ dependencies {
     implementation(libs.zxing.android.embedded)
     implementation(libs.core)
 
+    implementation(libs.play.services.location)
+
     // Grafico para reporte
     //implementation(libs.mpandroidchart)
 

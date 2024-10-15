@@ -33,15 +33,26 @@
                 android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/tvLote"
+                android:id="@+id/tvFecha"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_margin="6dp"
-                android:text="Lote"
+                android:text="Fecha"
                 android:textColor="@color/black"
                 android:textSize="16sp" />
 
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvLote"
+            android:layout_width="70dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:layout_margin="6dp"
+            android:text="Lote"
+            android:textAlignment="center"
+            android:textColor="@color/black"
+            android:textSize="16sp" />
 
         <ImageView
             android:id="@+id/uMenus"

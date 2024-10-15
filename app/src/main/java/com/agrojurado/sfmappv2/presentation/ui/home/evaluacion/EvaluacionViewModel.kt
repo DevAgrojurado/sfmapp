@@ -14,6 +14,7 @@ import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 @HiltViewModel
@@ -47,12 +48,30 @@ class EvaluacionViewModel @Inject constructor(
     private val _operarioMap = MutableLiveData<Map<Int, String>>()
     val operarioMap: LiveData<Map<Int, String>> = _operarioMap
 
+    private val _lastUsedOperarioId = MutableLiveData<Int?>()
+    val lastUsedOperarioId: LiveData<Int?> = _lastUsedOperarioId
+
+    private val _totalPalmas = MutableLiveData<Int>()
+    val totalPalmas: LiveData<Int> = _totalPalmas
+
+    private val _currentWeek = MutableLiveData<Int>()
+    val currentWeek: LiveData<Int> = _currentWeek
+
+    private val _palmExists = MutableLiveData<Boolean>()
+    val palmExists: LiveData<Boolean> = _palmExists
+
+    private val _ubicacion = MutableLiveData<String>()
+    val ubicacion: LiveData<String> = _ubicacion
+
     private val _inflorescencia = MutableLiveData<Int>()
 
     init {
         loadLoggedInUser()
         loadOperarioMap()
         loadEvaluadorMap()
+        loadLastUsedOperario()
+        setCurrentWeek()
+
     }
 
     fun loadEvaluaciones() {
@@ -87,6 +106,37 @@ class EvaluacionViewModel @Inject constructor(
                 _operarios.value = operariosList.map { operario ->
                     "${operario.codigo} - ${operario.nombre}" to operario
                 }
+                selectLastUsedOperario()
+            }
+        }
+    }
+
+    private fun selectLastUsedOperario() {
+        val lastUsedId = _lastUsedOperarioId.value
+        val operariosList = _operarios.value
+        if (lastUsedId != null && operariosList != null) {
+            val position = operariosList.indexOfFirst { it.second.id == lastUsedId }
+            if (position != -1) {
+                // Notificamos al Fragment que debe actualizar la selección del spinner
+                _lastUsedOperarioId.value = lastUsedId
+            }
+        }
+    }
+
+    private fun setCurrentWeek() {
+        val calendar = Calendar.getInstance()
+        _currentWeek.value = calendar.get(Calendar.WEEK_OF_YEAR)
+    }
+
+    fun updateTotalPalmas(idPolinizador: Int) {
+        viewModelScope.launch {
+            val week = _currentWeek.value ?: return@launch
+            evaluacionRepository.getEvaluaciones().collectLatest { evaluaciones ->
+                val total = evaluaciones.count {
+                    it.idPolinizador == idPolinizador && it.semana == week
+                }
+                _totalPalmas.value = total
+                Log.d("EvaluacionViewModel", "Total palmas para polinizador $idPolinizador en semana $week: $total")
             }
         }
     }
@@ -116,8 +166,31 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
+    private fun loadLastUsedOperario() {
+        viewModelScope.launch {
+            try {
+                val lastEvaluacion = evaluacionRepository.getLastEvaluacion()
+                _lastUsedOperarioId.value = lastEvaluacion?.idPolinizador
+                Log.d("EvaluacionViewModel", "Último operario cargado: ${lastEvaluacion?.idPolinizador}")
+            } catch (e: Exception) {
+                Log.e("EvaluacionViewModel", "Error al cargar el último operario: ${e.message}")
+            }
+        }
+    }
+
+    fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int) {
+        viewModelScope.launch {
+            val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador)
+            _palmExists.value = exists
+        }
+    }
+
     fun setInflorescencia(value: Int) {
         _inflorescencia.value = value
+    }
+
+    fun setUbicacion(ubicacion: String) {
+        _ubicacion.value = ubicacion
     }
 
     fun saveAllData(
@@ -131,10 +204,12 @@ class EvaluacionViewModel @Inject constructor(
                     fecha = informacionGeneral["etFecha"] as String,
                     hora = informacionGeneral["etHora"] as String,
                     semana = informacionGeneral["etSemana"] as Int,
+                    ubicacion = _ubicacion.value ?: "",
                     idEvaluador = _loggedInUser.value?.id ?: throw IllegalArgumentException("ID del evaluador no disponible"),
                     idPolinizador = informacionGeneral["spinnerPolinizador"] as Int,
                     lote = informacionGeneral["etLote"] as Int,
                     seccion = informacionGeneral["etSeccion"] as Int,
+                    palma = informacionGeneral["etPalma"] as Int,
                     inflorescencia = _inflorescencia.value ?: 0,
                     antesis = detallesPolinizacion["antesis"] as Int,
                     postAntesis = detallesPolinizacion["postAntesis"] as Int,
