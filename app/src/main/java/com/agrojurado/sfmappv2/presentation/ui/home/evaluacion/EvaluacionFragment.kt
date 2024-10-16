@@ -26,11 +26,11 @@ class EvaluacionFragment : Fragment() {
     private lateinit var etObservaciones: TextInputEditText
     private lateinit var btnSave: Button
 
-    private var espateValue = -1
-    private var aplicacionValue = -1
-    private var marcacionValue = -1
-    private var repaso1Value = -1
-    private var repaso2Value = -1
+    private var espateValue: Int? = null
+    private var aplicacionValue: Int? = null
+    private var marcacionValue: Int? = null
+    private var repaso1Value: Int? = null
+    private var repaso2Value: Int? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_evaluacion, container, false)
@@ -67,19 +67,17 @@ class EvaluacionFragment : Fragment() {
         setupToggleButtons(toggleEspateBueno, toggleEspateMalo) { espateValue = it }
         setupToggleButtons(toggleAplicacionBueno, toggleAplicacionMalo) { aplicacionValue = it }
         setupToggleButtons(toggleMarcacionBueno, toggleMarcacionMalo) { marcacionValue = it }
-
-        // Aquí ajusto los valores de repaso1 y repaso2
-        setupToggleButtons(toggleRepaso1Bueno, toggleRepaso1Malo) { repaso1Value = if (it == 0) 1 else 0 }
-        setupToggleButtons(toggleRepaso2Bueno, toggleRepaso2Malo) { repaso2Value = if (it == 0) 1 else 0 }
+        setupToggleButtons(toggleRepaso1Bueno, toggleRepaso1Malo) { repaso1Value = it?.let { if (it == 0) 1 else 0 } }
+        setupToggleButtons(toggleRepaso2Bueno, toggleRepaso2Malo) { repaso2Value = it?.let { if (it == 0) 1 else 0 } }
     }
 
-    private fun setupToggleButtons(toggleBueno: ToggleButton, toggleMalo: ToggleButton, updateValue: (Int) -> Unit) {
+    private fun setupToggleButtons(toggleBueno: ToggleButton, toggleMalo: ToggleButton, updateValue: (Int?) -> Unit) {
         toggleBueno.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 toggleMalo.isChecked = false
                 updateValue(0)
             } else if (!toggleMalo.isChecked) {
-                updateValue(-1)
+                updateValue(null)
             }
         }
 
@@ -88,12 +86,12 @@ class EvaluacionFragment : Fragment() {
                 toggleBueno.isChecked = false
                 updateValue(1)
             } else if (!toggleBueno.isChecked) {
-                updateValue(-1)
+                updateValue(null)
             }
         }
     }
 
-    fun getValues(): Map<String, Any> {
+    fun getValues(): Map<String, Any?> {
         return mapOf(
             "espate" to espateValue,
             "aplicacion" to aplicacionValue,

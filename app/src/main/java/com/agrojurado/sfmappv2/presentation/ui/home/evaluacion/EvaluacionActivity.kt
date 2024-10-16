@@ -50,26 +50,19 @@ class EvaluacionActivity : AppCompatActivity() {
     fun saveAllData() {
         val adapter = viewPager.adapter as EvaluacionPagerAdapter
         val informacionGeneralFragment = adapter.getFragment(0) as InformacionGeneralFragment
+        val detallesPolinizacionFragment = adapter.getFragment(1) as DetallesPolinizacionFragment
+        val evaluacionFragment = adapter.getFragment(2) as EvaluacionFragment
 
         val informacionGeneral = informacionGeneralFragment.getValues()
+        val detallesPolinizacion = detallesPolinizacionFragment.getValues()
+        val evaluacion = evaluacionFragment.getValues()
 
-        // Check if palm exists before saving
-        val semana = informacionGeneral["etSemana"] as? Int
-        val lote = informacionGeneral["etLote"] as? Int
-        val palma = informacionGeneral["etPalma"] as? Int
-        val idPolinizador = informacionGeneral["spinnerPolinizador"] as? Int
-
-        if (semana != null && lote != null && palma != null && idPolinizador != null) {
-            viewModel.checkPalmExists(semana, lote, palma, idPolinizador)
-        } else {
-            // If any required field is null, show an error message
-            Toast.makeText(this, "Por favor, complete todos los campos obligatorios", Toast.LENGTH_LONG).show()
-        }
+        viewModel.saveAllData(informacionGeneral, detallesPolinizacion, evaluacion)
     }
 
     private fun setupObservers() {
         viewModel.saveResult.observe(this) { success ->
-            val message = if (success) "Evaluación guardada exitosamente" else "Error al guardar la evaluación"
+            val message = if (success) "Evaluación guardada exitosamente" else "Por favor llene todos los campos requeridos"
             Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
             if (success) finish()
         }

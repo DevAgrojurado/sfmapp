@@ -1,14 +1,20 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
@@ -16,15 +22,13 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.Operario
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
 import com.google.android.material.textfield.TextInputEditText
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.*
 
 @AndroidEntryPoint
-class InformacionGeneralFragment : Fragment() {
+class InformacionGeneralFragment : Fragment(), LocationListener {
 
     private lateinit var rgInflorescencia: RadioGroup
     private lateinit var etFecha: TextInputEditText
@@ -37,13 +41,14 @@ class InformacionGeneralFragment : Fragment() {
     private lateinit var etPalma: TextInputEditText
     private lateinit var tvTotalPalmas: TextView
     private lateinit var etUbicacion: TextInputEditText
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationManager: LocationManager
 
     private val viewModel: EvaluacionViewModel by activityViewModels()
     private var operarios: List<Pair<String, Operario>> = emptyList()
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1
+        private const val GPS_REQUEST_CODE = 2
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -58,8 +63,8 @@ class InformacionGeneralFragment : Fragment() {
         setupObservers()
         setupListeners()
 
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-        requestLocationPermission()
+        locationManager = requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        checkLocationPermission()
 
         viewModel.loadOperarios()
     }
@@ -169,7 +174,7 @@ class InformacionGeneralFragment : Fragment() {
         }
     }
 
-    private fun requestLocationPermission() {
+    private fun checkLocationPermission() {
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -181,24 +186,52 @@ class InformacionGeneralFragment : Fragment() {
                 LOCATION_PERMISSION_REQUEST_CODE
             )
         } else {
-            getLastLocation()
+            checkGPSEnabled()
         }
     }
 
-    private fun getLastLocation() {
+    private fun checkGPSEnabled() {
+        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            showGPSDisabledAlert()
+        } else {
+            startLocationUpdates()
+        }
+    }
+
+    private fun showGPSDisabledAlert() {
+        val dialogBuilder = AlertDialog.Builder(requireContext())
+        dialogBuilder.setMessage("GPS está desactivado. ¿Desea activarlo?")
+            .setCancelable(false)
+            .setPositiveButton("Sí") { _, _ ->
+                startActivityForResult(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS), GPS_REQUEST_CODE)
+            }
+            .setNegativeButton("No") { dialog, _ ->
+                dialog.cancel()
+                Toast.makeText(requireContext(), "GPS es necesario para obtener la ubicación", Toast.LENGTH_SHORT).show()
+            }
+        val alert = dialogBuilder.create()
+        alert.show()
+    }
+
+    private fun startLocationUpdates() {
         if (ActivityCompat.checkSelfPermission(
                 requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            fusedLocationClient.lastLocation
-                .addOnSuccessListener { location: Location? ->
-                    location?.let {
-                        val ubicacion = "${it.latitude},${it.longitude}"
-                        viewModel.setUbicacion(ubicacion)
-                    }
-                }
+            locationManager.requestLocationUpdates(
+                LocationManager.GPS_PROVIDER,
+                5000L,
+                10f,
+                this
+            )
         }
+    }
+
+    override fun onLocationChanged(location: Location) {
+        val ubicacion = "${location.latitude},${location.longitude}"
+        viewModel.setUbicacion(ubicacion)
+        locationManager.removeUpdates(this)
     }
 
     override fun onRequestPermissionsResult(
@@ -209,7 +242,7 @@ class InformacionGeneralFragment : Fragment() {
         when (requestCode) {
             LOCATION_PERMISSION_REQUEST_CODE -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    getLastLocation()
+                    checkGPSEnabled()
                 } else {
                     Toast.makeText(requireContext(), "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show()
                 }
@@ -218,17 +251,24 @@ class InformacionGeneralFragment : Fragment() {
         }
     }
 
-    fun getValues(): Map<String, Any> {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == GPS_REQUEST_CODE) {
+            checkGPSEnabled()
+        }
+    }
+
+    fun getValues(): Map<String, Any?> {
         return mapOf(
-            "etFecha" to etFecha.text.toString().ifEmpty { throw IllegalArgumentException("La fecha no puede estar vacía") },
-            "etHora" to etHora.text.toString().ifEmpty { throw IllegalArgumentException("La hora no puede estar vacía") },
-            "etSemana" to (etSemana.text.toString().toIntOrNull() ?: throw IllegalArgumentException("La semana debe ser un número")),
-            "tvEvaluador" to tvEvaluador.text.toString().ifEmpty { throw IllegalArgumentException("El evaluador no puede estar vacío") },
-            "spinnerPolinizador" to (operarios.getOrNull(spinnerPolinizador.selectedItemPosition)?.second?.id ?: throw IllegalArgumentException("Debe seleccionar un polinizador válido")),
-            "etLote" to (etLote.text.toString().toIntOrNull() ?: throw IllegalArgumentException("El lote debe ser un número")),
-            "etSeccion" to (etSeccion.text.toString().toIntOrNull() ?: throw IllegalArgumentException("La sección debe ser un número")),
-            "etPalma" to (etPalma.text.toString().toIntOrNull() ?: throw IllegalArgumentException("La palma debe ser un número")),
-            "etUbicacion" to etUbicacion.text.toString().ifEmpty { throw IllegalArgumentException("La ubicación no puede estar vacía") }
+            "etFecha" to etFecha.text.toString(),
+            "etHora" to etHora.text.toString(),
+            "etSemana" to etSemana.text.toString().toIntOrNull(),
+            "tvEvaluador" to tvEvaluador.text.toString(),
+            "spinnerPolinizador" to (operarios.getOrNull(spinnerPolinizador.selectedItemPosition)?.second?.id),
+            "etLote" to etLote.text.toString().toIntOrNull(),
+            "etSeccion" to etSeccion.text.toString().toIntOrNull(),
+            "etPalma" to etPalma.text.toString().toIntOrNull(),
+            "etUbicacion" to etUbicacion.text.toString()
         )
     }
 }

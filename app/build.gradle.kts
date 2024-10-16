@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.benchmark.common)
     implementation(libs.androidx.gridlayout)
+    implementation(libs.play.services.maps)
     ksp(libs.androidx.room.compiler)
 
     // Dagger - Hilt

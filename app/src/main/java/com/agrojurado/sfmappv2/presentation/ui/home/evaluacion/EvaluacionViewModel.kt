@@ -194,41 +194,59 @@ class EvaluacionViewModel @Inject constructor(
     }
 
     fun saveAllData(
-        informacionGeneral: Map<String, Any>,
-        detallesPolinizacion: Map<String, Any>,
-        evaluacion: Map<String, Any>
+        informacionGeneral: Map<String, Any?>,
+        detallesPolinizacion: Map<String, Any?>,
+        evaluacion: Map<String, Any?>
     ) {
         viewModelScope.launch {
             try {
+                // Validate required fields
+                val requiredFields = listOf("etFecha", "etHora", "etSemana", "spinnerPolinizador", "etLote", "etSeccion")
+                for (field in requiredFields) {
+                    if (informacionGeneral[field] == null) {
+                        throw IllegalArgumentException("El campo $field es obligatorio")
+                    }
+                }
+
+                if (_ubicacion.value.isNullOrEmpty()) {
+                    throw IllegalArgumentException("La ubicación es obligatoria")
+                }
+
+                if (evaluacion["observaciones"] == null || (evaluacion["observaciones"] as? String)?.isEmpty() == true) {
+                    throw IllegalArgumentException("Las observaciones son obligatorias")
+                }
+
+                // Handle the week conversion safely
+
                 val evaluacionPolinizacion = EvaluacionPolinizacion(
                     fecha = informacionGeneral["etFecha"] as String,
                     hora = informacionGeneral["etHora"] as String,
-                    semana = informacionGeneral["etSemana"] as Int,
+                    semana = (informacionGeneral["etSemana"] as? Int) ?: throw IllegalArgumentException("Semana inválida"),
                     ubicacion = _ubicacion.value ?: "",
                     idEvaluador = _loggedInUser.value?.id ?: throw IllegalArgumentException("ID del evaluador no disponible"),
-                    idPolinizador = informacionGeneral["spinnerPolinizador"] as Int,
-                    lote = informacionGeneral["etLote"] as Int,
-                    seccion = informacionGeneral["etSeccion"] as Int,
-                    palma = informacionGeneral["etPalma"] as Int,
-                    inflorescencia = _inflorescencia.value ?: 0,
-                    antesis = detallesPolinizacion["antesis"] as Int,
-                    postAntesis = detallesPolinizacion["postAntesis"] as Int,
-                    antesisDejadas = detallesPolinizacion["antesisDejadas"] as Int,
-                    postAntesisDejadas = detallesPolinizacion["postAntesisDejadas"] as Int,
-                    espate = evaluacion["espate"] as Int,
-                    aplicacion = evaluacion["aplicacion"] as Int,
-                    marcacion = evaluacion["marcacion"] as Int,
-                    repaso1 = evaluacion["repaso1"] as Int,
-                    repaso2 = evaluacion["repaso2"] as Int,
+                    idPolinizador = (informacionGeneral["spinnerPolinizador"] as? Int) ?: throw IllegalArgumentException("ID del polinizador inválido"),
+                    lote = (informacionGeneral["etLote"] as? Int) ?: throw IllegalArgumentException("Lote inválido"),
+                    seccion = (informacionGeneral["etSeccion"] as? Int) ?: throw IllegalArgumentException("Sección inválida"),
+                    palma = informacionGeneral["etPalma"] as? Int,
+                    inflorescencia = _inflorescencia.value,
+                    antesis = detallesPolinizacion["antesis"] as? Int,
+                    postAntesis = detallesPolinizacion["postAntesis"] as? Int,
+                    antesisDejadas = detallesPolinizacion["antesisDejadas"] as? Int,
+                    postAntesisDejadas = detallesPolinizacion["postAntesisDejadas"] as? Int,
+                    espate = evaluacion["espate"] as? Int,
+                    aplicacion = evaluacion["aplicacion"] as? Int,
+                    marcacion = evaluacion["marcacion"] as? Int,
+                    repaso1 = evaluacion["repaso1"] as? Int,
+                    repaso2 = evaluacion["repaso2"] as? Int,
                     observaciones = evaluacion["observaciones"] as String
                 )
 
                 evaluacionRepository.insertEvaluacion(evaluacionPolinizacion)
                 _saveResult.value = true
-                Log.d("EvaluacionViewModel", "Evaluación guardada exitosamente. Inflorescencia: ${evaluacionPolinizacion.inflorescencia}")
+                Log.d("EvaluacionViewModel", "Evaluación guardada exitosamente.")
             } catch (e: Exception) {
                 _saveResult.value = false
-                Log.e("EvaluacionViewModel", "Error al guardar evaluación: ${e.message}")
+                Log.e("EvaluacionViewModel", "Error al guardar la evaluación: ${e.message}")
                 _errorMessage.value = e.message ?: "Error desconocido al guardar la evaluación"
             }
         }

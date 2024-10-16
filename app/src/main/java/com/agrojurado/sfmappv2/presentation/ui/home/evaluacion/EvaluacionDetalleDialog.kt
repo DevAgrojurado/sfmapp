@@ -26,6 +26,7 @@ class EvaluacionDetalleDialog(
         view.findViewById<TextView>(R.id.tvFecha).text = "Fecha: ${evaluacion.fecha}"
         view.findViewById<TextView>(R.id.tvHora).text = "Hora: ${evaluacion.hora}"
         view.findViewById<TextView>(R.id.tvSemana).text = "Semana: ${evaluacion.semana}"
+        view.findViewById<TextView>(R.id.tvUbicacion).text = "Ubicación: ${evaluacion.ubicacion}"
         view.findViewById<TextView>(R.id.tvEvaluador).text = "Evaluador: $nombreEvaluador"
         view.findViewById<TextView>(R.id.tvPolinizador).text = "Polinizador: $nombrePolinizador"
         view.findViewById<TextView>(R.id.tvLote).text = "Lote: ${evaluacion.lote}"

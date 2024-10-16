@@ -67,12 +67,12 @@ class DetallesPolinizacionFragment : Fragment() {
         editText.setText(count.toString())
     }
 
-    fun getValues(): Map<String, Any> {
+    fun getValues(): Map<String, Any?> {
         return mapOf(
-            "antesis" to (etAntesis.text.toString().toIntOrNull() ?: 0),
-            "postAntesis" to (etPostAntesis.text.toString().toIntOrNull() ?: 0),
-            "antesisDejadas" to (etAntesisDejadas.text.toString().toIntOrNull() ?: 0),
-            "postAntesisDejadas" to (etPostAntesisDejadas.text.toString().toIntOrNull() ?: 0)
+            "antesis" to etAntesis.text.toString().toIntOrNull(),
+            "postAntesis" to etPostAntesis.text.toString().toIntOrNull(),
+            "antesisDejadas" to etAntesisDejadas.text.toString().toIntOrNull(),
+            "postAntesisDejadas" to etPostAntesisDejadas.text.toString().toIntOrNull()
         )
     }
 }

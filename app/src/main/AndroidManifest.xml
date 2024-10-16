@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <application
         android:name=".SfmApp"
@@ -17,14 +18,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SfmAppV2"
         tools:targetApi="31">
-
+        <activity
+            android:name=".presentation.ui.home.listaevaluacion.ListaEvaluacionActivity"
+            android:exported="false" />
         <activity
             android:name=".presentation.ui.home.listaevaluacion.EvaluacionesPorSemanaActivity"
             android:exported="false" />
-        <activity
-            android:name=".presentation.ui.home.listaevaluacion.ListaEvaluacionActivity"
-            android:exported="false"
-            android:theme="@style/Theme.SfmAppV2" />
         <activity
             android:name=".presentation.ui.home.evaluacion.EvaluacionActivity"
             android:exported="false" />
