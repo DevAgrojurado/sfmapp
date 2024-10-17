@@ -2,53 +2,64 @@ package com.agrojurado.sfmappv2.presentation.ui.admin.operarios
 
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.MenuItem
+import android.view.Menu
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.Operario
 import com.agrojurado.sfmappv2.domain.model.Cargo
+import com.agrojurado.sfmappv2.presentation.ui.base.BaseActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class OperariosActivity : AppCompatActivity() {
+class OperariosActivity : BaseActivity() {
     private lateinit var addsBtn: FloatingActionButton
     private lateinit var recv: RecyclerView
     private lateinit var operariosAdapter: OperariosAdapter
     private val viewModel: OperariosViewModel by viewModels()
     private var cargosList: List<Cargo> = listOf()
 
+    override fun getLayoutResourceId(): Int = R.layout.activity_operarios
+    override fun getActivityTitle(): String = "Operarios"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_operarios)
 
+        initializeViews()
+        setupRecyclerView()
+        setupListeners()
+        observeOperarios()
+        observeCargos()
+    }
+
+    private fun initializeViews() {
         addsBtn = findViewById(R.id.addingBtnO)
         recv = findViewById(R.id.oRecycler)
+    }
 
+    private fun setupRecyclerView() {
         operariosAdapter = OperariosAdapter(this, ArrayList(), cargosList) { operario, action ->
             when (action) {
                 "update" -> updateOperario(operario)
                 "delete" -> deleteOperario(operario)
             }
         }
-
         recv.layoutManager = LinearLayoutManager(this)
         recv.adapter = operariosAdapter
+    }
 
+    private fun setupListeners() {
         addsBtn.setOnClickListener { addInfo() }
-
-        observeOperarios()
-        observeCargos()
     }
 
     private fun observeOperarios() {
@@ -149,13 +160,30 @@ class OperariosActivity : AppCompatActivity() {
         }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                true
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_search, menu)
+        val searchItem = menu.findItem(R.id.action_search)
+        val searchView = searchItem.actionView as SearchView
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
             }
-            else -> super.onOptionsItemSelected(item)
-        }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                filterOperarios(newText ?: "")
+                return true
+            }
+        })
+        return true
+    }
+
+    private fun filterOperarios(query: String) {
+        val filteredList = viewModel.operarios.value?.filter { operario ->
+            val cargoDescripcion = cargosList.find { it.id == operario.cargoId }?.descripcion ?: ""
+            operario.codigo.contains(query, ignoreCase = true) ||
+                    operario.nombre.contains(query, ignoreCase = true) ||
+                    cargoDescripcion.contains(query, ignoreCase = true)
+        } ?: emptyList()
+        operariosAdapter.updateOperarios(filteredList)
     }
 }

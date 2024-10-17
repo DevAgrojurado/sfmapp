@@ -27,6 +27,8 @@ object RoomModule {
             context,
             AppDatabase::class.java,
             DATABASE_NAME
+
+            // Solo purebas
         ).fallbackToDestructiveMigration()
             .build()
     }

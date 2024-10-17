@@ -74,14 +74,6 @@ class EvaluacionViewModel @Inject constructor(
 
     }
 
-    fun loadEvaluaciones() {
-        viewModelScope.launch {
-            evaluacionRepository.getEvaluaciones().collectLatest { evaluacionesList ->
-                _evaluaciones.value = evaluacionesList
-            }
-        }
-    }
-
     private fun loadLoggedInUser() {
         viewModelScope.launch {
             try {

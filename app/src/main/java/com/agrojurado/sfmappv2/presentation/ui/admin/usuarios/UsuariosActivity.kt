@@ -57,13 +57,6 @@ class UsuariosActivity : AppCompatActivity() {
         }
     }
 
-    //private fun updateUsuario(usuario: Usuario) {
-       // lifecycleScope.launch {
-         //   viewModel.updateUsuario(usuario)
-           // Toast.makeText(this@UsuariosActivity, "Usuario actualizado", Toast.LENGTH_SHORT).show()
-        //}
-    //}
-
     private fun deleteUsuario(usuario: Usuario) {
         lifecycleScope.launch {
             viewModel.deleteUsuario(usuario)

@@ -6,43 +6,53 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.Cargo
+import com.agrojurado.sfmappv2.presentation.ui.base.BaseActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class CargosActivity : AppCompatActivity() {
+class CargosActivity : BaseActivity() {
     private lateinit var addsBtn: FloatingActionButton
     private lateinit var recv: RecyclerView
     private lateinit var cargosAdapter: CargosAdapter
     private val viewModel: CargosViewModel by viewModels()
 
+    override fun getLayoutResourceId(): Int = R.layout.activity_cargos
+    override fun getActivityTitle(): String = "Cargos"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_cargos)
 
+        initializeViews()
+        setupRecyclerView()
+        setupListeners()
+        observeCargos()
+    }
+
+    private fun initializeViews() {
         addsBtn = findViewById(R.id.addingBtn)
         recv = findViewById(R.id.mRecycler)
+    }
 
+    private fun setupRecyclerView() {
         cargosAdapter = CargosAdapter(this, ArrayList()) { cargo, action ->
             when (action) {
                 "update" -> updateCargo(cargo)
                 "delete" -> deleteCargo(cargo)
             }
         }
-
         recv.layoutManager = LinearLayoutManager(this)
         recv.adapter = cargosAdapter
+    }
 
+    private fun setupListeners() {
         addsBtn.setOnClickListener { addInfo() }
-
-        observeCargos()
     }
 
     private fun observeCargos() {

@@ -2,49 +2,57 @@ package com.agrojurado.sfmappv2.presentation.ui.admin.areas
 
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.MenuItem
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.Area
-import com.agrojurado.sfmappv2.domain.model.Cargo
+import com.agrojurado.sfmappv2.presentation.ui.base.BaseActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
-class AreasActivity : AppCompatActivity() {
+class AreasActivity : BaseActivity() {
     private lateinit var addsBtn: FloatingActionButton
     private lateinit var recv: RecyclerView
     private lateinit var areasAdapter: AreasAdapter
     private val viewModel: AreasViewModel by viewModels()
 
+    override fun getLayoutResourceId(): Int = R.layout.activity_areas
+    override fun getActivityTitle(): String = "Áreas"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_areas)
 
+        initializeViews()
+        setupRecyclerView()
+        setupListeners()
+        observeAreas()
+    }
+
+    private fun initializeViews() {
         addsBtn = findViewById(R.id.addingBtn)
         recv = findViewById(R.id.aRecycler)
+    }
 
+    private fun setupRecyclerView() {
         areasAdapter = AreasAdapter(this, ArrayList()) { area, action ->
             when (action) {
                 "update" -> updateArea(area)
                 "delete" -> deleteArea(area)
             }
         }
-
         recv.layoutManager = LinearLayoutManager(this)
         recv.adapter = areasAdapter
+    }
 
+    private fun setupListeners() {
         addsBtn.setOnClickListener { addInfo() }
-
-        observeAreas()
     }
 
     private fun observeAreas() {
@@ -65,10 +73,10 @@ class AreasActivity : AppCompatActivity() {
             if (areaDescription.isNotEmpty()) {
                 lifecycleScope.launch {
                     viewModel.insertArea(Area(descripcion = areaDescription))
-                    Toast.makeText(this@AreasActivity, "Area agregada con éxito", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@AreasActivity, "Área agregada con éxito", Toast.LENGTH_SHORT).show()
                 }
             } else {
-                Toast.makeText(this, "Por favor ingresa un area", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Por favor ingresa un área", Toast.LENGTH_SHORT).show()
             }
             dialog.dismiss()
         }
@@ -79,24 +87,14 @@ class AreasActivity : AppCompatActivity() {
     private fun updateArea(area: Area) {
         lifecycleScope.launch {
             viewModel.updateArea(area)
-            Toast.makeText(this@AreasActivity, "Area actualizada", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@AreasActivity, "Área actualizada", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun deleteArea(area: Area) {
         lifecycleScope.launch {
             viewModel.deleteArea(area)
-            Toast.makeText(this@AreasActivity, "Area eliminada", Toast.LENGTH_SHORT).show()
-        }
-    }
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressed()
-                true
-            }
-
-            else -> super.onOptionsItemSelected(item)
+            Toast.makeText(this@AreasActivity, "Área eliminada", Toast.LENGTH_SHORT).show()
         }
     }
 }
