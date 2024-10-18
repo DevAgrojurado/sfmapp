@@ -1,6 +1,8 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
 
 import android.os.Bundle
+import android.view.View
+import android.widget.Button
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.core.view.ViewCompat
@@ -16,6 +18,8 @@ import dagger.hilt.android.AndroidEntryPoint
 class EvaluacionActivity : BaseActivity() {
     private lateinit var viewPager: ViewPager2
     private lateinit var tabLayout: TabLayout
+    private lateinit var btnBack: Button
+    private lateinit var btnForward: Button
     private val viewModel: EvaluacionViewModel by viewModels()
 
     override fun getLayoutResourceId(): Int = R.layout.activity_evaluacion
@@ -28,11 +32,14 @@ class EvaluacionActivity : BaseActivity() {
         setupViewPager()
         setupWindowInsets()
         setupObservers()
+        setupNavigation()
     }
 
     private fun initViews() {
         viewPager = findViewById(R.id.viewPager)
         tabLayout = findViewById(R.id.tabLayout)
+        btnBack = findViewById(R.id.btnBack)
+        btnForward = findViewById(R.id.btnForward)
     }
 
     private fun setupViewPager() {
@@ -40,12 +47,19 @@ class EvaluacionActivity : BaseActivity() {
         viewPager.adapter = adapter
 
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            tab.text = when (position + 1) {
-                1 -> "Información General"
-                2 -> "Detalles Polinizacion"
-                else -> "Evaluacion"
+            tab.text = when (position) {
+                0 -> "Información General"
+                1 -> "Detalles Polinizacion"
+                2 -> "Evaluacion"
+                else -> ""
             }
         }.attach()
+
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                updateNavigationButtons(position)
+            }
+        })
     }
 
     private fun setupWindowInsets() {
@@ -56,7 +70,46 @@ class EvaluacionActivity : BaseActivity() {
         }
     }
 
-    fun saveAllData() {
+    private fun setupNavigation() {
+        btnBack.setOnClickListener {
+            when (viewPager.currentItem) {
+                0 -> finish() // Go back to previous activity
+                else -> viewPager.currentItem = viewPager.currentItem - 1
+            }
+        }
+
+        btnForward.setOnClickListener {
+            if (viewPager.currentItem < 2) {
+                viewPager.currentItem = viewPager.currentItem + 1
+            } else {
+                saveAllData()
+            }
+        }
+
+        updateNavigationButtons(0)
+    }
+
+    private fun updateNavigationButtons(position: Int) {
+        when (position) {
+            0 -> {
+                btnBack.text = "Cerrar"
+                btnForward.text = "Siguiente"
+                btnForward.isEnabled = true
+            }
+            1 -> {
+                btnBack.text = "Atrás"
+                btnForward.text = "Siguiente"
+                btnForward.isEnabled = true
+            }
+            2 -> {
+                btnBack.text = "Atrás"
+                btnForward.text = "Guardar"
+                btnForward.isEnabled = true
+            }
+        }
+    }
+
+    private fun saveAllData() {
         val adapter = viewPager.adapter as EvaluacionPagerAdapter
         val informacionGeneralFragment = adapter.getFragment(0) as InformacionGeneralFragment
         val detallesPolinizacionFragment = adapter.getFragment(1) as DetallesPolinizacionFragment
@@ -92,4 +145,12 @@ class EvaluacionActivity : BaseActivity() {
     }
 
     override fun getToolbarColor(): Int = R.color.green // Replace with your desired color resource
+
+    override fun onBackPressed() {
+        if (viewPager.currentItem == 0) {
+            super.onBackPressed()
+        } else {
+            viewPager.currentItem = viewPager.currentItem - 1
+        }
+    }
 }

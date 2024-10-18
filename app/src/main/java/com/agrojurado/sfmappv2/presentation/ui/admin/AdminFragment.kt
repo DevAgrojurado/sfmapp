@@ -31,7 +31,7 @@ class AdminFragment : Fragment() {
 
         viewModel = ViewModelProvider(this).get(AdminViewModel::class.java)
 
-        // Encuentra tus TextViews
+        // Encuentra los TextViews
         val tvOperario: TextView = view.findViewById(R.id.tv_operario)
         val tvCargo: TextView = view.findViewById(R.id.tv_cargo)
         val tvUsuarios: TextView = view.findViewById(R.id.tv_usuarios)

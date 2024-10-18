@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
     android:fillViewport="true"
-    tools:context=".presentation.ui.home.evaluacion.DetallesPolinizacionFragment">
+    tools:context=".presentation.ui.home.evaluacion.">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -189,39 +189,6 @@
                 android:layout_height="wrap_content"
                 android:inputType="text"/>
         </com.google.android.material.textfield.TextInputLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="32dp" />
-
-        <LinearLayout
-            android:id="@+id/buttonLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btnAtras"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="8dp"
-                android:text="Atrás"
-                android:padding="12dp"
-                android:backgroundTint="#4CAF50"
-                android:textColor="#FFFFFF" />
-
-            <Button
-                android:id="@+id/btnSave"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="8dp"
-                android:text="Guardar"
-                android:padding="12dp"
-                android:backgroundTint="#4CAF50"
-                android:textColor="#FFFFFF" />
-        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

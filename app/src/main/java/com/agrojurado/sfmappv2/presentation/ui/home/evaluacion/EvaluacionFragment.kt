@@ -42,10 +42,6 @@ class EvaluacionFragment : Fragment() {
         initializeViews(view)
         setupListeners()
 
-        btnSave = view.findViewById(R.id.btnSave)
-        btnSave.setOnClickListener {
-            (activity as? EvaluacionActivity)?.saveAllData()
-        }
     }
 
     private fun initializeViews(view: View) {
