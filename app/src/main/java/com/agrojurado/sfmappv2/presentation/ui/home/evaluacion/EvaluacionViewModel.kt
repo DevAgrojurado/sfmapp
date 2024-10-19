@@ -71,7 +71,6 @@ class EvaluacionViewModel @Inject constructor(
         loadEvaluadorMap()
         loadLastUsedOperario()
         setCurrentWeek()
-
     }
 
     private fun loadLoggedInUser() {
@@ -109,7 +108,6 @@ class EvaluacionViewModel @Inject constructor(
         if (lastUsedId != null && operariosList != null) {
             val position = operariosList.indexOfFirst { it.second.id == lastUsedId }
             if (position != -1) {
-                // Notificamos al Fragment que debe actualizar la selección del spinner
                 _lastUsedOperarioId.value = lastUsedId
             }
         }
@@ -170,10 +168,22 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
-    fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int) {
+    fun checkPalmExists(semana: Int?, lote: Int?, palma: Int?, idPolinizador: Int?) {
         viewModelScope.launch {
-            val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador)
-            _palmExists.value = exists
+            try {
+                if (semana == null || lote == null || palma == null || idPolinizador == null) {
+                    _palmExists.value = false
+                    return@launch
+                }
+
+                val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador)
+                _palmExists.value = exists
+                Log.d("EvaluacionViewModel", "Palma existente: $exists (Semana: $semana, Lote: $lote, Palma: $palma, IdPolinizador: $idPolinizador)")
+            } catch (e: Exception) {
+                Log.e("EvaluacionViewModel", "Error al verificar la palma: ${e.message}")
+                _errorMessage.value = "Error al verificar la palma: ${e.message}"
+                _palmExists.value = false
+            }
         }
     }
 
@@ -192,8 +202,7 @@ class EvaluacionViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                // Validate required fields
-                val requiredFields = listOf("etFecha", "etHora", "etSemana", "spinnerPolinizador", "etLote", "etSeccion")
+                val requiredFields = listOf("etFecha", "etHora", "etSemana", "spinnerPolinizador", "etLote", "etSeccion", "etPalma")
                 for (field in requiredFields) {
                     if (informacionGeneral[field] == null) {
                         throw IllegalArgumentException("El campo $field es obligatorio")
@@ -208,18 +217,30 @@ class EvaluacionViewModel @Inject constructor(
                     throw IllegalArgumentException("Las observaciones son obligatorias")
                 }
 
-                // Handle the week conversion safely
+                val semana = (informacionGeneral["etSemana"] as? Int) ?: throw IllegalArgumentException("Semana inválida")
+                val lote = (informacionGeneral["etLote"] as? Int) ?: throw IllegalArgumentException("Lote inválido")
+                val palma = (informacionGeneral["etPalma"] as? Int) ?: throw IllegalArgumentException("Palma inválida")
+                val idPolinizador = (informacionGeneral["spinnerPolinizador"] as? Int) ?: throw IllegalArgumentException("ID del polinizador inválido")
+
+                // Verificar si la palma ya existe
+                val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador)
+                if (exists) {
+                    _palmExists.value = true
+                    _errorMessage.value = "Palma existente"
+                    _saveResult.value = false
+                    return@launch
+                }
 
                 val evaluacionPolinizacion = EvaluacionPolinizacion(
                     fecha = informacionGeneral["etFecha"] as String,
                     hora = informacionGeneral["etHora"] as String,
-                    semana = (informacionGeneral["etSemana"] as? Int) ?: throw IllegalArgumentException("Semana inválida"),
+                    semana = semana,
                     ubicacion = _ubicacion.value ?: "",
                     idEvaluador = _loggedInUser.value?.id ?: throw IllegalArgumentException("ID del evaluador no disponible"),
-                    idPolinizador = (informacionGeneral["spinnerPolinizador"] as? Int) ?: throw IllegalArgumentException("ID del polinizador inválido"),
-                    lote = (informacionGeneral["etLote"] as? Int) ?: throw IllegalArgumentException("Lote inválido"),
+                    idPolinizador = idPolinizador,
+                    lote = lote,
                     seccion = (informacionGeneral["etSeccion"] as? Int) ?: throw IllegalArgumentException("Sección inválida"),
-                    palma = informacionGeneral["etPalma"] as? Int,
+                    palma = palma,
                     inflorescencia = _inflorescencia.value,
                     antesis = detallesPolinizacion["antesis"] as? Int,
                     postAntesis = detallesPolinizacion["postAntesis"] as? Int,
@@ -235,6 +256,7 @@ class EvaluacionViewModel @Inject constructor(
 
                 evaluacionRepository.insertEvaluacion(evaluacionPolinizacion)
                 _saveResult.value = true
+                _palmExists.value = false
                 Log.d("EvaluacionViewModel", "Evaluación guardada exitosamente.")
             } catch (e: Exception) {
                 _saveResult.value = false

@@ -44,6 +44,10 @@ object RoomModule {
 
     @Singleton
     @Provides
+    fun provideFincaDao(db: AppDatabase): FincaDao = db.fincaDao()
+
+    @Singleton
+    @Provides
     fun provideOperarioDao(db: AppDatabase): OperarioDao = db.operarioDao()
 
     @Singleton
@@ -68,6 +72,12 @@ object RoomModule {
     @Provides
     fun provideCargoRepository(dao: CargoDao): CargoRepository {
         return CargoRepositoryImpl(dao)
+    }
+
+    @Singleton
+    @Provides
+    fun provideFinca(dao: FincaDao): FincaRepository {
+        return FincaRepositoryImpl(dao)
     }
 
     @Singleton

@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.presentation.ui.admin.areas.AreasActivity
 import com.agrojurado.sfmappv2.presentation.ui.admin.cargos.CargosActivity
+import com.agrojurado.sfmappv2.presentation.ui.admin.fincas.FincasActivity
 import com.agrojurado.sfmappv2.presentation.ui.admin.operarios.OperariosActivity
 import com.agrojurado.sfmappv2.presentation.ui.admin.usuarios.UsuariosActivity
 
@@ -36,6 +37,7 @@ class AdminFragment : Fragment() {
         val tvCargo: TextView = view.findViewById(R.id.tv_cargo)
         val tvUsuarios: TextView = view.findViewById(R.id.tv_usuarios)
         val tvAreas: TextView = view.findViewById(R.id.tv_areas)
+        val tvFincas: TextView = view.findViewById(R.id.tv_fincas)
 
         // Configura los OnClickListener
         tvCargo.setOnClickListener {
@@ -55,6 +57,10 @@ class AdminFragment : Fragment() {
 
         tvAreas.setOnClickListener {
             val intent = Intent(activity, AreasActivity::class.java)
+            startActivity(intent)
+        }
+        tvFincas.setOnClickListener {
+            val intent = Intent(activity, FincasActivity::class.java)
             startActivity(intent)
         }
     }

@@ -12,7 +12,6 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.Area
-import com.agrojurado.sfmappv2.domain.model.Cargo
 
 class AreasAdapter(
     private val context: Context,

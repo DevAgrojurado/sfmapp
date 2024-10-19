@@ -44,6 +44,11 @@
         <activity
             android:name=".presentation.ui.admin.cargos.CargosActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".presentation.ui.admin.fincas.FincasActivity"
+            android:exported="false" />
+
         <activity
             android:name=".presentation.ui.crearcuenta.CrearCuentaActivity"
             android:exported="false"

@@ -134,23 +134,8 @@ class EvaluacionActivity : BaseActivity() {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
             }
         }
-
-        viewModel.palmExists.observe(this) { exists ->
-            if (exists) {
-                Toast.makeText(this, "Esta palma ya ha sido registrada", Toast.LENGTH_LONG).show()
-            } else {
-                saveAllData()
-            }
-        }
     }
 
     override fun getToolbarColor(): Int = R.color.green // Replace with your desired color resource
 
-    override fun onBackPressed() {
-        if (viewPager.currentItem == 0) {
-            super.onBackPressed()
-        } else {
-            viewPager.currentItem = viewPager.currentItem - 1
-        }
-    }
 }

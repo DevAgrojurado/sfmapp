@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".presentation.ui.admin.cargos.CargosActivity">
+    tools:context=".presentation.ui.admin.cargos.FincasActivity">
 
     <LinearLayout
         android:orientation="vertical"

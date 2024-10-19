@@ -1,45 +1,43 @@
-package com.agrojurado.sfmappv2.presentation.ui.admin.cargos
+package com.agrojurado.sfmappv2.presentation.ui.admin.fincas
 
 import android.app.AlertDialog
 import android.content.Context
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
-import com.agrojurado.sfmappv2.databinding.AddItemBinding
-import com.agrojurado.sfmappv2.databinding.ListCargosBinding
-import com.agrojurado.sfmappv2.domain.model.Cargo
+import com.agrojurado.sfmappv2.databinding.ListFincasBinding
+import com.agrojurado.sfmappv2.databinding.AddFincaBinding
+import com.agrojurado.sfmappv2.domain.model.Finca
 
-class CargosAdapter(
+class FincasAdapter(
     private val context: Context,
-    private var cargosList: List<Cargo>,
-    private val onCargoAction: (Cargo, String) -> Unit
-) : RecyclerView.Adapter<CargosAdapter.CargoViewHolder>() {
+    private var fincasList: List<Finca>,
+    private val onFincaAction: (Finca, String) -> Unit
+) : RecyclerView.Adapter<FincasAdapter.FincaViewHolder>() {
 
-    inner class CargoViewHolder(val binding: ListCargosBinding) : RecyclerView.ViewHolder(binding.root) {
+    inner class FincaViewHolder(val binding: ListFincasBinding) : RecyclerView.ViewHolder(binding.root) {
         init {
             binding.mMenus.setOnClickListener { popupMenus(it) }
         }
 
-        private fun popupMenus(v: View) {
+        private fun popupMenus(v: android.view.View) {
             val position = adapterPosition
-            val cargo = cargosList[position]
+            val finca = fincasList[position]
             val popupMenus = PopupMenu(context, v)
             popupMenus.inflate(R.menu.show_menu)
             popupMenus.setOnMenuItemClickListener {
                 when (it.itemId) {
                     R.id.editText -> {
-                        val dialogBinding = AddItemBinding.inflate(LayoutInflater.from(context))
-                        dialogBinding.etCargo.setText(cargo .descripcion)
-
+                        val dialogBinding = AddFincaBinding.inflate(LayoutInflater.from(context))
+                        dialogBinding.etFinca.setText(finca.descripcion)
 
                         AlertDialog.Builder(context)
                             .setView(dialogBinding.root)
                             .setPositiveButton("OK") { dialog, _ ->
-                                cargo.descripcion = dialogBinding.etCargo.text.toString()
-                                onCargoAction(cargo, "update")
+                                finca.descripcion = dialogBinding.etFinca.text.toString()
+                                onFincaAction(finca, "update")
                                 notifyItemChanged(position)
                                 dialog.dismiss()
                             }
@@ -56,7 +54,7 @@ class CargosAdapter(
                             .setIcon(R.drawable.ic_warning)
                             .setMessage("¿Estás seguro que deseas realizar esta acción?")
                             .setPositiveButton("Sí") { dialog, _ ->
-                                onCargoAction(cargo, "delete")
+                                onFincaAction(finca, "delete")
                                 dialog.dismiss()
                             }
                             .setNegativeButton("No") { dialog, _ ->
@@ -73,20 +71,20 @@ class CargosAdapter(
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CargoViewHolder {
-        val binding = ListCargosBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return CargoViewHolder(binding)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FincaViewHolder {
+        val binding = ListFincasBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return FincaViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: CargoViewHolder, position: Int) {
-        val cargo = cargosList[position]
-        holder.binding.mTitle.text = cargo.descripcion
+    override fun onBindViewHolder(holder: FincaViewHolder, position: Int) {
+        val finca = fincasList[position]
+        holder.binding.mTitle.text = finca.descripcion
     }
 
-    override fun getItemCount(): Int = cargosList.size
+    override fun getItemCount(): Int = fincasList.size
 
-    fun updateCargos(newCargos: List<Cargo>) {
-        cargosList = newCargos
+    fun updateFincas(newFincas: List<Finca>) {
+        fincasList = newFincas
         notifyDataSetChanged()
     }
 }

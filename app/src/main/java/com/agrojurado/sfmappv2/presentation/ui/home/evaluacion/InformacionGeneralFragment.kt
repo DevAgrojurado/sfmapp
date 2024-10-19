@@ -121,6 +121,12 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
             tvTotalPalmas.text = "$total"
         }
 
+        viewModel.palmExists.observe(viewLifecycleOwner) { exists ->
+            if (exists) {
+                etPalma.setText("")
+            }
+        }
+
         viewModel.ubicacion.observe(viewLifecycleOwner) { ubicacion ->
             etUbicacion.setText(ubicacion)
         }

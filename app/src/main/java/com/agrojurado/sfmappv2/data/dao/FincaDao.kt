@@ -35,7 +35,7 @@ interface FincaDao {
     suspend fun getFincaPredeterminado(): FincaEntity?
 
     @Transaction
-    suspend fun indertFincaIfNotExists(finca: FincaEntity) {
+    suspend fun insertFincaIfNotExists(finca: FincaEntity) {
         val existingFinca = getFincaPredeterminado()
         if (existingFinca == null) {
             insertFinca(finca)
