@@ -39,17 +39,5 @@ class CargoRepositoryImpl @Inject constructor(
         cargoDao.deleteAllCargos()
     }
 
-    override suspend fun crearCargoPredeterminado() {
-        val cargoExistente = cargoDao.getCargoPredeterminado()
-        if (cargoExistente == null) {
-            val cargoPredeterminado = CargoEntity(
-                id = 0,
-                descripcion = "Cargo Predeterminado"
-            )
-            cargoDao.insertCargo(cargoPredeterminado)
-            println("Cargo predeterminado creado con éxito.")
-        } else {
-            println("El cargo predeterminado ya existe.")
-        }
-    }
+
 }

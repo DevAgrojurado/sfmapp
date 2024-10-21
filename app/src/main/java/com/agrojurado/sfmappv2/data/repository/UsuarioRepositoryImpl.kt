@@ -66,28 +66,6 @@ class UsuarioRepositoryImpl @Inject constructor(
         dao.delete(UsuarioMapper.toDatabase(usuario))
     }
 
-    override suspend fun crearUsuarioPredeterminado() {
-        try {
-            if (existsAccount() == 0) {
-                val usuarioPredeterminado = UsuarioEntity(
-                    codigo = "A760",
-                    nombre = "Root User",
-                    cedula = "1040381886",
-                    email = "suarezzdavid@gmail.com",
-                    clave = UtilsSecurity.createHashSha512("the-suarezz"),
-                    idCargo = 0,
-                    vigente = 1
-                )
-                dao.insert(usuarioPredeterminado)
-                println("Usuario predeterminado creado con éxito.")
-            } else {
-                println("El usuario predeterminado ya existe.")
-            }
-        } catch (e: Exception) {
-            println("Error al crear usuario predeterminado: ${e.message}")
-        }
-    }
-
     override suspend fun getLoggedInUserEmail(): String? {
         val sharedPreferences = context.getSharedPreferences("login_prefs", Context.MODE_PRIVATE)
         return sharedPreferences.getString("email_usuario", null)

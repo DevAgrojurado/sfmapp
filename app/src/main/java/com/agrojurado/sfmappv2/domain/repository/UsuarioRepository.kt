@@ -19,7 +19,7 @@ interface UsuarioRepository {
 
     suspend fun insertAccount(usuario: Usuario): Usuario?
 
-    suspend fun crearUsuarioPredeterminado()
+    //suspend fun crearUsuarioPredeterminado()
 
     fun getAllUsersUseCase(): Flow<List<Usuario>>
 

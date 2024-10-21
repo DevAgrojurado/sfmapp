@@ -1,8 +1,6 @@
 package com.agrojurado.sfmappv2.presentation.ui.crearcuenta
 
 import android.os.Bundle
-import android.view.View
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -30,88 +28,96 @@ class CrearCuentaActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupUI()
-        initListener()
-        initObserver()
+        setupListeners()
+        setupObservers()
         setupCargoSpinner()
     }
 
     private fun setupUI() {
-        binding.includeEditar.toolbar.title = "Crear Usuario"
-        binding.includeEditar.toolbar.subtitle = "Ingresa los datos del usuario"
+        binding.includeEditar.toolbar.apply {
+            title = "Crear Usuario"
+            subtitle = "Ingresa los datos del usuario"
+            setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        }
     }
 
-    private fun initListener() {
-        binding.includeEditar.toolbar.setNavigationOnClickListener {
-            onBackPressedDispatcher.onBackPressed()
-        }
-
+    private fun setupListeners() {
         binding.fabGrabar.setOnClickListener {
             UtilsCommon.hideKeyboard(this, it)
-
-            if (validateInputs()) {
-                createUser()
-            } else {
-                UtilsMessage.showAlertOk("Advertencia", "Todos los campos son obligatorios", this)
-            }
+            if (validateInputs()) createUser() else showValidationError()
         }
+    }
+
+    private fun setupObservers() {
+        viewModel.uiStateGrabar.observe(this, ::handleUiState)
+        viewModel.cargos.observe(this, ::updateCargosList)
     }
 
     private fun validateInputs(): Boolean {
-        return binding.etContraseA.text.toString().trim().isNotEmpty() &&
-                binding.etEmail.text.toString().trim().isNotEmpty() &&
-                binding.etCedula.text.toString().trim().isNotEmpty() &&
-                binding.etNombre.text.toString().trim().isNotEmpty() &&
-                binding.etCodigo.text.toString().trim().isNotEmpty() &&
-                binding.spinnerCargoU.selectedItemPosition != AdapterView.INVALID_POSITION
+        return binding.run {
+            etContraseA.text.toString().isNotBlank() &&
+                    etEmail.text.toString().isNotBlank() &&
+                    etCedula.text.toString().isNotBlank() &&
+                    etNombre.text.toString().isNotBlank() &&
+                    etCodigo.text.toString().isNotBlank()
+        }
     }
 
     private fun createUser() {
-        val selectedCargo = cargosList[binding.spinnerCargoU.selectedItemPosition]
+        val selectedCargoPosition = binding.spinnerCargoU.selectedItemPosition
+        val selectedCargo = if (selectedCargoPosition >= 0 && selectedCargoPosition < cargosList.size) {
+            cargosList[selectedCargoPosition]
+        } else null
 
         val nuevoUsuario = Usuario(
-            id = 0,
             codigo = binding.etCodigo.text.toString().trim(),
             nombre = binding.etNombre.text.toString().trim(),
             cedula = binding.etCedula.text.toString().trim(),
             email = binding.etEmail.text.toString().trim(),
             clave = UtilsSecurity.createHashSha512(binding.etContraseA.text.toString().trim()),
-            idCargo = selectedCargo.id,
+            idCargo = selectedCargo?.id,
             vigente = 1
         )
 
         viewModel.grabarCuenta(nuevoUsuario)
     }
 
-    private fun initObserver() {
-        viewModel.uiStateGrabar.observe(this) { state ->
-            when (state) {
-                is UiState.Error -> {
-                    binding.progressBar.isVisible = false
-                    UtilsMessage.showAlertOk("Error", state.message, this)
-                    viewModel.resetUiStateGrabar()
-                }
-                UiState.Loading -> binding.progressBar.isVisible = true
-                is UiState.Success -> {
-                    binding.progressBar.isVisible = false
-                    if (state.data != null) {
-                        UtilsMessage.showToast(this, "Usuario creado con éxito")
-                        finish()
-                    }
-                }
-                null -> Unit
+    private fun handleUiState(state: UiState<Usuario?>?) {
+        when (state) {
+            is UiState.Error -> {
+                binding.progressBar.isVisible = false
+                UtilsMessage.showAlertOk("Error", state.message, this)
+                viewModel.resetUiStateGrabar()
             }
+            UiState.Loading -> binding.progressBar.isVisible = true
+            is UiState.Success -> {
+                binding.progressBar.isVisible = false
+                if (state.data != null) {
+                    UtilsMessage.showToast(this, "Usuario creado con éxito")
+                    finish()
+                }
+            }
+            null -> Unit
         }
+    }
 
-        viewModel.cargos.observe(this) { cargos ->
-            cargosList = cargos
-            cargoAdapter.clear()
-            cargoAdapter.addAll(cargos.map { it.descripcion })
-        }
+    private fun updateCargosList(cargos: List<Cargo>) {
+        cargosList = cargos
+        cargoAdapter.clear()
+        cargoAdapter.addAll(cargos.map { it.descripcion })
     }
 
     private fun setupCargoSpinner() {
         cargoAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf())
         cargoAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerCargoU.adapter = cargoAdapter
+    }
+
+    private fun showValidationError() {
+        UtilsMessage.showAlertOk(
+            "Advertencia",
+            "Todos los campos son obligatorios excepto el cargo",
+            this
+        )
     }
 }

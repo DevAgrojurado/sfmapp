@@ -5,6 +5,6 @@ import javax.inject.Inject
 
 class CrearCargoPredeterminadoUseCase @Inject constructor(private val repository: CargoRepository) {
     suspend operator fun invoke() {
-        repository.crearCargoPredeterminado()
+        //repository.crearCargoPredeterminado()
     }
 }

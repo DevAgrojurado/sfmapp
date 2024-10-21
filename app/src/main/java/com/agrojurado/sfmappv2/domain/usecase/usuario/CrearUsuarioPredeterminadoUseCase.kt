@@ -4,6 +4,6 @@ import javax.inject.Inject
 
 class CrearUsuarioPredeterminadoUseCase @Inject constructor(private val repository: UsuarioRepository) {
     suspend operator fun invoke() {
-        repository.crearUsuarioPredeterminado()
+       // repository.crearUsuarioPredeterminado()
     }
 }
