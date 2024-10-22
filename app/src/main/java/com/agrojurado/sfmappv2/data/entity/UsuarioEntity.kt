@@ -8,13 +8,31 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "usuario",
-    foreignKeys = [ForeignKey(
+        indices = [
+            Index(value = ["idCargo"]),
+            Index(value = ["idArea"])
+
+    ],
+    foreignKeys = [
+        ForeignKey(
         entity = CargoEntity::class,
         parentColumns = ["id"],
         childColumns = ["idCargo"],
         onDelete = ForeignKey.NO_ACTION
-    )],
-    indices = [Index(value = ["idCargo"])]
+        ),
+        ForeignKey(
+            entity = OperarioEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["idArea"],
+            onDelete = ForeignKey.NO_ACTION
+        ),
+        ForeignKey(
+            entity = OperarioEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["idFinca"],
+            onDelete = ForeignKey.NO_ACTION
+        )
+    ]
 )
 data class UsuarioEntity(
     @PrimaryKey(autoGenerate = true)
@@ -25,5 +43,7 @@ data class UsuarioEntity(
     @ColumnInfo(name = "email") val email: String,
     @ColumnInfo(name = "clave") val clave: String,
     @ColumnInfo(name = "idCargo") val idCargo: Int?,
+    @ColumnInfo(name = "idArea") val idArea: Int?,
+    @ColumnInfo(name = "idFinca") val idFinca: Int?,
     @ColumnInfo(name = "vigente") val vigente: Int = 0
 )

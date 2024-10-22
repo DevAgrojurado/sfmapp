@@ -13,13 +13,17 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
+import com.agrojurado.sfmappv2.domain.model.Area
 import com.agrojurado.sfmappv2.domain.model.Cargo
+import com.agrojurado.sfmappv2.domain.model.Finca
 import com.agrojurado.sfmappv2.domain.model.Operario
 
 class OperariosAdapter(
     private val context: Context,
     private var operariosList: List<Operario>,
     private var cargosList: List<Cargo>,
+    private var areasList: List<Area>,
+    private var fincasList: List<Finca>,
     private val onOperarioAction: (Operario, String) -> Unit
 ) : RecyclerView.Adapter<OperariosAdapter.OperarioViewHolder>() {
 
@@ -45,16 +49,19 @@ class OperariosAdapter(
                         val etCodigo = dialogView.findViewById<EditText>(R.id.et_codigo)
                         val etNombre = dialogView.findViewById<EditText>(R.id.et_nombre)
                         val spinnerCargo = dialogView.findViewById<Spinner>(R.id.spinnerCargo)
+                        val spinnerArea = dialogView.findViewById<Spinner>(R.id.spinnerArea)
+                        val spinnerFinca = dialogView.findViewById<Spinner>(R.id.spinnerFinca)
 
                         etCodigo.setText(operario.codigo)
                         etNombre.setText(operario.nombre)
 
-                        val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, cargosList.map { it.descripcion })
-                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                        spinnerCargo.adapter = adapter
+                        setupSpinner(spinnerCargo, cargosList.map { it.descripcion })
+                        setupSpinner(spinnerArea, areasList.map { it.descripcion })
+                        setupSpinner(spinnerFinca, fincasList.map { it.descripcion })
 
-                        val cargoIndex = cargosList.indexOfFirst { it.id == operario.cargoId }
-                        spinnerCargo.setSelection(cargoIndex)
+                        setSpinnerSelection(spinnerCargo, cargosList, operario.cargoId)
+                        setSpinnerSelection(spinnerArea, areasList, operario.areaId)
+                        setSpinnerSelection(spinnerFinca, fincasList, operario.fincaId)
 
                         AlertDialog.Builder(context)
                             .setView(dialogView)
@@ -62,6 +69,8 @@ class OperariosAdapter(
                                 operario.codigo = etCodigo.text.toString()
                                 operario.nombre = etNombre.text.toString()
                                 operario.cargoId = cargosList[spinnerCargo.selectedItemPosition].id
+                                operario.areaId = areasList[spinnerArea.selectedItemPosition].id
+                                operario.fincaId = fincasList[spinnerFinca.selectedItemPosition].id
                                 onOperarioAction(operario, "update")
                                 notifyItemChanged(position)
                                 dialog.dismiss()
@@ -115,5 +124,28 @@ class OperariosAdapter(
     fun setCargos(cargos: List<Cargo>) {
         this.cargosList = cargos
         notifyDataSetChanged()
+    }
+
+    fun setAreas(areas: List<Area>) {
+        this.areasList = areas
+        notifyDataSetChanged()
+    }
+
+    fun setFincas(fincas: List<Finca>) {
+        this.fincasList = fincas
+        notifyDataSetChanged()
+    }
+
+    private fun setupSpinner(spinner: Spinner, items: List<String>) {
+        val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_item, items)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinner.adapter = adapter
+    }
+
+    private fun <T> setSpinnerSelection(spinner: Spinner, list: List<T>, id: Int) {
+        val position = list.indexOfFirst { (it as? Cargo)?.id == id || (it as? Area)?.id == id || (it as? Finca)?.id == id }
+        if (position != -1) {
+            spinner.setSelection(position)
+        }
     }
 }

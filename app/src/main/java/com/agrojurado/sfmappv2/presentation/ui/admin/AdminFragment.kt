@@ -12,6 +12,7 @@ import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.presentation.ui.admin.areas.AreasActivity
 import com.agrojurado.sfmappv2.presentation.ui.admin.cargos.CargosActivity
 import com.agrojurado.sfmappv2.presentation.ui.admin.fincas.FincasActivity
+import com.agrojurado.sfmappv2.presentation.ui.admin.lotes.LotesActivity
 import com.agrojurado.sfmappv2.presentation.ui.admin.operarios.OperariosActivity
 import com.agrojurado.sfmappv2.presentation.ui.admin.usuarios.UsuariosActivity
 
@@ -38,6 +39,7 @@ class AdminFragment : Fragment() {
         val tvUsuarios: TextView = view.findViewById(R.id.tv_usuarios)
         val tvAreas: TextView = view.findViewById(R.id.tv_areas)
         val tvFincas: TextView = view.findViewById(R.id.tv_fincas)
+        val tvLotes: TextView = view.findViewById(R.id.tv_lotes)
 
         // Configura los OnClickListener
         tvCargo.setOnClickListener {
@@ -61,6 +63,10 @@ class AdminFragment : Fragment() {
         }
         tvFincas.setOnClickListener {
             val intent = Intent(activity, FincasActivity::class.java)
+            startActivity(intent)
+        }
+        tvLotes.setOnClickListener {
+            val intent = Intent(activity, LotesActivity::class.java)
             startActivity(intent)
         }
     }

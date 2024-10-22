@@ -6,7 +6,9 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.agrojurado.sfmappv2.databinding.ActivityCrearCuentaBinding
+import com.agrojurado.sfmappv2.domain.model.Area
 import com.agrojurado.sfmappv2.domain.model.Cargo
+import com.agrojurado.sfmappv2.domain.model.Finca
 import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.presentation.common.UiState
 import dagger.hilt.android.AndroidEntryPoint
@@ -20,7 +22,12 @@ class CrearCuentaActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCrearCuentaBinding
     private val viewModel: CrearCuentaViewModel by viewModels()
     private lateinit var cargoAdapter: ArrayAdapter<String>
+    private lateinit var areaAdapter: ArrayAdapter<String>
+    private lateinit var fincaAdapter: ArrayAdapter<String>
+
     private var cargosList: List<Cargo> = listOf()
+    private var areasList: List<Area> = listOf()
+    private var fincasList: List<Finca> = listOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,6 +38,8 @@ class CrearCuentaActivity : AppCompatActivity() {
         setupListeners()
         setupObservers()
         setupCargoSpinner()
+        setupAreaSpinner()
+        setupFincaSpinner()
     }
 
     private fun setupUI() {
@@ -51,6 +60,8 @@ class CrearCuentaActivity : AppCompatActivity() {
     private fun setupObservers() {
         viewModel.uiStateGrabar.observe(this, ::handleUiState)
         viewModel.cargos.observe(this, ::updateCargosList)
+        viewModel.areas.observe(this, ::updateAreasList)
+        viewModel.fincas.observe(this, ::updateFincasList)
     }
 
     private fun validateInputs(): Boolean {
@@ -65,8 +76,19 @@ class CrearCuentaActivity : AppCompatActivity() {
 
     private fun createUser() {
         val selectedCargoPosition = binding.spinnerCargoU.selectedItemPosition
+        val selectedAreaPosition = binding.spinnerAreaU.selectedItemPosition
+        val selectedFincaPosition = binding.spinnerFincaU.selectedItemPosition
+
         val selectedCargo = if (selectedCargoPosition >= 0 && selectedCargoPosition < cargosList.size) {
             cargosList[selectedCargoPosition]
+        } else null
+
+        val selectedArea = if (selectedAreaPosition >= 0 && selectedAreaPosition < areasList.size) {
+            areasList[selectedAreaPosition]
+        } else null
+
+        val selectedFinca = if (selectedFincaPosition >= 0 && selectedFincaPosition < fincasList.size) {
+            fincasList[selectedFincaPosition]
         } else null
 
         val nuevoUsuario = Usuario(
@@ -76,6 +98,8 @@ class CrearCuentaActivity : AppCompatActivity() {
             email = binding.etEmail.text.toString().trim(),
             clave = UtilsSecurity.createHashSha512(binding.etContraseA.text.toString().trim()),
             idCargo = selectedCargo?.id,
+            idArea = selectedArea?.id,
+            idFinca = selectedFinca?.id,
             vigente = 1
         )
 
@@ -107,16 +131,40 @@ class CrearCuentaActivity : AppCompatActivity() {
         cargoAdapter.addAll(cargos.map { it.descripcion })
     }
 
+    private fun updateAreasList(areas: List<Area>) {
+        areasList = areas
+        areaAdapter.clear()
+        areaAdapter.addAll(areas.map { it.descripcion })
+    }
+
+    private fun updateFincasList(fincas: List<Finca>) {
+        fincasList = fincas
+        fincaAdapter.clear()
+        fincaAdapter.addAll(fincas.map { it.descripcion })
+    }
+
     private fun setupCargoSpinner() {
         cargoAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf())
         cargoAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerCargoU.adapter = cargoAdapter
     }
 
+    private fun setupAreaSpinner() {
+        areaAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf())
+        areaAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerAreaU.adapter = areaAdapter
+    }
+
+    private fun setupFincaSpinner(){
+        fincaAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf())
+        fincaAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerFincaU.adapter = fincaAdapter
+    }
+
     private fun showValidationError() {
         UtilsMessage.showAlertOk(
             "Advertencia",
-            "Todos los campos son obligatorios excepto el cargo",
+            "Complete los campos obligatorios",
             this
         )
     }

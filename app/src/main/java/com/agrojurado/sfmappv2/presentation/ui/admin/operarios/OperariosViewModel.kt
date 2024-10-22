@@ -4,9 +4,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.agrojurado.sfmappv2.domain.model.Area
 import com.agrojurado.sfmappv2.domain.model.Cargo
+import com.agrojurado.sfmappv2.domain.model.Finca
 import com.agrojurado.sfmappv2.domain.model.Operario
-import com.agrojurado.sfmappv2.domain.repository.CargoRepository // Asegúrate de que esto exista
+import com.agrojurado.sfmappv2.domain.repository.AreaRepository
+import com.agrojurado.sfmappv2.domain.repository.CargoRepository
+import com.agrojurado.sfmappv2.domain.repository.FincaRepository
 import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -15,12 +19,15 @@ import javax.inject.Inject
 @HiltViewModel
 class OperariosViewModel @Inject constructor(
     private val operarioRepository: OperarioRepository,
-    private val cargoRepository: CargoRepository // Asegúrate de tener un repositorio para cargos
+    private val cargoRepository: CargoRepository,
+    private val areaRepository: AreaRepository,
+    private val fincaRepository: FincaRepository
 ) : ViewModel() {
 
     val operarios = operarioRepository.getAllOperarios().asLiveData()
-
-    val cargos: LiveData<List<Cargo>> = cargoRepository.getAllCargos().asLiveData() // Obtener cargos
+    val cargos: LiveData<List<Cargo>> = cargoRepository.getAllCargos().asLiveData()
+    val areas: LiveData<List<Area>> = areaRepository.getAllAreas().asLiveData()
+    val fincas: LiveData<List<Finca>> = fincaRepository.getAllFincas().asLiveData()
 
     fun insertOperario(operario: Operario) = viewModelScope.launch {
         operarioRepository.insertOperario(operario)

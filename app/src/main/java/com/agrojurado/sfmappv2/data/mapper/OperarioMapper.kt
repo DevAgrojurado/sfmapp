@@ -9,7 +9,9 @@ object OperarioMapper {
             id = entity.id,
             codigo = entity.codigo,
             nombre = entity.nombre,
-            cargoId = entity.cargoId // Relación a Cargo
+            cargoId = entity.cargoId,
+            areaId = entity.areaId,
+            fincaId = entity.fincaId
         )
     }
 
@@ -18,7 +20,9 @@ object OperarioMapper {
             id = domain.id,
             codigo = domain.codigo,
             nombre = domain.nombre,
-            cargoId = domain.cargoId // Relación a Cargo
+            cargoId = domain.cargoId,
+            areaId = domain.areaId,
+            fincaId = domain.fincaId
         )
     }
 }

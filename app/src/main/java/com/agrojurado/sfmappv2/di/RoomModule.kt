@@ -58,6 +58,10 @@ object RoomModule {
     @Provides
     fun provideEvaluacionDao(db: AppDatabase): EvaluacionPolinizacionDao = db.evaluacionDao()
 
+    @Singleton
+    @Provides
+    fun provideLoteDao(db: AppDatabase): LoteDao = db.loteDao()
+
     // Proveer Repositorios
     @Singleton
     @Provides
@@ -98,5 +102,11 @@ object RoomModule {
         dao: EvaluacionPolinizacionDao
     ): EvaluacionPolinizacionRepository {
         return EvaluacionPolinizacionRepositoryImpl(dao)
+    }
+
+    @Singleton
+    @Provides
+    fun provideLoteRepository(dao: LoteDao): LoteRepository {
+        return LoteRepositoryImpl(dao)
     }
 }

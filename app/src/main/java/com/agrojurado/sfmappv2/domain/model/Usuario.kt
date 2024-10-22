@@ -8,5 +8,7 @@ data class Usuario(
     var email: String="",
     var clave: String="",
     var idCargo: Int?,
+    var idArea: Int?,
+    var idFinca: Int?,
     var vigente: Int=0
 )

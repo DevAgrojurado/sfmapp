@@ -6,6 +6,7 @@ import com.agrojurado.sfmappv2.data.dao.AreaDao
 import com.agrojurado.sfmappv2.data.dao.CargoDao
 import com.agrojurado.sfmappv2.data.dao.EvaluacionPolinizacionDao
 import com.agrojurado.sfmappv2.data.dao.FincaDao
+import com.agrojurado.sfmappv2.data.dao.LoteDao
 import com.agrojurado.sfmappv2.data.dao.OperarioDao
 import com.agrojurado.sfmappv2.data.dao.UsuarioDao
 import com.agrojurado.sfmappv2.data.entity.AreaEntity
@@ -39,4 +40,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun areaDao(): AreaDao
     abstract fun evaluacionDao(): EvaluacionPolinizacionDao
     abstract fun fincaDao(): FincaDao
+    abstract fun loteDao(): LoteDao
 }

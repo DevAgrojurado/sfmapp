@@ -8,13 +8,31 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "operario",
-    foreignKeys = [ForeignKey(
+    foreignKeys = [
+        ForeignKey(
         entity = CargoEntity::class,
         parentColumns = ["id"],
         childColumns = ["cargoId"],
         onDelete = ForeignKey.NO_ACTION
-    )],
-    indices = [Index(value = ["cargoId"])]
+    ),
+    ForeignKey(
+        entity = AreaEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["areaId"],
+        onDelete = ForeignKey.NO_ACTION
+    ),
+    ForeignKey(
+        entity = FincaEntity::class,
+        parentColumns = ["id"],
+        childColumns = ["fincaId"],
+        onDelete = ForeignKey.NO_ACTION
+    ),
+],
+    indices = [
+        Index(value = ["cargoId"]),
+        Index(value = ["areaId"]),
+        Index(value = ["fincaId"])
+    ]
 )
 data class OperarioEntity(
     @PrimaryKey(autoGenerate = true)
@@ -22,5 +40,8 @@ data class OperarioEntity(
     @ColumnInfo(name = "codigo") var codigo: String,
     @ColumnInfo(name = "nombre") var nombre: String,
     @ColumnInfo(name = "vigente") val vigente: Int = 0,
-    @ColumnInfo(name = "cargoId") val cargoId: Int
+    @ColumnInfo(name = "cargoId") val cargoId: Int,
+    @ColumnInfo(name = "areaId") val areaId: Int,
+    @ColumnInfo(name = "fincaId") val fincaId: Int
+
 )

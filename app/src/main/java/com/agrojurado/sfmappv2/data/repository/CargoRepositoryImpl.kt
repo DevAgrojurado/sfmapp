@@ -38,6 +38,4 @@ class CargoRepositoryImpl @Inject constructor(
     override suspend fun deleteAllCargos() {
         cargoDao.deleteAllCargos()
     }
-
-
 }
