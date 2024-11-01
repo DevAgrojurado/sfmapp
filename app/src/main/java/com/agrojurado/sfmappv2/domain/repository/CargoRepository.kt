@@ -16,5 +16,7 @@ interface CargoRepository {
 
     suspend fun deleteAllCargos()
 
-    //suspend fun crearCargoPredeterminado()
+    suspend fun fullSync(): Boolean
+
+    suspend fun syncCargos()
 }

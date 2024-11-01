@@ -1,7 +1,7 @@
-package com.agrojurado.sfmappv2.data.dao
+package com.agrojurado.sfmappv2.data.local.dao
 
 import androidx.room.*
-import com.agrojurado.sfmappv2.data.entity.EvaluacionPolinizacionEntity
+import com.agrojurado.sfmappv2.data.local.entity.EvaluacionPolinizacionEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -24,6 +24,6 @@ interface EvaluacionPolinizacionDao {
     @Query("SELECT * FROM evaluacionpolinizacion ORDER BY id DESC LIMIT 1")
     suspend fun getLastEvaluacion(): EvaluacionPolinizacionEntity?
 
-    @Query("SELECT COUNT(*) FROM evaluacionpolinizacion WHERE semana = :semana AND lote = :lote AND palma = :palma AND idPolinizador = :idPolinizador")
-    suspend fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int): Int
+    @Query("SELECT COUNT(*) FROM evaluacionpolinizacion WHERE semana = :semana AND idlote = :idlote AND palma = :palma AND idPolinizador = :idPolinizador")
+    suspend fun checkPalmExists(semana: Int, idlote: Int, palma: Int, idPolinizador: Int): Int
 }

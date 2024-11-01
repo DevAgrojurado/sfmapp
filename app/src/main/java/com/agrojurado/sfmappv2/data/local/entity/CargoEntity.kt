@@ -1,13 +1,13 @@
-package com.agrojurado.sfmappv2.data.entity
+package com.agrojurado.sfmappv2.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "finca",
+    tableName = "cargo",
 )
-data class FincaEntity(
+data class  CargoEntity(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id") var id: Int = 0,
     @ColumnInfo(name = "descripcion") var descripcion: String = ""

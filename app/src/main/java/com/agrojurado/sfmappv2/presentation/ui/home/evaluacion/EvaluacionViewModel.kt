@@ -11,6 +11,8 @@ import com.agrojurado.sfmappv2.domain.repository.EvaluacionPolinizacionRepositor
 import com.agrojurado.sfmappv2.domain.model.Operario
 import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
+import com.agrojurado.sfmappv2.domain.model.Lote
+import com.agrojurado.sfmappv2.domain.repository.LoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -21,6 +23,7 @@ import javax.inject.Inject
 class EvaluacionViewModel @Inject constructor(
     private val usuarioRepository: UsuarioRepository,
     private val operarioRepository: OperarioRepository,
+    private val loteRepository: LoteRepository,
     private val evaluacionRepository: EvaluacionPolinizacionRepository
 ) : ViewModel() {
 
@@ -65,11 +68,18 @@ class EvaluacionViewModel @Inject constructor(
 
     private val _inflorescencia = MutableLiveData<Int>()
 
+    private val _lotes = MutableLiveData<List<Pair<String, Lote>>>()
+    val lotes: LiveData<List<Pair<String, Lote>>> = _lotes
+
+    private val _lastUsedLoteId = MutableLiveData<Int?>()
+    val lastUsedLoteId: LiveData<Int?> = _lastUsedLoteId
+
     init {
         loadLoggedInUser()
         loadOperarioMap()
         loadEvaluadorMap()
         loadLastUsedOperario()
+        loadLastUsedLote()
         setCurrentWeek()
     }
 
@@ -102,6 +112,17 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
+    fun loadLotes() {
+        viewModelScope.launch {
+            loteRepository.getAllLotes().collectLatest { lotesList ->
+                _lotes.value = lotesList.map { lote ->
+                    "Lote ${lote.descripcion}" to lote
+                }
+                selectLastUsedLote()
+            }
+        }
+    }
+
     private fun selectLastUsedOperario() {
         val lastUsedId = _lastUsedOperarioId.value
         val operariosList = _operarios.value
@@ -109,6 +130,17 @@ class EvaluacionViewModel @Inject constructor(
             val position = operariosList.indexOfFirst { it.second.id == lastUsedId }
             if (position != -1) {
                 _lastUsedOperarioId.value = lastUsedId
+            }
+        }
+    }
+
+    private fun selectLastUsedLote() {
+        val lastUsedId = _lastUsedLoteId.value
+        val lotesList = _lotes.value
+        if (lastUsedId != null && lotesList != null) {
+            val position = lotesList.indexOfFirst { it.second.id == lastUsedId }
+            if (position != -1) {
+                _lastUsedLoteId.value = lastUsedId
             }
         }
     }
@@ -168,6 +200,18 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
+    private fun loadLastUsedLote() {
+        viewModelScope.launch {
+            try {
+                val lastEvaluacion = evaluacionRepository.getLastEvaluacion()
+                _lastUsedLoteId.value = lastEvaluacion?.idlote
+                Log.d("EvaluacionViewModel", "Último lote cargado: ${lastEvaluacion?.idlote}")
+            } catch (e: Exception) {
+                Log.e("EvaluacionViewModel", "Error al cargar el último lote: ${e.message}")
+            }
+        }
+    }
+
     fun checkPalmExists(semana: Int?, lote: Int?, palma: Int?, idPolinizador: Int?) {
         viewModelScope.launch {
             try {
@@ -202,7 +246,7 @@ class EvaluacionViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val requiredFields = listOf("etFecha", "etHora", "etSemana", "spinnerPolinizador", "etLote", "etSeccion", "etPalma")
+                val requiredFields = listOf("etFecha", "etHora", "etSemana", "spinnerPolinizador", "spinnerLote", "etSeccion", "etPalma")
                 for (field in requiredFields) {
                     if (informacionGeneral[field] == null) {
                         throw IllegalArgumentException("El campo $field es obligatorio")
@@ -218,7 +262,7 @@ class EvaluacionViewModel @Inject constructor(
                 }
 
                 val semana = (informacionGeneral["etSemana"] as? Int) ?: throw IllegalArgumentException("Semana inválida")
-                val lote = (informacionGeneral["etLote"] as? Int) ?: throw IllegalArgumentException("Lote inválido")
+                val lote = (informacionGeneral["spinnerLote"] as? Int) ?: throw IllegalArgumentException("Lote inválido")
                 val palma = (informacionGeneral["etPalma"] as? Int) ?: throw IllegalArgumentException("Palma inválida")
                 val idPolinizador = (informacionGeneral["spinnerPolinizador"] as? Int) ?: throw IllegalArgumentException("ID del polinizador inválido")
 
@@ -238,7 +282,7 @@ class EvaluacionViewModel @Inject constructor(
                     ubicacion = _ubicacion.value ?: "",
                     idEvaluador = _loggedInUser.value?.id ?: throw IllegalArgumentException("ID del evaluador no disponible"),
                     idPolinizador = idPolinizador,
-                    lote = lote,
+                    idlote = lote,
                     seccion = (informacionGeneral["etSeccion"] as? Int) ?: throw IllegalArgumentException("Sección inválida"),
                     palma = palma,
                     inflorescencia = _inflorescencia.value,

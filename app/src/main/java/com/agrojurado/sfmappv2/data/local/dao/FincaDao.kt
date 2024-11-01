@@ -1,7 +1,7 @@
-package com.agrojurado.sfmappv2.data.dao
+package com.agrojurado.sfmappv2.data.local.dao
 
 import androidx.room.*
-import com.agrojurado.sfmappv2.data.entity.FincaEntity
+import com.agrojurado.sfmappv2.data.local.entity.FincaEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -28,18 +28,5 @@ interface FincaDao {
     @Query("SELECT COUNT(*) FROM finca")
     suspend fun CountFincas(): Int
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertIfNotExists(finca: FincaEntity) : Long
-
-    @Query("SELECT * FROM cargo WHERE id = 0 LIMIT 1")
-    suspend fun getFincaPredeterminado(): FincaEntity?
-
-    @Transaction
-    suspend fun insertFincaIfNotExists(finca: FincaEntity) {
-        val existingFinca = getFincaPredeterminado()
-        if (existingFinca == null) {
-            insertFinca(finca)
-        }
-    }
 }
 

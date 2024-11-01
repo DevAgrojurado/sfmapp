@@ -1,7 +1,7 @@
 package com.agrojurado.sfmappv2.data.repository
 
 import android.content.Context
-import com.agrojurado.sfmappv2.data.dao.UsuarioDao
+import com.agrojurado.sfmappv2.data.local.dao.UsuarioDao
 import com.agrojurado.sfmappv2.data.mapper.UsuarioMapper
 import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository

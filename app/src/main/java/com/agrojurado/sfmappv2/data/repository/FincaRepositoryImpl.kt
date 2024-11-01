@@ -1,8 +1,8 @@
 package com.agrojurado.sfmappv2.data.repository
 
-import com.agrojurado.sfmappv2.data.dao.CargoDao
-import com.agrojurado.sfmappv2.data.dao.FincaDao
-import com.agrojurado.sfmappv2.data.entity.CargoEntity
+import com.agrojurado.sfmappv2.data.local.dao.CargoDao
+import com.agrojurado.sfmappv2.data.local.dao.FincaDao
+import com.agrojurado.sfmappv2.data.local.entity.CargoEntity
 import com.agrojurado.sfmappv2.data.mapper.CargoMapper
 import com.agrojurado.sfmappv2.data.mapper.FincaMapper
 import com.agrojurado.sfmappv2.domain.model.Cargo

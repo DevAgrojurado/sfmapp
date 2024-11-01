@@ -42,7 +42,7 @@ class EvaluacionAdapter(private val onItemClick: (EvaluacionPolinizacion, String
         fun bind(evaluacion: EvaluacionPolinizacion, nombrePolinizador: String) {
             tvPolinizador.text = "$nombrePolinizador"
             tvFecha.text = "${evaluacion.fecha}"
-            tvLote.text = "Lote: ${evaluacion.lote}"
+            tvLote.text = "Lote: ${evaluacion.idlote}"
         }
     }
 

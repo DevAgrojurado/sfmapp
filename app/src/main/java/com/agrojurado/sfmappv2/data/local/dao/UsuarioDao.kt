@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.data.dao
+package com.agrojurado.sfmappv2.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -7,7 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
-import com.agrojurado.sfmappv2.data.entity.UsuarioEntity
+import com.agrojurado.sfmappv2.data.local.entity.UsuarioEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao

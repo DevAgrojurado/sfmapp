@@ -21,6 +21,7 @@ class AreasActivity : BaseActivity() {
     private lateinit var addsBtn: FloatingActionButton
     private lateinit var recv: RecyclerView
     private lateinit var areasAdapter: AreasAdapter
+    private lateinit var syncButton: FloatingActionButton
     private val viewModel: AreasViewModel by viewModels()
 
     override fun getLayoutResourceId(): Int = R.layout.activity_areas
@@ -29,10 +30,16 @@ class AreasActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        syncButton = findViewById(R.id.syncButton)
+        syncButton.setOnClickListener {
+            viewModel.performFullSync()
+        }
+
         initializeViews()
         setupRecyclerView()
         setupListeners()
         observeAreas()
+        observeNetworkState()
     }
 
     private fun initializeViews() {
@@ -55,11 +62,24 @@ class AreasActivity : BaseActivity() {
         addsBtn.setOnClickListener { addInfo() }
     }
 
-    private fun observeAreas() {
-        viewModel.areas.observe(this) { areas ->
-            areasAdapter.updateAreas(areas)
+    private fun observeNetworkState() {
+        lifecycleScope.launch {
+            viewModel.isOnline.collect { isOnline ->
+                val message = if (isOnline) "Conectado" else "Modo sin conexión"
+                Toast.makeText(this@AreasActivity, message, Toast.LENGTH_SHORT).show()
+            }
         }
     }
+
+
+    private fun observeAreas() {
+        lifecycleScope.launch {
+            viewModel.areas.collect { areas ->
+                areasAdapter.updateAreas(areas)
+            }
+        }
+    }
+
 
     private fun addInfo() {
         val inflater = LayoutInflater.from(this)
@@ -72,8 +92,16 @@ class AreasActivity : BaseActivity() {
             val areaDescription = etarea.text.toString()
             if (areaDescription.isNotEmpty()) {
                 lifecycleScope.launch {
-                    viewModel.insertArea(Area(descripcion = areaDescription))
-                    Toast.makeText(this@AreasActivity, "Área agregada con éxito", Toast.LENGTH_SHORT).show()
+                    try {
+                        viewModel.insertArea(Area(descripcion = areaDescription))
+                        Toast.makeText(this@AreasActivity, "Área agregada con éxito", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@AreasActivity,
+                            "Error al guardar: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             } else {
                 Toast.makeText(this, "Por favor ingresa un área", Toast.LENGTH_SHORT).show()

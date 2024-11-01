@@ -21,6 +21,7 @@ class CargosActivity : BaseActivity() {
     private lateinit var addsBtn: FloatingActionButton
     private lateinit var recv: RecyclerView
     private lateinit var cargosAdapter: CargosAdapter
+    private lateinit var syncButton: FloatingActionButton
     private val viewModel: CargosViewModel by viewModels()
 
     override fun getLayoutResourceId(): Int = R.layout.activity_cargos
@@ -29,10 +30,16 @@ class CargosActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        syncButton = findViewById(R.id.syncButtonC)
+        syncButton.setOnClickListener {
+            viewModel.performFullSync()
+        }
+
         initializeViews()
         setupRecyclerView()
         setupListeners()
         observeCargos()
+        observeNetworkState()
     }
 
     private fun initializeViews() {
@@ -55,9 +62,20 @@ class CargosActivity : BaseActivity() {
         addsBtn.setOnClickListener { addInfo() }
     }
 
+    private fun observeNetworkState() {
+        lifecycleScope.launch {
+            viewModel.isOnline.collect { isOnline ->
+                val message = if (isOnline) "Conectado" else "Modo sin conexión"
+                Toast.makeText(this@CargosActivity, message, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun observeCargos() {
-        viewModel.cargos.observe(this) { cargos ->
-            cargosAdapter.updateCargos(cargos)
+        lifecycleScope.launch {
+            viewModel.cargos.collect { cargos ->
+                cargosAdapter.updateCargos(cargos)
+            }
         }
     }
 

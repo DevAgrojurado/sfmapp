@@ -1,6 +1,6 @@
 package com.agrojurado.sfmappv2.data.mapper
 
-import com.agrojurado.sfmappv2.data.entity.LoteEntity
+import com.agrojurado.sfmappv2.data.local.entity.LoteEntity
 import com.agrojurado.sfmappv2.domain.model.Lote
 
 object LoteMapper {

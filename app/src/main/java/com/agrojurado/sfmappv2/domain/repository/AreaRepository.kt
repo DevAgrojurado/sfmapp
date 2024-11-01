@@ -15,4 +15,9 @@ interface AreaRepository {
     suspend fun deleteArea(area: Area)
 
     suspend fun deleteAllAreas()
+
+    suspend fun fullSync(): Boolean
+
+    suspend fun syncAreas()
+
 }

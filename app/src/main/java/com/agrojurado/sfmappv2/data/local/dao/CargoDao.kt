@@ -1,7 +1,7 @@
-package com.agrojurado.sfmappv2.data.dao
+package com.agrojurado.sfmappv2.data.local.dao
 
 import androidx.room.*
-import com.agrojurado.sfmappv2.data.entity.CargoEntity
+import com.agrojurado.sfmappv2.data.local.entity.CargoEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -35,11 +35,9 @@ interface CargoDao {
     suspend fun getCargoPredeterminado(): CargoEntity?
 
     @Transaction
-    suspend fun insertCargoIfNotExists(cargo: CargoEntity) {
-        val existingCargo = getCargoPredeterminado()
-        if (existingCargo == null) {
-            insertCargo(cargo)
-        }
+    suspend fun upsertCargo(cargo: CargoEntity) {
+        val id = insertCargo(cargo)
+        if (id == -1L) updateCargo(cargo)
     }
 }
 

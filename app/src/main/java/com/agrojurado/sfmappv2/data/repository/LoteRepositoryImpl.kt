@@ -1,5 +1,5 @@
 package com.agrojurado.sfmappv2.data.repository
-import com.agrojurado.sfmappv2.data.dao.LoteDao
+import com.agrojurado.sfmappv2.data.local.dao.LoteDao
 import com.agrojurado.sfmappv2.data.mapper.LoteMapper
 import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.repository.LoteRepository

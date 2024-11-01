@@ -2,8 +2,10 @@ package com.agrojurado.sfmappv2.di
 
 import android.content.Context
 import androidx.room.Room
-import com.agrojurado.sfmappv2.data.dao.*
-import com.agrojurado.sfmappv2.data.database.AppDatabase
+import com.agrojurado.sfmappv2.data.local.dao.*
+import com.agrojurado.sfmappv2.data.local.database.AppDatabase
+import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
+import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
 import com.agrojurado.sfmappv2.data.repository.*
 import com.agrojurado.sfmappv2.domain.repository.*
 import dagger.Module
@@ -27,8 +29,6 @@ object RoomModule {
             context,
             AppDatabase::class.java,
             DATABASE_NAME
-
-            // Solo purebas
         ).fallbackToDestructiveMigration()
             .build()
     }
@@ -74,8 +74,12 @@ object RoomModule {
 
     @Singleton
     @Provides
-    fun provideCargoRepository(dao: CargoDao): CargoRepository {
-        return CargoRepositoryImpl(dao)
+    fun provideCargoRepository(
+        dao: CargoDao,
+        cargoApiService: CargoApiService,
+        @ApplicationContext context: Context
+    ): CargoRepository {
+        return CargoRepositoryImpl(dao, cargoApiService, context)
     }
 
     @Singleton
@@ -92,8 +96,12 @@ object RoomModule {
 
     @Singleton
     @Provides
-    fun provideAreaRepository(dao: AreaDao): AreaRepository {
-        return AreaRepositoryImpl(dao)
+    fun provideAreaRepository(
+        dao: AreaDao,
+        areaApiService: AreaApiService,
+        @ApplicationContext context: Context // Agregar context
+    ): AreaRepository {
+        return AreaRepositoryImpl(dao, areaApiService, context)
     }
 
     @Singleton

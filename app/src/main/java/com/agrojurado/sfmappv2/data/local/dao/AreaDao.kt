@@ -1,7 +1,7 @@
-package com.agrojurado.sfmappv2.data.dao
+package com.agrojurado.sfmappv2.data.local.dao
 
 import androidx.room.*
-import com.agrojurado.sfmappv2.data.entity.AreaEntity
+import com.agrojurado.sfmappv2.data.local.entity.AreaEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -27,4 +27,10 @@ interface AreaDao {
 
     @Query("SELECT COUNT(*) FROM area")
     suspend fun countAreas(): Int
+
+    @Transaction
+    suspend fun upsertArea(area: AreaEntity) {
+        val id = insertArea(area)
+        if (id == -1L) updateArea(area)
+    }
 }

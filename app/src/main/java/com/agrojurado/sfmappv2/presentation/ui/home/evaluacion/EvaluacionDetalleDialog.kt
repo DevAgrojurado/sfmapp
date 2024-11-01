@@ -29,7 +29,7 @@ class EvaluacionDetalleDialog(
         view.findViewById<TextView>(R.id.tvUbicacion).text = "Ubicación: ${evaluacion.ubicacion}"
         view.findViewById<TextView>(R.id.tvEvaluador).text = "Evaluador: $nombreEvaluador"
         view.findViewById<TextView>(R.id.tvPolinizador).text = "Polinizador: $nombrePolinizador"
-        view.findViewById<TextView>(R.id.tvLote).text = "Lote: ${evaluacion.lote}"
+        view.findViewById<TextView>(R.id.tvLote).text = "Lote: ${evaluacion.idlote}"
         view.findViewById<TextView>(R.id.tvSeccion).text = "Sección: ${evaluacion.seccion}"
         view.findViewById<TextView>(R.id.tvPalma).text = "Palma: ${evaluacion.palma}"
         view.findViewById<TextView>(R.id.tvInflorescencia).text = "Inflorescencia: ${evaluacion.inflorescencia}"

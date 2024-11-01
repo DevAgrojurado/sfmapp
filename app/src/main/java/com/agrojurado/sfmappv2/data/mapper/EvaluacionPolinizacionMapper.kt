@@ -1,6 +1,6 @@
 package com.agrojurado.sfmappv2.data.mapper
 
-import com.agrojurado.sfmappv2.data.entity.EvaluacionPolinizacionEntity
+import com.agrojurado.sfmappv2.data.local.entity.EvaluacionPolinizacionEntity
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import javax.inject.Inject
 
@@ -15,7 +15,7 @@ object EvaluacionPolinizacionMapper {
             ubicacion = entity.ubicacion,
             idEvaluador = entity.idevaluador,
             idPolinizador = entity.idpolinizador,
-            lote = entity.lote,
+            idlote = entity.idlote,
             seccion = entity.seccion,
             palma = entity.palma,
             inflorescencia = entity.inflorescencia,
@@ -41,7 +41,7 @@ object EvaluacionPolinizacionMapper {
             ubicacion = domain.ubicacion,
             idevaluador = domain.idEvaluador,
             idpolinizador = domain.idPolinizador,
-            lote = domain.lote,
+            idlote = domain.idlote,
             seccion = domain.seccion,
             palma = domain.palma,
             inflorescencia = domain.inflorescencia,

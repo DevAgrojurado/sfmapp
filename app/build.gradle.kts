@@ -80,6 +80,10 @@ dependencies {
 
     implementation(libs.play.services.location)
 
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+
     // Grafico para reporte
     //implementation(libs.mpandroidchart)
 

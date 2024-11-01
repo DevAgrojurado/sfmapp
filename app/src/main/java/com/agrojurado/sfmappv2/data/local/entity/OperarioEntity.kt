@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.data.entity
+package com.agrojurado.sfmappv2.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

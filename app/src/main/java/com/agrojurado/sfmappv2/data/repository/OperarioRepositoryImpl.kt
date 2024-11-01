@@ -1,6 +1,6 @@
 package com.agrojurado.sfmappv2.data.repository
 
-import com.agrojurado.sfmappv2.data.dao.OperarioDao
+import com.agrojurado.sfmappv2.data.local.dao.OperarioDao
 import com.agrojurado.sfmappv2.data.mapper.OperarioMapper
 import com.agrojurado.sfmappv2.domain.model.Operario
 import com.agrojurado.sfmappv2.domain.repository.OperarioRepository

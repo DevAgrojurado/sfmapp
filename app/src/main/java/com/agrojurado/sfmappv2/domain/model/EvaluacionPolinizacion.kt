@@ -8,7 +8,7 @@ data class EvaluacionPolinizacion(
     val ubicacion: String,
     val idEvaluador: Int,
     val idPolinizador: Int,
-    val lote: Int,
+    val idlote: Int,
     val seccion: Int,
     val palma: Int?,
     val inflorescencia: Int?,

@@ -1,6 +1,6 @@
 package com.agrojurado.sfmappv2.data.repository
 
-import com.agrojurado.sfmappv2.data.dao.EvaluacionPolinizacionDao
+import com.agrojurado.sfmappv2.data.local.dao.EvaluacionPolinizacionDao
 import com.agrojurado.sfmappv2.data.mapper.EvaluacionPolinizacionMapper
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.domain.repository.EvaluacionPolinizacionRepository

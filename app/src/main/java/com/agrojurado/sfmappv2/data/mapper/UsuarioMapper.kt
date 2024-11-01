@@ -1,7 +1,7 @@
 package com.agrojurado.sfmappv2.data.mapper
 
 import com.agrojurado.sfmappv2.domain.model.Usuario
-import com.agrojurado.sfmappv2.data.entity.UsuarioEntity
+import com.agrojurado.sfmappv2.data.local.entity.UsuarioEntity
 
 object UsuarioMapper {
 

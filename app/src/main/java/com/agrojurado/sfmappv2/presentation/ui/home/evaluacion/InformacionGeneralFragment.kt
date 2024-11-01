@@ -21,6 +21,7 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.agrojurado.sfmappv2.R
+import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.model.Operario
 import com.google.android.material.textfield.TextInputEditText
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,7 +37,7 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
     private lateinit var etSemana: TextInputEditText
     private lateinit var tvEvaluador: TextView
     private lateinit var spinnerPolinizador: Spinner
-    private lateinit var etLote: TextInputEditText
+    private lateinit var spinnerLote: Spinner
     private lateinit var etSeccion: TextInputEditText
     private lateinit var etPalma: TextInputEditText
     private lateinit var tvTotalPalmas: TextView
@@ -45,6 +46,8 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
 
     private val viewModel: EvaluacionViewModel by activityViewModels()
     private var operarios: List<Pair<String, Operario>> = emptyList()
+    private var lotes: List<Pair<String, Lote>> = emptyList()
+
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1
@@ -67,6 +70,7 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         checkLocationPermission()
 
         viewModel.loadOperarios()
+        viewModel.loadLotes()
     }
 
     private fun initializeViews(view: View) {
@@ -76,7 +80,7 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         etSemana = view.findViewById(R.id.etSemana)
         tvEvaluador = view.findViewById(R.id.tvEvaluador)
         spinnerPolinizador = view.findViewById(R.id.spinnerPolinizador)
-        etLote = view.findViewById(R.id.etLote)
+        spinnerLote = view.findViewById(R.id.spinnerLote)
         etSeccion = view.findViewById(R.id.etSeccion)
         etPalma = view.findViewById(R.id.etPalma)
         tvTotalPalmas = view.findViewById(R.id.tvTotalPalmas)
@@ -148,6 +152,37 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
                 // No hacer nada
             }
         }
+
+
+        viewModel.lotes.observe(viewLifecycleOwner) { lotesList ->
+            lotes = lotesList
+            setupLotesSpinner(lotesList)
+        }
+
+        viewModel.lastUsedLoteId.observe(viewLifecycleOwner) { lastUsedLoteId ->
+            lastUsedLoteId?.let { id ->
+                val position = lotes.indexOfFirst { it.second.id == id }
+                if (position != -1) {
+                    spinnerLote.setSelection(position)
+                }
+            }
+        }
+    }
+
+    private fun setupLotesSpinner(lotesList: List<Pair<String, Lote>>) {
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, lotesList.map { it.first })
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerLote.adapter = adapter
+
+        spinnerLote.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                checkPalmExists()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                // No hacer nada
+            }
+        }
     }
 
     private fun setupListeners() {
@@ -164,19 +199,18 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         }
 
         etSemana.doAfterTextChanged { checkPalmExists() }
-        etLote.doAfterTextChanged { checkPalmExists() }
         etSeccion.doAfterTextChanged { checkPalmExists() }
         etPalma.doAfterTextChanged { checkPalmExists() }
     }
 
     private fun checkPalmExists() {
         val semana = etSemana.text.toString().toIntOrNull()
-        val lote = etLote.text.toString().toIntOrNull()
+        val idLote = lotes.getOrNull(spinnerLote.selectedItemPosition)?.second?.id
         val palma = etPalma.text.toString().toIntOrNull()
         val idPolinizador = (spinnerPolinizador.selectedItem as? Pair<String, Operario>)?.second?.id
 
-        if (semana != null && lote != null && palma != null && idPolinizador != null) {
-            viewModel.checkPalmExists(semana, lote, palma, idPolinizador)
+        if (semana != null && idLote != null && palma != null && idPolinizador != null) {
+            viewModel.checkPalmExists(semana, idLote, palma, idPolinizador)
         }
     }
 
@@ -271,7 +305,7 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
             "etSemana" to etSemana.text.toString().toIntOrNull(),
             "tvEvaluador" to tvEvaluador.text.toString(),
             "spinnerPolinizador" to (operarios.getOrNull(spinnerPolinizador.selectedItemPosition)?.second?.id),
-            "etLote" to etLote.text.toString().toIntOrNull(),
+            "spinnerLote" to (lotes.getOrNull(spinnerLote.selectedItemPosition)?.second?.id),
             "etSeccion" to etSeccion.text.toString().toIntOrNull(),
             "etPalma" to etPalma.text.toString().toIntOrNull(),
             "etUbicacion" to etUbicacion.text.toString()

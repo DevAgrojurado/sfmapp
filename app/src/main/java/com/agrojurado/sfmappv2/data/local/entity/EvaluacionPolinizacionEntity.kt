@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.data.entity
+package com.agrojurado.sfmappv2.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
@@ -10,7 +10,8 @@ import androidx.room.PrimaryKey
     tableName = "evaluacionpolinizacion",
     indices = [
         Index(value = ["idevaluador"]),
-        Index(value = ["idpolinizador"])
+        Index(value = ["idpolinizador"]),
+        Index(value = ["idlote"]),
     ],
     foreignKeys = [
         ForeignKey(
@@ -24,6 +25,12 @@ import androidx.room.PrimaryKey
             parentColumns = ["id"],
             childColumns = ["idpolinizador"],
             onDelete = ForeignKey.NO_ACTION
+        ),
+        ForeignKey(
+            entity = OperarioEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["idlote"],
+            onDelete = ForeignKey.NO_ACTION
         )
     ]
 )
@@ -35,7 +42,7 @@ data class EvaluacionPolinizacionEntity(
     @ColumnInfo(name = "ubicacion") val ubicacion: String,
     @ColumnInfo(name = "idevaluador") val idevaluador: Int,
     @ColumnInfo(name = "idpolinizador") val idpolinizador: Int,
-    @ColumnInfo(name = "lote") val lote: Int,
+    @ColumnInfo(name = "idlote") val idlote: Int,
     @ColumnInfo(name = "seccion") val seccion: Int,
     @ColumnInfo(name = "palma") val palma: Int?,
     @ColumnInfo(name = "inflorescencia") val inflorescencia: Int?,
