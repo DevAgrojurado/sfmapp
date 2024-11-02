@@ -28,5 +28,11 @@ interface FincaDao {
     @Query("SELECT COUNT(*) FROM finca")
     suspend fun CountFincas(): Int
 
+    @Transaction
+    suspend fun upsertFinca(finca: FincaEntity) {
+        val id = insertFinca(finca)
+        if (id == -1L) updateFinca(finca)
+    }
+
 }
 

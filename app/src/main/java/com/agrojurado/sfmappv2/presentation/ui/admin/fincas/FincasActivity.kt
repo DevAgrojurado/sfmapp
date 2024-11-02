@@ -21,6 +21,7 @@ class FincasActivity : BaseActivity() {
     private lateinit var addsBtn: FloatingActionButton
     private lateinit var recv: RecyclerView
     private lateinit var fincasAdapter: FincasAdapter
+    private lateinit var syncButton: FloatingActionButton
     private val viewModel: FincasViewModel by viewModels()
 
     override fun getLayoutResourceId(): Int = R.layout.activity_fincas
@@ -29,10 +30,16 @@ class FincasActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        syncButton = findViewById(R.id.syncButtonF)
+        syncButton.setOnClickListener {
+            viewModel.performFullSync()
+        }
+
         initializeViews()
         setupRecyclerView()
         setupListeners()
         observeFincas()
+        observeNetworkState()
     }
 
     private fun initializeViews() {
@@ -55,9 +62,20 @@ class FincasActivity : BaseActivity() {
         addsBtn.setOnClickListener { addInfo() }
     }
 
+    private fun observeNetworkState() {
+        lifecycleScope.launch {
+            viewModel.isOnline.collect { isOnline ->
+                val message = if (isOnline) "Conectado" else "Modo sin conexión"
+                Toast.makeText(this@FincasActivity, message, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     private fun observeFincas() {
-        viewModel.fincas.observe(this) { fincas ->
-            fincasAdapter.updateFincas(fincas)
+        lifecycleScope.launch {
+            viewModel.fincas.collect { fincas ->
+                fincasAdapter.updateFincas(fincas)
+            }
         }
     }
 
@@ -72,8 +90,16 @@ class FincasActivity : BaseActivity() {
             val fincaDescription = etFinca.text.toString()
             if (fincaDescription.isNotEmpty()) {
                 lifecycleScope.launch {
-                    viewModel.insertFinca(Finca(descripcion = fincaDescription))
-                    Toast.makeText(this@FincasActivity, "Finca agregada con éxito", Toast.LENGTH_SHORT).show()
+                    try {
+                        viewModel.insertFinca(Finca(descripcion = fincaDescription))
+                        Toast.makeText(this@FincasActivity, "Finca agregada con éxito", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@FincasActivity,
+                            "Error al guardar: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             } else {
                 Toast.makeText(this, "Por favor ingresa una finca", Toast.LENGTH_SHORT).show()
@@ -94,7 +120,7 @@ class FincasActivity : BaseActivity() {
     private fun deleteFinca(finca: Finca) {
         lifecycleScope.launch {
             viewModel.deleteFinca(finca)
-            Toast.makeText(this@FincasActivity, "Finca eliminado", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@FincasActivity, "Finca eliminada", Toast.LENGTH_SHORT).show()
         }
     }
 }

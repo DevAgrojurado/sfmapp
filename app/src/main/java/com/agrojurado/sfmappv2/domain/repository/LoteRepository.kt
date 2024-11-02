@@ -17,4 +17,9 @@ interface LoteRepository {
 
     suspend fun deleteAllLotes()
 
+    suspend fun syncLotes()
+
+    suspend fun fullSync(): Boolean
+
+
 }

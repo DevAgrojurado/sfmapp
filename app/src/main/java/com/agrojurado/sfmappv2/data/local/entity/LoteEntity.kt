@@ -13,7 +13,7 @@ import androidx.room.Index
     ],
     foreignKeys = [
         ForeignKey(
-            entity = LoteEntity::class,
+            entity = FincaEntity::class,
             parentColumns = ["id"],
             childColumns = ["idFinca"],
             onDelete = ForeignKey.NO_ACTION

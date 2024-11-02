@@ -6,6 +6,8 @@ import com.agrojurado.sfmappv2.data.local.dao.*
 import com.agrojurado.sfmappv2.data.local.database.AppDatabase
 import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
 import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
+import com.agrojurado.sfmappv2.data.remote.api.FincaApiService
+import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
 import com.agrojurado.sfmappv2.data.repository.*
 import com.agrojurado.sfmappv2.domain.repository.*
 import dagger.Module
@@ -84,8 +86,12 @@ object RoomModule {
 
     @Singleton
     @Provides
-    fun provideFinca(dao: FincaDao): FincaRepository {
-        return FincaRepositoryImpl(dao)
+    fun provideFinca(
+        dao: FincaDao,
+        fincaApiService: FincaApiService,
+        @ApplicationContext context: Context
+    ): FincaRepository {
+        return FincaRepositoryImpl(dao, fincaApiService, context)
     }
 
     @Singleton
@@ -114,7 +120,10 @@ object RoomModule {
 
     @Singleton
     @Provides
-    fun provideLoteRepository(dao: LoteDao): LoteRepository {
-        return LoteRepositoryImpl(dao)
+    fun provideLoteRepository(
+        dao: LoteDao,
+        loteApiService: LoteApiService,
+        @ApplicationContext context: Context): LoteRepository {
+        return LoteRepositoryImpl(dao, loteApiService, context)
     }
 }

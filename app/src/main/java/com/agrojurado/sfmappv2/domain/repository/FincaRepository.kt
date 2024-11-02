@@ -5,6 +5,7 @@ import com.agrojurado.sfmappv2.domain.model.Finca
 import kotlinx.coroutines.flow.Flow
 
 interface FincaRepository {
+
     suspend fun insertFinca(finca: Finca): Long
 
     fun getAllFincas(): Flow<List<Finca>>
@@ -17,5 +18,8 @@ interface FincaRepository {
 
     suspend fun deleteAllFincas()
 
-    suspend fun crearFincaPredeterminado()
+    suspend fun fullSync(): Boolean
+
+    suspend fun syncFincas()
+
 }

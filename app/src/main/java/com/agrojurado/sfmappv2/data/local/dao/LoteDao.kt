@@ -31,5 +31,11 @@ interface LoteDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfNotExists(lote: LoteEntity) : Long
 
+    @Transaction
+    suspend fun upsertLote(lote: LoteEntity) {
+        val id = insertLote(lote)
+        if (id == -1L) updateLote(lote)
+    }
+
 }
 

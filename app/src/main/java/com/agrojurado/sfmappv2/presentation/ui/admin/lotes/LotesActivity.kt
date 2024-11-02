@@ -26,6 +26,7 @@ class LotesActivity : BaseActivity() {
     private lateinit var addsBtn: FloatingActionButton
     private lateinit var recv: RecyclerView
     private lateinit var lotesAdapter: LotesAdapter
+    private lateinit var syncButton: FloatingActionButton
     private val viewModel: LotesViewModel by viewModels()
     private var fincasList: List<Finca> = listOf()
 
@@ -35,11 +36,19 @@ class LotesActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        syncButton = findViewById(R.id.syncButtonL)
+        syncButton.setOnClickListener {
+            viewModel.performFullSync()
+        }
+
         initializeViews()
         setupRecyclerView()
         setupListeners()
         observeLotes()
         observeFincas()
+        observeNetworkState()
+        observeLoadingState()
+        observeErrors()
     }
 
     private fun initializeViews() {
@@ -62,16 +71,47 @@ class LotesActivity : BaseActivity() {
         addsBtn.setOnClickListener { addInfo() }
     }
 
+    private fun observeNetworkState() {
+        lifecycleScope.launch {
+            viewModel.isOnline.collect { isOnline ->
+                val message = if (isOnline) "Conectado" else "Modo sin conexión"
+                Toast.makeText(this@LotesActivity, message, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun observeLoadingState() {
+        lifecycleScope.launch {
+            viewModel.isLoading.collect { isLoading ->
+                // Aquí puedes mostrar/ocultar un indicador de carga
+            }
+        }
+    }
+
+    private fun observeErrors() {
+        lifecycleScope.launch {
+            viewModel.error.collect { error ->
+                error?.let {
+                    Toast.makeText(this@LotesActivity, it, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     private fun observeLotes() {
-        viewModel.lotes.observe(this) { lotes ->
-            lotesAdapter.updateLotes(lotes)
+        lifecycleScope.launch {
+            viewModel.lotes.collect { lotes ->
+                lotesAdapter.updateLotes(lotes)
+            }
         }
     }
 
     private fun observeFincas() {
-        viewModel.fincas.observe(this) { fincas ->
-            this.fincasList = fincas
-            lotesAdapter.setFincas(fincas)
+        lifecycleScope.launch {
+            viewModel.fincas.collect { fincas ->
+                this@LotesActivity.fincasList = fincas
+                lotesAdapter.setFincas(fincas)
+            }
         }
     }
 
@@ -92,19 +132,27 @@ class LotesActivity : BaseActivity() {
                 val idFinca = fincasList[spinnerFinca.selectedItemPosition].id
                 if (descripcion.isNotEmpty()) {
                     lifecycleScope.launch {
-                        viewModel.insertLote(Lote(descripcion = descripcion, idFinca = idFinca))
-                        Toast.makeText(this@LotesActivity, "Lote agregado", Toast.LENGTH_SHORT).show()
+                        try {
+                            viewModel.insertLote(Lote(descripcion = descripcion, idFinca = idFinca))
+                            Toast.makeText(this@LotesActivity, "Lote agregado con éxito", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(
+                                this@LotesActivity,
+                                "Error al guardar: ${e.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                 } else {
                     Toast.makeText(this, "Por favor ingresa todos los datos", Toast.LENGTH_SHORT).show()
                 }
             } else {
-                Toast.makeText(this, "No hay datos disponibles para todas las opciones", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "No hay fincas disponibles", Toast.LENGTH_SHORT).show()
             }
             dialog.dismiss()
         }
         addDialog.setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
-        addDialog.create().show()
+        addDialog.show()
     }
 
     private fun updateLote(lote: Lote) {
@@ -126,8 +174,16 @@ class LotesActivity : BaseActivity() {
 
             if (descripcion.isNotEmpty()) {
                 lifecycleScope.launch {
-                    viewModel.updateLote(lote.copy(descripcion = descripcion, idFinca = idFinca))
-                    Toast.makeText(this@LotesActivity, "Lote actualizado", Toast.LENGTH_SHORT).show()
+                    try {
+                        viewModel.updateLote(lote.copy(descripcion = descripcion, idFinca = idFinca))
+                        Toast.makeText(this@LotesActivity, "Lote actualizado", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@LotesActivity,
+                            "Error al actualizar: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             } else {
                 Toast.makeText(this, "Por favor ingresa todos los datos", Toast.LENGTH_SHORT).show()
@@ -135,7 +191,7 @@ class LotesActivity : BaseActivity() {
             dialog.dismiss()
         }
         updateDialog.setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
-        updateDialog.create().show()
+        updateDialog.show()
     }
 
     private fun setupSpinner(spinner: Spinner, items: List<String>) {
@@ -153,8 +209,16 @@ class LotesActivity : BaseActivity() {
 
     private fun deleteLote(lote: Lote) {
         lifecycleScope.launch {
-            viewModel.deleteLote(lote)
-            Toast.makeText(this@LotesActivity, "Lote eliminado", Toast.LENGTH_SHORT).show()
+            try {
+                viewModel.deleteLote(lote)
+                Toast.makeText(this@LotesActivity, "Lote eliminado", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@LotesActivity,
+                    "Error al eliminar: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
@@ -179,7 +243,6 @@ class LotesActivity : BaseActivity() {
         val filteredList = viewModel.lotes.value?.filter { lote ->
             val fincaDescripcion = fincasList.find { it.id == lote.idFinca }?.descripcion ?: ""
             lote.descripcion.contains(query, ignoreCase = true) ||
-                    lote.descripcion.contains(query, ignoreCase = true) ||
                     fincaDescripcion.contains(query, ignoreCase = true)
         } ?: emptyList()
         lotesAdapter.updateLotes(filteredList)
