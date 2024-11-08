@@ -1,15 +1,13 @@
 package com.agrojurado.sfmappv2.data.repository
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.util.Log
-import android.widget.Toast
 import com.agrojurado.sfmappv2.data.local.dao.AreaDao
 import com.agrojurado.sfmappv2.data.mapper.AreaMapper
 import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
 import com.agrojurado.sfmappv2.domain.model.Area
 import com.agrojurado.sfmappv2.domain.repository.AreaRepository
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -26,18 +24,14 @@ class AreaRepositoryImpl @Inject constructor(
         private const val TAG = "AreaRepository"
     }
 
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivityManager.activeNetwork
-        val capabilities = connectivityManager.getNetworkCapabilities(network)
-        return capabilities != null && (
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-                )
-    }
+    private fun isNetworkAvailable(): Boolean = Utils.isNetworkAvailable(context)
 
     private fun showSyncAlert(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        Utils.showAlert(context, message)
+    }
+
+    private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
+        Utils.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
     }
 
     override fun getAllAreas(): Flow<List<Area>> {
@@ -51,58 +45,49 @@ class AreaRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertArea(area: Area): Long {
-        var localId = 0L
         try {
-            // Guardar el área localmente y obtener el ID local
-            localId = areaDao.insertArea(AreaMapper.toDatabase(area))
-
-            // Intentar sincronizar si hay conexión de red
             if (isNetworkAvailable()) {
-                val areaRequest = AreaMapper.toRequest(area.copy(id = localId.toInt()))
+                val areaRequest = AreaMapper.toRequest(area)
                 val response = areaApiService.createArea(areaRequest)
+                syncAreas()
 
                 if (response.isSuccessful && response.body() != null) {
-                    // Actualizar con los datos del servidor si la sincronización fue exitosa
                     val serverArea = AreaMapper.fromResponse(response.body()!!)
-                    areaDao.updateArea(AreaMapper.toDatabase(serverArea))
-                    return serverArea.id?.toLong() ?: localId
+                    val areaWithServerId = area.copy(id = serverArea.id, isSynced = true)
+                    return areaDao.insertArea(AreaMapper.toDatabase(areaWithServerId))
                 } else {
                     logServerError(response, "Error creando el área en el servidor")
                     throw Exception("Error del servidor al crear el área")
                 }
+            } else {
+                val localArea = area.copy(id = 0, isSynced = false)
+                val localId = areaDao.insertArea(AreaMapper.toDatabase(localArea))
+                showSyncAlert("Guardado localmente, se sincronizará cuando haya conexión")
+                return localId
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error creating area: ${e.message}")
-
-            // Si no se guardó localmente, lanzar excepción
-            if (localId == 0L) {
-                throw Exception("Error al guardar el área: ${e.message}")
-            }
+            Log.e(TAG, "Error creando área: ${e.message}")
+            throw Exception("Error al guardar el área: ${e.message}")
         }
-
-        // Mostrar alerta solo si no hay conexión y se guardó localmente
-        if (!isNetworkAvailable() && localId != 0L) {
-            showSyncAlert("Área guardada localmente, se sincronizará cuando haya conexión")
-        }
-        return localId
     }
-
 
     override suspend fun updateArea(area: Area) {
         try {
-            areaDao.updateArea(AreaMapper.toDatabase(area))
+            areaDao.updateArea(AreaMapper.toDatabase(area).apply { isSynced = false })
+
             if (isNetworkAvailable() && area.id != null) {
                 val response = areaApiService.updateArea(AreaMapper.toRequest(area))
-
-                if (!response.isSuccessful) {
-                    logServerError(response, "Error updating area on server")
+                if (response.isSuccessful) {
+                    areaDao.updateArea(AreaMapper.toDatabase(area).apply { isSynced = true })
+                } else {
+                    logServerError(response, "Error actualizando el área en el servidor")
                     throw Exception("Error del servidor al actualizar el área")
                 }
             } else {
                 showSyncAlert("Sin conexión, área actualizada localmente")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error updating area: ${e.message}")
+            Log.e(TAG, "Error actualizando área: ${e.message}")
             showSyncAlert("Error al actualizar: ${e.message}")
             throw e
         }
@@ -111,17 +96,20 @@ class AreaRepositoryImpl @Inject constructor(
     override suspend fun deleteArea(area: Area) {
         try {
             areaDao.deleteArea(AreaMapper.toDatabase(area))
+
             if (isNetworkAvailable() && area.id != null) {
                 val response = areaApiService.deleteArea(area.id)
-                if (!response.isSuccessful) {
-                    logServerError(response, "Error deleting area on server")
+                if (response.isSuccessful) {
+                    Log.d(TAG, "Área eliminada correctamente en el servidor")
+                } else {
+                    logServerError(response, "Error al eliminar área en el servidor")
                     throw Exception("Error del servidor al eliminar el área")
                 }
             } else {
                 showSyncAlert("Sin conexión, área eliminada localmente")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error deleting area: ${e.message}")
+            Log.e(TAG, "Error eliminando área: ${e.message}")
             showSyncAlert("Error al eliminar: ${e.message}")
             throw e
         }
@@ -132,9 +120,9 @@ class AreaRepositoryImpl @Inject constructor(
         var hasLocalChanges = false
 
         try {
-            val localAreas = areaDao.getAllAreas().first()
             areaDao.deleteAllAreas()
             hasLocalChanges = true
+            Log.d(TAG, "Datos locales eliminados")
 
             if (isNetworkAvailable()) {
                 val serverResponse = areaApiService.getAreas()
@@ -143,29 +131,29 @@ class AreaRepositoryImpl @Inject constructor(
                 }
 
                 val serverAreas = serverResponse.body()?.filterNotNull() ?: emptyList()
-                val allAreas = (serverAreas.map { it.id } + localAreas.mapNotNull { it.id }).distinct()
-
-                allAreas.forEach { areaId ->
-                    areaId?.let {
-                        val response = areaApiService.deleteArea(it)
+                serverAreas.forEach { serverArea ->
+                    try {
+                        val response = areaApiService.deleteArea(serverArea.id)
                         if (!response.isSuccessful) {
-                            val error = "Error al eliminar área $it: ${response.errorBody()?.string()}"
+                            val error = "Error al eliminar área ${serverArea.id}: ${response.errorBody()?.string()}"
                             Log.e(TAG, error)
                             errorList.add(error)
                         }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error al eliminar área en el servidor: ${e.message}")
+                        errorList.add("Error al eliminar área ${serverArea.id} en el servidor: ${e.message}")
                     }
                 }
 
                 if (errorList.isNotEmpty()) {
                     throw Exception("Errores al eliminar áreas en el servidor:\n${errorList.joinToString("\n")}")
                 }
-
-                showSyncAlert("Todas las áreas eliminadas correctamente")
+                showSyncAlert("Todas las áreas eliminadas correctamente del servidor")
             } else {
                 showSyncAlert("Sin conexión, áreas eliminadas localmente")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in deleteAllAreas: ${e.message}")
+            Log.e(TAG, "Error al eliminar todas las áreas: ${e.message}")
             val message = if (hasLocalChanges) {
                 "Áreas eliminadas localmente, pero hubo errores en el servidor: ${e.message}"
             } else {
@@ -178,62 +166,78 @@ class AreaRepositoryImpl @Inject constructor(
 
     override suspend fun syncAreas() {
         if (!isNetworkAvailable()) {
-            Log.d(TAG, "No connection available for sync")
+            Log.d(TAG, "No hay conexión disponible para la sincronización")
             showSyncAlert("Sin conexión, usando datos locales")
             return
         }
 
         try {
-            // Obtener todas las áreas desde el servidor
+            val unsyncedAreas = areaDao.getAllAreas().first().filter { !it.isSynced }
+
+            if (unsyncedAreas.isNotEmpty()) {
+                Log.d(TAG, "Áreas no sincronizadas encontradas: ${unsyncedAreas.size}")
+                unsyncedAreas.forEach { localArea ->
+                    try {
+                        val areaRequest = AreaMapper.toRequest(AreaMapper.toDomain(localArea))
+
+                        if (areaRequest.id == null || areaRequest.descripcion.isNullOrBlank()) {
+                            Log.e(TAG, "Campos obligatorios faltantes para el área: ${localArea.id}")
+                            return@forEach
+                        }
+
+                        val response = areaApiService.createArea(areaRequest)
+                        if (response.isSuccessful && response.body() != null) {
+                            val serverArea = AreaMapper.fromResponse(response.body()!!)
+                            val updatedArea = localArea.copy(id = serverArea.id, isSynced = true)
+                            areaDao.updateArea(updatedArea)
+                            Log.d(TAG, "Área sincronizada correctamente con el ID: ${updatedArea.id}")
+                        } else {
+                            Log.e(TAG, "Error al sincronizar área ${localArea.id}: ${response.errorBody()?.string()}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error al sincronizar área ${localArea.id}: ${e.message}")
+                    }
+                }
+            }
+
             val response = areaApiService.getAreas()
             if (!response.isSuccessful) {
+                logServerError(response, "Error obteniendo áreas del servidor")
                 throw Exception("Error al obtener áreas del servidor")
             }
 
             val serverAreas = response.body()?.filterNotNull() ?: emptyList()
-            val localAreas = areaDao.getAllAreas().first()
-            val serverAreasMap = serverAreas.associateBy { it.id }
-            val localAreasMap = localAreas.associateBy { it.id }
+            if (serverAreas.isEmpty()) {
+                Log.d(TAG, "El servidor no tiene áreas, no se realiza la sincronización.")
+                showSyncAlert("El servidor no tiene áreas para sincronizar.")
+                return
+            }
 
-            // Sincronizar áreas desde el servidor
+            val localAreasMap = areaDao.getAllAreas().first().associateBy { it.id }
+
+            localAreasMap.values.filter { it.id != null && !serverAreas.any { serverArea -> serverArea.id == it.id } }
+                .forEach { localArea ->
+                    areaDao.deleteArea(localArea)
+                    Log.d(TAG, "Área eliminada localmente porque no existe en el servidor: ${localArea.id}")
+                }
+
             serverAreas.forEach { serverArea ->
-                val localArea = localAreasMap[serverArea.id]
                 val domainArea = AreaMapper.fromResponse(serverArea)
-
+                val localArea = localAreasMap[serverArea.id]
                 if (localArea == null) {
-                    areaDao.insertArea(AreaMapper.toDatabase(domainArea))
+                    areaDao.insertArea(AreaMapper.toDatabase(domainArea).apply { isSynced = true })
                 } else {
-                    areaDao.updateArea(AreaMapper.toDatabase(domainArea))
+                    areaDao.updateArea(AreaMapper.toDatabase(domainArea).apply { isSynced = true })
                 }
             }
 
-            // Sincronizar áreas locales que no están en el servidor
-            localAreas.filter { it.id == null || !serverAreasMap.containsKey(it.id) }
-                .forEach { localArea ->
-                    try {
-                        val domainArea = AreaMapper.toDomain(localArea)
-                        val createResponse = areaApiService.createArea(AreaMapper.toRequest(domainArea))
-
-                        if (createResponse.isSuccessful && createResponse.body() != null) {
-                            val newServerArea = AreaMapper.fromResponse(createResponse.body()!!)
-                            areaDao.updateArea(AreaMapper.toDatabase(newServerArea))
-                        } else {
-                            logServerError(createResponse, "Error syncing local area")
-                            throw Exception("Error al sincronizar área local con el servidor")
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error syncing local area: ${e.message}")
-                        // Manejar el error adecuadamente
-                    }
-                }
-
-            showSyncAlert("Sincronización completada")
+            Log.d(TAG, "Sincronización completa")
+            //showSyncAlert("Sincronización completada exitosamente.")
         } catch (e: Exception) {
-            Log.e(TAG, "Sync error: ${e.message}")
-            throw Exception("Error en la sincronización: ${e.message}")
+            Log.e(TAG, "Error durante la sincronización: ${e.message}")
+            //showSyncAlert("Error durante la sincronización: ${e.message}")
         }
     }
-
 
     override suspend fun fullSync(): Boolean {
         if (!isNetworkAvailable()) {
@@ -242,38 +246,43 @@ class AreaRepositoryImpl @Inject constructor(
         }
 
         try {
+            areaDao.deleteAllAreas()
+            Log.d(TAG, "Áreas locales eliminadas.")
+
             val response = areaApiService.getAreas()
             if (!response.isSuccessful) {
-                throw Exception("Error al obtener datos del servidor")
+                logServerError(response, "Error en la sincronización completa")
+                return false
             }
 
             val serverAreas = response.body()?.filterNotNull() ?: emptyList()
-            val localAreas = areaDao.getAllAreas().first()
 
-            localAreas.filter { it.id == null }.forEach { localArea ->
-                val createResponse = areaApiService.createArea(
-                    AreaMapper.toRequest(AreaMapper.toDomain(localArea))
-                )
-                if (!createResponse.isSuccessful) {
-                    throw Exception("Error al sincronizar área local")
+            if (serverAreas.isEmpty()) {
+                Log.d(TAG, "El servidor no tiene áreas, no se realiza la sincronización completa.")
+                showSyncAlert("El servidor no tiene áreas para sincronizar.")
+                return true
+            }
+
+            serverAreas.forEach { serverArea ->
+                val domainArea = AreaMapper.fromResponse(serverArea)
+                val localArea = areaDao.getAreaById(domainArea.id)
+
+                if (localArea == null) {
+                    areaDao.insertArea(AreaMapper.toDatabase(domainArea).apply { isSynced = true })
+                    Log.d(TAG, "Área insertada desde el servidor: ${domainArea.id}")
+                } else {
+                    areaDao.updateArea(AreaMapper.toDatabase(domainArea).apply { isSynced = true })
+                    Log.d(TAG, "Área actualizada desde el servidor: ${domainArea.id}")
                 }
             }
 
-            areaDao.deleteAllAreas()
-            serverAreas.forEach { serverArea ->
-                areaDao.insertArea(AreaMapper.toDatabase(AreaMapper.fromResponse(serverArea)))
-            }
-
-            showSyncAlert("Sincronización completada")
+            Log.d(TAG, "Sincronización completa exitosa.")
+            showSyncAlert("Sincronización completa")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Full sync error: ${e.message}")
-            throw Exception("Error en la sincronización completa: ${e.message}")
+            Log.e(TAG, "Error en la sincronización completa: ${e.message}", e)
+            showSyncAlert("Error durante la sincronización completa: ${e.message}")
+            return false
         }
-    }
-
-    private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
-        val error = "Server error (${response.code()}): ${response.errorBody()?.string()}"
-        Log.e(TAG, "$logMessage - $error")
     }
 }

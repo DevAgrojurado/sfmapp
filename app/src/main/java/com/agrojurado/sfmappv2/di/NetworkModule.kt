@@ -6,6 +6,7 @@ import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
 import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
 import com.agrojurado.sfmappv2.data.remote.api.FincaApiService
 import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
+import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
 import com.agrojurado.sfmappv2.data.remote.api.RetrofitClient
 import dagger.Module
 import dagger.Provides
@@ -40,6 +41,12 @@ object NetworkModule {
     @Provides
     fun provideLoteApiService(): LoteApiService {
         return RetrofitClient.loteApiService
+    }
+
+    @Singleton
+    @Provides
+    fun provideOperarioApiService(): OperarioApiService {
+        return RetrofitClient.operarioApiService
     }
 
     // Agregar para proveer el Context

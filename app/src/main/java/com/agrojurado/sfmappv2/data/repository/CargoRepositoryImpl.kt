@@ -1,15 +1,13 @@
 package com.agrojurado.sfmappv2.data.repository
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.util.Log
-import android.widget.Toast
 import com.agrojurado.sfmappv2.data.local.dao.CargoDao
 import com.agrojurado.sfmappv2.data.mapper.CargoMapper
 import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
 import com.agrojurado.sfmappv2.domain.model.Cargo
 import com.agrojurado.sfmappv2.domain.repository.CargoRepository
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -27,17 +25,15 @@ class CargoRepositoryImpl @Inject constructor(
     }
 
     private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivityManager.activeNetwork
-        val capabilities = connectivityManager.getNetworkCapabilities(network)
-        return capabilities != null && (
-                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-                )
+        return Utils.isNetworkAvailable(context)
     }
 
     private fun showSyncAlert(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        Utils.showAlert(context, message)
+    }
+
+    private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
+        Utils.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
     }
 
     override fun getAllCargos(): Flow<List<Cargo>> {
@@ -51,32 +47,29 @@ class CargoRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertCargo(cargo: Cargo): Long {
-        var localId = 0L
         try {
-            localId = cargoDao.insertCargo(CargoMapper.toDatabase(cargo))
             if (isNetworkAvailable()) {
-                val cargoRequest = CargoMapper.toRequest(cargo.copy(id = localId.toInt()))
+                val cargoRequest = CargoMapper.toRequest(cargo)
                 val response = cargoApiService.createCargo(cargoRequest)
 
                 if (response.isSuccessful && response.body() != null) {
+                    fullSync()
                     val serverCargo = CargoMapper.fromResponse(response.body()!!)
-                    cargoDao.updateCargo(CargoMapper.toDatabase(serverCargo))
-                    return serverCargo.id?.toLong() ?: localId
+                    val localId = cargoDao.insertCargo(CargoMapper.toDatabase(serverCargo))
+                    return localId
                 } else {
-                    logServerError(response, "Error creating cargo on server")
+                    logServerError(response, "Error creando el cargo en el servidor")
                     throw Exception("Error del servidor al crear el cargo")
                 }
+            } else {
+                val localId = cargoDao.insertCargo(CargoMapper.toDatabase(cargo))
+                showSyncAlert("Cargo guardado localmente, se sincronizará cuando haya conexión")
+                return localId
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error creating cargo: ${e.message}")
-            if (localId != 0L) {
-                throw Exception("Error al guardar el cargo: ${e.message}")
-            }
+            Log.e(TAG, "Error creando cargo: ${e.message}")
+            throw Exception("Error al guardar el cargo: ${e.message}")
         }
-        if (!isNetworkAvailable() && localId != 0L) {
-            showSyncAlert("Cargo guardado localmente, se sincronizará cuando haya conexión")
-        }
-        return localId
     }
 
     override suspend fun updateCargo(cargo: Cargo) {
@@ -134,16 +127,18 @@ class CargoRepositoryImpl @Inject constructor(
                 }
 
                 val serverCargos = serverResponse.body()?.filterNotNull() ?: emptyList()
-                val allCargos = (serverCargos.map { it.id } + localCargos.mapNotNull { it.id }).distinct()
 
-                allCargos.forEach { cargoId ->
-                    cargoId?.let {
-                        val response = cargoApiService.deleteCargo(it)
+                serverCargos.forEach { serverCargo ->
+                    try {
+                        val response = cargoApiService.deleteCargo(serverCargo.id)
                         if (!response.isSuccessful) {
-                            val error = "Error al eliminar cargo $it: ${response.errorBody()?.string()}"
+                            val error = "Error al eliminar cargo ${serverCargo.id}: ${response.errorBody()?.string()}"
                             Log.e(TAG, error)
                             errorList.add(error)
                         }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error al eliminar cargo en el servidor: ${e.message}")
+                        errorList.add("Error al eliminar cargo ${serverCargo.id} en el servidor: ${e.message}")
                     }
                 }
 
@@ -151,12 +146,12 @@ class CargoRepositoryImpl @Inject constructor(
                     throw Exception("Errores al eliminar cargos en el servidor:\n${errorList.joinToString("\n")}")
                 }
 
-                showSyncAlert("Todos los cargos eliminados correctamente")
+                showSyncAlert("Todos los cargos eliminados correctamente del servidor")
             } else {
                 showSyncAlert("Sin conexión, cargos eliminados localmente")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error in deleteAllCargos: ${e.message}")
+            Log.e(TAG, "Error al eliminar todos los cargos: ${e.message}")
             val message = if (hasLocalChanges) {
                 "Cargos eliminados localmente, pero hubo errores en el servidor: ${e.message}"
             } else {
@@ -169,7 +164,7 @@ class CargoRepositoryImpl @Inject constructor(
 
     override suspend fun syncCargos() {
         if (!isNetworkAvailable()) {
-            Log.d(TAG, "No connection available for sync")
+            Log.d(TAG, "No hay conexión disponible para la sincronización")
             showSyncAlert("Sin conexión, usando datos locales")
             return
         }
@@ -177,6 +172,10 @@ class CargoRepositoryImpl @Inject constructor(
         try {
             val response = cargoApiService.getCargos()
             if (!response.isSuccessful) {
+                if (response.code() == 404) {
+                    Log.w(TAG, "No se encontraron cargos en el servidor.")
+                    return
+                }
                 throw Exception("Error al obtener cargos del servidor")
             }
 
@@ -185,6 +184,7 @@ class CargoRepositoryImpl @Inject constructor(
             val serverCargosMap = serverCargos.associateBy { it.id }
             val localCargosMap = localCargos.associateBy { it.id }
 
+            // Paso 1: Actualizar o insertar cargos del servidor que ya existen localmente.
             serverCargos.forEach { serverCargo ->
                 val localCargo = localCargosMap[serverCargo.id]
                 val domainCargo = CargoMapper.fromResponse(serverCargo)
@@ -196,27 +196,31 @@ class CargoRepositoryImpl @Inject constructor(
                 }
             }
 
+            // Paso 2: Sincronizar cargos locales que no existan en el servidor.
             localCargos.filter { it.id == null || !serverCargosMap.containsKey(it.id) }
                 .forEach { localCargo ->
                     try {
-                        val domainCargo = CargoMapper.toDomain(localCargo)
-                        val createResponse = cargoApiService.createCargo(CargoMapper.toRequest(domainCargo))
+                        // Verifica si el cargo local ya existe en el servidor antes de crearlo
+                        if (!serverCargosMap.containsKey(localCargo.id)) {
+                            val domainCargo = CargoMapper.toDomain(localCargo)
+                            val createResponse = cargoApiService.createCargo(CargoMapper.toRequest(domainCargo))
 
-                        if (createResponse.isSuccessful && createResponse.body() != null) {
-                            val newServerCargo = CargoMapper.fromResponse(createResponse.body()!!)
-                            cargoDao.updateCargo(CargoMapper.toDatabase(newServerCargo))
-                        } else {
-                            logServerError(createResponse, "Error syncing local cargo")
-                            throw Exception("Error al sincronizar cargo local con el servidor")
+                            if (createResponse.isSuccessful && createResponse.body() != null) {
+                                val newServerCargo = CargoMapper.fromResponse(createResponse.body()!!)
+                                cargoDao.updateCargo(CargoMapper.toDatabase(newServerCargo)) // Actualiza el cargo local con el nuevo ID
+                            } else {
+                                logServerError(createResponse, "Error sincronizando cargo local")
+                                throw Exception("Error al sincronizar cargo local con el servidor")
+                            }
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error syncing local cargo: ${e.message}")
+                        Log.e(TAG, "Error sincronizando cargo local: ${e.message}")
                     }
                 }
 
             showSyncAlert("Sincronización completada")
         } catch (e: Exception) {
-            Log.e(TAG, "Sync error: ${e.message}")
+            Log.e(TAG, "Error de sincronización: ${e.message}")
             throw Exception("Error en la sincronización: ${e.message}")
         }
     }
@@ -230,22 +234,16 @@ class CargoRepositoryImpl @Inject constructor(
         try {
             val response = cargoApiService.getCargos()
             if (!response.isSuccessful) {
+                if (response.code() == 404) {
+                    Log.w(TAG, "No se encontraron cargos en el servidor.")
+                    cargoDao.deleteAllCargos() // Asegurarse de limpiar también localmente
+                    return true
+                }
                 throw Exception("Error al obtener datos del servidor")
             }
 
             val serverCargos = response.body()?.filterNotNull() ?: emptyList()
-            val localCargos = cargoDao.getAllCargos().first()
-
-            localCargos.filter { it.id == null }.forEach { localCargo ->
-                val createResponse = cargoApiService.createCargo(
-                    CargoMapper.toRequest(CargoMapper.toDomain(localCargo))
-                )
-                if (!createResponse.isSuccessful) {
-                    throw Exception("Error al sincronizar cargo local")
-                }
-            }
-
-            cargoDao.deleteAllCargos()
+            cargoDao.deleteAllCargos() // Limpia la base de datos local antes de la nueva inserción
             serverCargos.forEach { serverCargo ->
                 cargoDao.insertCargo(CargoMapper.toDatabase(CargoMapper.fromResponse(serverCargo)))
             }
@@ -253,13 +251,8 @@ class CargoRepositoryImpl @Inject constructor(
             showSyncAlert("Sincronización completada")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Full sync error: ${e.message}")
+            Log.e(TAG, "Error durante la sincronización completa: ${e.message}")
             throw Exception("Error en la sincronización completa: ${e.message}")
         }
-    }
-
-    private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
-        val error = "Server error (${response.code()}): ${response.errorBody()?.string()}"
-        Log.e(TAG, "$logMessage - $error")
     }
 }

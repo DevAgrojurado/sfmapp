@@ -8,6 +8,7 @@ import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
 import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
 import com.agrojurado.sfmappv2.data.remote.api.FincaApiService
 import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
+import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
 import com.agrojurado.sfmappv2.data.repository.*
 import com.agrojurado.sfmappv2.domain.repository.*
 import dagger.Module
@@ -96,8 +97,11 @@ object RoomModule {
 
     @Singleton
     @Provides
-    fun provideOperarioRepository(dao: OperarioDao): OperarioRepository {
-        return OperarioRepositoryImpl(dao)
+    fun provideOperarioRepository(
+        dao: OperarioDao,
+        operarioApiService: OperarioApiService,
+        @ApplicationContext context: Context): OperarioRepository {
+        return OperarioRepositoryImpl(dao, operarioApiService, context)
     }
 
     @Singleton

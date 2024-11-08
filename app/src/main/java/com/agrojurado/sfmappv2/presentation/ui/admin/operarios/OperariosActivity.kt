@@ -28,6 +28,7 @@ class OperariosActivity : BaseActivity() {
     private lateinit var addsBtn: FloatingActionButton
     private lateinit var recv: RecyclerView
     private lateinit var operariosAdapter: OperariosAdapter
+    private lateinit var syncButton: FloatingActionButton
     private val viewModel: OperariosViewModel by viewModels()
     private var cargosList: List<Cargo> = listOf()
     private var areasList: List<Area> = listOf()
@@ -39,6 +40,11 @@ class OperariosActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        syncButton = findViewById(R.id.syncButtonO)
+        syncButton.setOnClickListener {
+            viewModel.performFullSync()
+        }
+
         initializeViews()
         setupRecyclerView()
         setupListeners()
@@ -46,6 +52,9 @@ class OperariosActivity : BaseActivity() {
         observeCargos()
         observeAreas()
         observeFincas()
+        observeNetworkState()
+        observeLoadingState()
+        observeErrors()
     }
 
     private fun initializeViews() {
@@ -68,30 +77,65 @@ class OperariosActivity : BaseActivity() {
         addsBtn.setOnClickListener { addInfo() }
     }
 
+    private fun observeNetworkState() {
+        lifecycleScope.launch {
+            viewModel.isOnline.collect { isOnline ->
+                val message = if (isOnline) "Conectado" else "Modo sin conexión"
+                Toast.makeText(this@OperariosActivity, message, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun observeLoadingState() {
+        lifecycleScope.launch {
+            viewModel.isLoading.collect { isLoading ->
+                // Aquí puedes mostrar/ocultar un indicador de carga
+            }
+        }
+    }
+
+    private fun observeErrors() {
+        lifecycleScope.launch {
+            viewModel.error.collect { error ->
+                error?.let {
+                    Toast.makeText(this@OperariosActivity, it, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     private fun observeOperarios() {
-        viewModel.operarios.observe(this) { operarios ->
-            operariosAdapter.updateOperarios(operarios)
+        lifecycleScope.launch {
+            viewModel.operarios.collect { operarios ->
+                operariosAdapter.updateOperarios(operarios)
+            }
         }
     }
 
     private fun observeCargos() {
-        viewModel.cargos.observe(this) { cargos ->
-            this.cargosList = cargos
-            operariosAdapter.setCargos(cargos)
+        lifecycleScope.launch {
+            viewModel.cargos.collect { cargos ->
+                this@OperariosActivity.cargosList = cargos
+                operariosAdapter.setCargos(cargos)
+            }
         }
     }
 
     private fun observeAreas() {
-        viewModel.areas.observe(this) { areas ->
-            this.areasList = areas
-            operariosAdapter.setAreas(areas)
+        lifecycleScope.launch {
+            viewModel.areas.collect { areas ->
+                this@OperariosActivity.areasList = areas
+                operariosAdapter.setAreas(areas)
+            }
         }
     }
 
     private fun observeFincas() {
-        viewModel.fincas.observe(this) { fincas ->
-            this.fincasList = fincas
-            operariosAdapter.setFincas(fincas)
+        lifecycleScope.launch {
+            viewModel.fincas.collect { fincas ->
+                this@OperariosActivity.fincasList = fincas
+                operariosAdapter.setFincas(fincas)
+            }
         }
     }
 
@@ -120,8 +164,16 @@ class OperariosActivity : BaseActivity() {
                 val fincaId = fincasList[spinnerFinca.selectedItemPosition].id
                 if (codigo.isNotEmpty() && nombre.isNotEmpty()) {
                     lifecycleScope.launch {
-                        viewModel.insertOperario(Operario(codigo = codigo, nombre = nombre, cargoId = cargoId, areaId = areaId, fincaId = fincaId))
-                        Toast.makeText(this@OperariosActivity, "Operario agregado", Toast.LENGTH_SHORT).show()
+                        try {
+                            viewModel.insertOperario(Operario(codigo = codigo, nombre = nombre, cargoId = cargoId, areaId = areaId, fincaId = fincaId))
+                            Toast.makeText(this@OperariosActivity, "Operario agregado con éxito", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(
+                                this@OperariosActivity,
+                                "Error al guardar: ${e.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                 } else {
                     Toast.makeText(this, "Por favor ingresa todos los datos", Toast.LENGTH_SHORT).show()
@@ -132,7 +184,7 @@ class OperariosActivity : BaseActivity() {
             dialog.dismiss()
         }
         addDialog.setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
-        addDialog.create().show()
+        addDialog.show()
     }
 
     private fun updateOperario(operario: Operario) {
@@ -166,8 +218,16 @@ class OperariosActivity : BaseActivity() {
 
             if (codigo.isNotEmpty() && nombre.isNotEmpty()) {
                 lifecycleScope.launch {
-                    viewModel.updateOperario(operario.copy(codigo = codigo, nombre = nombre, cargoId = cargoId, areaId = areaId, fincaId = fincaId))
-                    Toast.makeText(this@OperariosActivity, "Operario actualizado", Toast.LENGTH_SHORT).show()
+                    try {
+                        viewModel.updateOperario(operario.copy(codigo = codigo, nombre = nombre, cargoId = cargoId, areaId = areaId, fincaId = fincaId))
+                        Toast.makeText(this@OperariosActivity, "Operario actualizado", Toast.LENGTH_SHORT).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@OperariosActivity,
+                            "Error al actualizar: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             } else {
                 Toast.makeText(this, "Por favor ingresa todos los datos", Toast.LENGTH_SHORT).show()
@@ -175,7 +235,7 @@ class OperariosActivity : BaseActivity() {
             dialog.dismiss()
         }
         updateDialog.setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
-        updateDialog.create().show()
+        updateDialog.show()
     }
 
     private fun setupSpinner(spinner: Spinner, items: List<String>) {
@@ -193,8 +253,16 @@ class OperariosActivity : BaseActivity() {
 
     private fun deleteOperario(operario: Operario) {
         lifecycleScope.launch {
-            viewModel.deleteOperario(operario)
-            Toast.makeText(this@OperariosActivity, "Operario eliminado", Toast.LENGTH_SHORT).show()
+            try {
+                viewModel.deleteOperario(operario)
+                Toast.makeText(this@OperariosActivity, "Operario eliminado", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@OperariosActivity,
+                    "Error al eliminar: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 

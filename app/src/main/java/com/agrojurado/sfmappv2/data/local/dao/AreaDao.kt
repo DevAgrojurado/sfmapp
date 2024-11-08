@@ -33,4 +33,7 @@ interface AreaDao {
         val id = insertArea(area)
         if (id == -1L) updateArea(area)
     }
+
+    @Query("SELECT * FROM area WHERE isSynced = 0")
+    suspend fun getUnsyncedAreas(): List<AreaEntity>
 }

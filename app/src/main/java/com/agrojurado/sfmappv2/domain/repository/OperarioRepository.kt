@@ -19,4 +19,8 @@ interface OperarioRepository {
 
     fun searchOperarios(query: String): Flow<List<Operario>>
 
+    suspend fun syncOperarios()
+
+    suspend fun fullSync(): Boolean
+
 }

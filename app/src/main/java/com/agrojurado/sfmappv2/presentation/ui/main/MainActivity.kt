@@ -3,6 +3,7 @@ package com.agrojurado.sfmappv2.presentation.ui.main
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
@@ -14,21 +15,29 @@ import androidx.navigation.ui.onNavDestinationSelected
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.agrojurado.sfmappv2.R
+import com.agrojurado.sfmappv2.data.sync.DataSyncManager
 import com.agrojurado.sfmappv2.databinding.ActivityMainBinding
 import com.agrojurado.sfmappv2.presentation.ui.login.LoginActivity
 import com.agrojurado.sfmappv2.presentation.ui.login.LoginViewModel
 import com.google.android.material.navigation.NavigationView
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
+    @Inject
+    lateinit var dataSyncManager: DataSyncManager
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
     private val viewModel: LoginViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        initializeSync()
+        dataSyncManager.autoSyncOnReconnect()
+
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -85,5 +94,13 @@ class MainActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
+    }
+
+    private fun initializeSync() {
+        dataSyncManager.syncAllData {
+            runOnUiThread {
+                Toast.makeText(this, "Sincronización completada", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }
