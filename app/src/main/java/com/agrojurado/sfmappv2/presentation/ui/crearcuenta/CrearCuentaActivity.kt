@@ -2,9 +2,11 @@ package com.agrojurado.sfmappv2.presentation.ui.crearcuenta
 
 import android.os.Bundle
 import android.widget.ArrayAdapter
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import com.agrojurado.sfmappv2.data.sync.DataSyncManager
 import com.agrojurado.sfmappv2.databinding.ActivityCrearCuentaBinding
 import com.agrojurado.sfmappv2.domain.model.Area
 import com.agrojurado.sfmappv2.domain.model.Cargo
@@ -15,10 +17,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import pe.pcs.libpcs.UtilsCommon
 import pe.pcs.libpcs.UtilsMessage
 import pe.pcs.libpcs.UtilsSecurity
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class CrearCuentaActivity : AppCompatActivity() {
 
+    @Inject
+    lateinit var dataSyncManager: DataSyncManager
     private lateinit var binding: ActivityCrearCuentaBinding
     private val viewModel: CrearCuentaViewModel by viewModels()
     private lateinit var cargoAdapter: ArrayAdapter<String>
@@ -40,6 +45,8 @@ class CrearCuentaActivity : AppCompatActivity() {
         setupCargoSpinner()
         setupAreaSpinner()
         setupFincaSpinner()
+        initializeSync()
+        dataSyncManager.autoSyncOnReconnect()
     }
 
     private fun setupUI() {
@@ -167,5 +174,12 @@ class CrearCuentaActivity : AppCompatActivity() {
             "Complete los campos obligatorios",
             this
         )
+    }
+    private fun initializeSync() {
+        dataSyncManager.syncAllData {
+            runOnUiThread {
+                Toast.makeText(this, "Sincronización completada", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }
