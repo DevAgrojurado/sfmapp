@@ -235,7 +235,7 @@ class AreaRepositoryImpl @Inject constructor(
             //showSyncAlert("Sincronización completada exitosamente.")
         } catch (e: Exception) {
             Log.e(TAG, "Error durante la sincronización: ${e.message}")
-            //showSyncAlert("Error durante la sincronización: ${e.message}")
+            showSyncAlert("Error durante la sincronización: ${e.message}")
         }
     }
 
@@ -246,9 +246,7 @@ class AreaRepositoryImpl @Inject constructor(
         }
 
         try {
-            areaDao.deleteAllAreas()
-            Log.d(TAG, "Áreas locales eliminadas.")
-
+            // Primero sincronizar áreas porque son requeridas por operarios
             val response = areaApiService.getAreas()
             if (!response.isSuccessful) {
                 logServerError(response, "Error en la sincronización completa")
@@ -257,23 +255,39 @@ class AreaRepositoryImpl @Inject constructor(
 
             val serverAreas = response.body()?.filterNotNull() ?: emptyList()
 
-            if (serverAreas.isEmpty()) {
-                Log.d(TAG, "El servidor no tiene áreas, no se realiza la sincronización completa.")
-                showSyncAlert("El servidor no tiene áreas para sincronizar.")
-                return true
-            }
+            // Usar transacción para mantener la integridad
+            areaDao.transaction {
+                // NO eliminar todas las áreas de golpe para evitar problemas de FK
+                val localAreasMap = areaDao.getAllAreas().first().associateBy { it.id }
 
-            serverAreas.forEach { serverArea ->
-                val domainArea = AreaMapper.fromResponse(serverArea)
-                val localArea = areaDao.getAreaById(domainArea.id)
+                // Primero insertar/actualizar áreas nuevas
+                serverAreas.forEach { serverArea ->
+                    val domainArea = AreaMapper.fromResponse(serverArea)
+                    val localArea = localAreasMap[serverArea.id]
 
-                if (localArea == null) {
-                    areaDao.insertArea(AreaMapper.toDatabase(domainArea).apply { isSynced = true })
-                    Log.d(TAG, "Área insertada desde el servidor: ${domainArea.id}")
-                } else {
-                    areaDao.updateArea(AreaMapper.toDatabase(domainArea).apply { isSynced = true })
-                    Log.d(TAG, "Área actualizada desde el servidor: ${domainArea.id}")
+                    if (localArea == null) {
+                        areaDao.insertArea(AreaMapper.toDatabase(domainArea).apply { isSynced = true })
+                        Log.d(TAG, "Área insertada desde el servidor: ${domainArea.id}")
+                    } else {
+                        areaDao.updateArea(AreaMapper.toDatabase(domainArea).apply { isSynced = true })
+                        Log.d(TAG, "Área actualizada desde el servidor: ${domainArea.id}")
+                    }
                 }
+
+                // Luego eliminar áreas que ya no existen en el servidor
+                // pero solo si no tienen operarios referenciándolas
+                localAreasMap.values
+                    .filter { localArea ->
+                        !serverAreas.any { it.id == localArea.id }
+                    }
+                    .forEach { areaToDelete ->
+                        try {
+                            areaDao.deleteArea(areaToDelete)
+                            Log.d(TAG, "Área eliminada: ${areaToDelete.id}")
+                        } catch (e: Exception) {
+                            Log.w(TAG, "No se pudo eliminar el área ${areaToDelete.id} porque tiene operarios asociados")
+                        }
+                    }
             }
 
             Log.d(TAG, "Sincronización completa exitosa.")

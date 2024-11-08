@@ -53,4 +53,7 @@ interface UsuarioDao {
             insert(usuario).toInt()
         )
     }
+
+    @Transaction
+    suspend fun transaction(block: suspend () -> Unit) = block()
 }

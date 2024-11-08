@@ -36,4 +36,7 @@ interface AreaDao {
 
     @Query("SELECT * FROM area WHERE isSynced = 0")
     suspend fun getUnsyncedAreas(): List<AreaEntity>
+
+    @Transaction
+    suspend fun transaction(block: suspend () -> Unit) = block()
 }

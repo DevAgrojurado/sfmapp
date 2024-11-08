@@ -39,5 +39,8 @@ interface CargoDao {
         val id = insertCargo(cargo)
         if (id == -1L) updateCargo(cargo)
     }
+
+    @Transaction
+    suspend fun transaction(block: suspend () -> Unit) = block()
 }
 

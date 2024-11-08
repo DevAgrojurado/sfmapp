@@ -34,5 +34,8 @@ interface FincaDao {
         if (id == -1L) updateFinca(finca)
     }
 
+    @Transaction
+    suspend fun transaction(block: suspend () -> Unit) = block()
+
 }
 

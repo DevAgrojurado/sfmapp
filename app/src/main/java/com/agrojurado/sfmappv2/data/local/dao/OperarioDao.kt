@@ -30,4 +30,7 @@ interface OperarioDao {
 
     @Query("SELECT * FROM operario WHERE nombre LIKE '%' || :query || '%' OR codigo LIKE '%' || :query || '%'")
     fun searchOperarios(query: String): Flow<List<OperarioEntity>>
+
+    @Transaction
+    suspend fun transaction(block: suspend () -> Unit) = block()
 }

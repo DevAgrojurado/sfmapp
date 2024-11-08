@@ -26,4 +26,7 @@ interface EvaluacionPolinizacionDao {
 
     @Query("SELECT COUNT(*) FROM evaluacionpolinizacion WHERE semana = :semana AND idlote = :idlote AND palma = :palma AND idPolinizador = :idPolinizador")
     suspend fun checkPalmExists(semana: Int, idlote: Int, palma: Int, idPolinizador: Int): Int
+
+    @Transaction
+    suspend fun transaction(block: suspend () -> Unit) = block()
 }

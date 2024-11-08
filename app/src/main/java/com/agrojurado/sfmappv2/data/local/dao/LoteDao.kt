@@ -37,5 +37,7 @@ interface LoteDao {
         if (id == -1L) updateLote(lote)
     }
 
+    @Transaction
+    suspend fun transaction(block: suspend () -> Unit) = block()
 }
 
