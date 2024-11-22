@@ -2,6 +2,7 @@ package com.agrojurado.sfmappv2.data.local.dao
 
 import androidx.room.*
 import com.agrojurado.sfmappv2.data.local.entity.EvaluacionPolinizacionEntity
+import com.agrojurado.sfmappv2.data.local.entity.OperarioEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -15,11 +16,14 @@ interface EvaluacionPolinizacionDao {
     @Delete
     suspend fun deleteEvaluacion(evaluacion: EvaluacionPolinizacionEntity)
 
+    @Query("DELETE FROM evaluacionpolinizacion")
+    suspend fun deleteAllEvaluaciones()
+
     @Query("SELECT * FROM evaluacionpolinizacion")
     fun getEvaluaciones(): Flow<List<EvaluacionPolinizacionEntity>>
 
-    @Query("SELECT * FROM evaluacionpolinizacion WHERE id = :id")
-    suspend fun getEvaluacionById(id: Long): EvaluacionPolinizacionEntity?
+    @Query("SELECT * FROM evaluacionpolinizacion WHERE id = :id LIMIT 1")
+    suspend fun getEvaluacionById(id: Int): EvaluacionPolinizacionEntity?
 
     @Query("SELECT * FROM evaluacionpolinizacion ORDER BY id DESC LIMIT 1")
     suspend fun getLastEvaluacion(): EvaluacionPolinizacionEntity?

@@ -23,6 +23,7 @@ import androidx.room.Index
 data class LoteEntity(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id") var id: Int = 0,
-    @ColumnInfo(name = "descripcion") var descripcion: String = "",
-    @ColumnInfo(name = "idFinca") var idFinca: Int
+    @ColumnInfo(name = "descripcion") var descripcion: String?,
+    @ColumnInfo(name = "idFinca") var idFinca: Int?,
+    @ColumnInfo(name = "isSynced") var isSynced: Boolean = false
 )

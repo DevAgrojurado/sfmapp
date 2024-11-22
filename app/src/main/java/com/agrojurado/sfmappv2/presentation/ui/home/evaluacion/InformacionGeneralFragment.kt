@@ -89,7 +89,7 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
     }
 
     private fun setupInitialValues() {
-        val currentDate = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
+        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         val currentWeek = Calendar.getInstance().get(Calendar.WEEK_OF_YEAR)
 

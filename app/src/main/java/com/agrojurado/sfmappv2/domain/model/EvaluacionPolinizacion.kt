@@ -2,10 +2,10 @@ package com.agrojurado.sfmappv2.domain.model
 
 data class EvaluacionPolinizacion(
     val id: Int = 0,
-    val fecha: String,
-    val hora: String,
+    val fecha: String?,
+    val hora: String?,
     val semana: Int,
-    val ubicacion: String,
+    val ubicacion: String?,
     val idEvaluador: Int,
     val idPolinizador: Int,
     val idlote: Int,
@@ -21,5 +21,6 @@ data class EvaluacionPolinizacion(
     val marcacion: Int?,
     val repaso1: Int?,
     val repaso2: Int?,
-    val observaciones: String
+    val observaciones: String?,
+    var isSynced: Boolean = false
 )

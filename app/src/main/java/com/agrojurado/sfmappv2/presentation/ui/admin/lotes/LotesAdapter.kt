@@ -46,7 +46,7 @@ class LotesAdapter(
                         etLote.setText(lote.descripcion)
                         setupSpinner(spinnerFinca, fincasList.map { it.descripcion })
 
-                        setSpinnerSelection(spinnerFinca, fincasList, lote.idFinca)
+                        setSpinnerSelection(spinnerFinca, fincasList, lote.idFinca!!)
 
                         AlertDialog.Builder(context)
                             .setView(dialogView)

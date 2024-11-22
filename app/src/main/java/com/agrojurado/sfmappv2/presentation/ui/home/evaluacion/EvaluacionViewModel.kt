@@ -1,5 +1,8 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -14,6 +17,9 @@ import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.repository.LoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -24,9 +30,21 @@ class EvaluacionViewModel @Inject constructor(
     private val usuarioRepository: UsuarioRepository,
     private val operarioRepository: OperarioRepository,
     private val loteRepository: LoteRepository,
-    private val evaluacionRepository: EvaluacionPolinizacionRepository
+    private val evaluacionRepository: EvaluacionPolinizacionRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
+    // Estado de sincronización y conectividad
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _isOnline = MutableStateFlow(false)
+    val isOnline: StateFlow<Boolean> = _isOnline
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error
+
+    // Estados existentes
     private val _evaluacionesPorSemana = MutableLiveData<Map<Int, List<EvaluacionPolinizacion>>>()
     val evaluacionesPorSemana: LiveData<Map<Int, List<EvaluacionPolinizacion>>> = _evaluacionesPorSemana
 
@@ -75,12 +93,38 @@ class EvaluacionViewModel @Inject constructor(
     val lastUsedLoteId: LiveData<Int?> = _lastUsedLoteId
 
     init {
+        observeNetworkState()
         loadLoggedInUser()
         loadOperarioMap()
         loadEvaluadorMap()
         loadLastUsedOperario()
         loadLastUsedLote()
         setCurrentWeek()
+    }
+
+    private fun observeNetworkState() {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                _isOnline.value = true
+                viewModelScope.launch {
+                    try {
+                        _isLoading.value = true
+                        syncEvaluaciones()
+                    } catch (e: Exception) {
+                        _error.value = "Error al sincronizar: ${e.message}"
+                    } finally {
+                        _isLoading.value = false
+                    }
+                }
+            }
+
+            override fun onLost(network: Network) {
+                _isOnline.value = false
+            }
+        }
+
+        connectivityManager.registerDefaultNetworkCallback(networkCallback)
     }
 
     private fun loadLoggedInUser() {
@@ -103,22 +147,63 @@ class EvaluacionViewModel @Inject constructor(
 
     fun loadOperarios() {
         viewModelScope.launch {
-            operarioRepository.getAllOperarios().collectLatest { operariosList ->
-                _operarios.value = operariosList.map { operario ->
-                    "${operario.codigo} - ${operario.nombre}" to operario
+            try {
+                _isLoading.value = true
+                operarioRepository.getAllOperarios().collectLatest { operariosList ->
+                    _operarios.value = operariosList.map { operario ->
+                        "${operario.codigo} - ${operario.nombre}" to operario
+                    }
+                    selectLastUsedOperario()
                 }
-                selectLastUsedOperario()
+            } catch (e: Exception) {
+                _error.value = "Error al cargar operarios: ${e.message}"
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
     fun loadLotes() {
         viewModelScope.launch {
-            loteRepository.getAllLotes().collectLatest { lotesList ->
-                _lotes.value = lotesList.map { lote ->
-                    "Lote ${lote.descripcion}" to lote
+            try {
+                _isLoading.value = true
+                loteRepository.getAllLotes().collectLatest { lotesList ->
+                    _lotes.value = lotesList.map { lote ->
+                        "Lote ${lote.descripcion}" to lote
+                    }
+                    selectLastUsedLote()
                 }
-                selectLastUsedLote()
+            } catch (e: Exception) {
+                _error.value = "Error al cargar lotes: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private suspend fun syncEvaluaciones() {
+        try {
+            evaluacionRepository.syncEvaluaciones()
+            loadEvaluacionesPorSemana()
+        } catch (e: Exception) {
+            _error.value = "Error en la sincronización: ${e.message}"
+        }
+    }
+
+    fun performFullSync() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val success = evaluacionRepository.fullSync()
+                if (success) {
+                    loadEvaluacionesPorSemana()
+                    loadOperarios()
+                    loadLotes()
+                }
+            } catch (e: Exception) {
+                _error.value = "Error en la sincronización completa: ${e.message}"
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -165,9 +250,16 @@ class EvaluacionViewModel @Inject constructor(
 
     fun loadEvaluacionesPorSemana() {
         viewModelScope.launch {
-            evaluacionRepository.getEvaluaciones().collectLatest { evaluacionesList ->
-                val groupedEvaluaciones = evaluacionesList.groupBy { it.semana }
-                _evaluacionesPorSemana.value = groupedEvaluaciones
+            try {
+                _isLoading.value = true
+                evaluacionRepository.getEvaluaciones().collectLatest { evaluacionesList ->
+                    val groupedEvaluaciones = evaluacionesList.groupBy { it.semana }
+                    _evaluacionesPorSemana.value = groupedEvaluaciones
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al cargar evaluaciones: ${e.message}"
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -246,6 +338,7 @@ class EvaluacionViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
+                _isLoading.value = true
                 val requiredFields = listOf("etFecha", "etHora", "etSemana", "spinnerPolinizador", "spinnerLote", "etSeccion", "etPalma")
                 for (field in requiredFields) {
                     if (informacionGeneral[field] == null) {
@@ -260,7 +353,8 @@ class EvaluacionViewModel @Inject constructor(
                 if (evaluacion["observaciones"] == null || (evaluacion["observaciones"] as? String)?.isEmpty() == true) {
                     throw IllegalArgumentException("Las observaciones son obligatorias")
                 }
-
+                val fecha = informacionGeneral["etFecha"] as String
+                val hora = informacionGeneral["etHora"] as String
                 val semana = (informacionGeneral["etSemana"] as? Int) ?: throw IllegalArgumentException("Semana inválida")
                 val lote = (informacionGeneral["spinnerLote"] as? Int) ?: throw IllegalArgumentException("Lote inválido")
                 val palma = (informacionGeneral["etPalma"] as? Int) ?: throw IllegalArgumentException("Palma inválida")
@@ -276,8 +370,8 @@ class EvaluacionViewModel @Inject constructor(
                 }
 
                 val evaluacionPolinizacion = EvaluacionPolinizacion(
-                    fecha = informacionGeneral["etFecha"] as String,
-                    hora = informacionGeneral["etHora"] as String,
+                    fecha = fecha,
+                    hora = hora,
                     semana = semana,
                     ubicacion = _ubicacion.value ?: "",
                     idEvaluador = _loggedInUser.value?.id ?: throw IllegalArgumentException("ID del evaluador no disponible"),
@@ -301,12 +395,70 @@ class EvaluacionViewModel @Inject constructor(
                 evaluacionRepository.insertEvaluacion(evaluacionPolinizacion)
                 _saveResult.value = true
                 _palmExists.value = false
+
                 Log.d("EvaluacionViewModel", "Evaluación guardada exitosamente.")
             } catch (e: Exception) {
                 _saveResult.value = false
                 Log.e("EvaluacionViewModel", "Error al guardar la evaluación: ${e.message}")
                 _errorMessage.value = e.message ?: "Error desconocido al guardar la evaluación"
+            } finally {
+                _isLoading.value = false
             }
+        }
+    }
+
+    fun deleteEvaluacion(evaluacion: EvaluacionPolinizacion) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _error.value = null
+                evaluacionRepository.deleteEvaluacion(evaluacion)
+
+                // Sincronizar si está en línea
+                if (_isOnline.value) {
+                    syncEvaluaciones()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al eliminar la evaluación: ${e.message}"
+                _saveResult.value = false
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun deleteAllEvaluaciones() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                evaluacionRepository.deleteAllEvaluaciones()
+
+                // Sincronizar si está en línea
+                if (_isOnline.value) {
+                    syncEvaluaciones()
+                }
+
+                loadEvaluacionesPorSemana()
+                _saveResult.value = true
+            } catch (e: Exception) {
+                _error.value = "Error al eliminar todas las evaluaciones: ${e.message}"
+                _saveResult.value = false
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Aquí podrías limpiar cualquier recurso si es necesario
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        try {
+            connectivityManager.unregisterNetworkCallback(
+                object : ConnectivityManager.NetworkCallback() {}
+            )
+        } catch (e: Exception) {
+            Log.e("EvaluacionViewModel", "Error al desregistrar network callback: ${e.message}")
         }
     }
 }

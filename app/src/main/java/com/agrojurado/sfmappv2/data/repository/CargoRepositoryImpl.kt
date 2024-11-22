@@ -52,8 +52,9 @@ class CargoRepositoryImpl @Inject constructor(
                 val cargoRequest = CargoMapper.toRequest(cargo)
                 val response = cargoApiService.createCargo(cargoRequest)
 
+                syncCargos()
+
                 if (response.isSuccessful && response.body() != null) {
-                    fullSync()
                     val serverCargo = CargoMapper.fromResponse(response.body()!!)
                     val localId = cargoDao.insertCargo(CargoMapper.toDatabase(serverCargo))
                     return localId

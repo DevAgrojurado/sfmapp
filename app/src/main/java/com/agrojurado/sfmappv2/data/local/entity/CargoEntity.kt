@@ -10,6 +10,7 @@ import androidx.room.PrimaryKey
 data class  CargoEntity(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id") var id: Int = 0,
-    @ColumnInfo(name = "descripcion") var descripcion: String = ""
+    @ColumnInfo(name = "descripcion") var descripcion: String = "",
+    @ColumnInfo(name = "isSynced") var isSynced: Boolean = false
 )
 

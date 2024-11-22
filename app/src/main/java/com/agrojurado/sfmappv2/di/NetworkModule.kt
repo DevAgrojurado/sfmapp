@@ -4,10 +4,12 @@ package com.agrojurado.sfmappv2.di
 import android.content.Context
 import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
 import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
+import com.agrojurado.sfmappv2.data.remote.api.EvaluacionApiService
 import com.agrojurado.sfmappv2.data.remote.api.FincaApiService
 import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
 import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
 import com.agrojurado.sfmappv2.data.remote.api.RetrofitClient
+import com.agrojurado.sfmappv2.data.remote.api.UsuarioApiService
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -48,6 +50,19 @@ object NetworkModule {
     fun provideOperarioApiService(): OperarioApiService {
         return RetrofitClient.operarioApiService
     }
+
+    @Singleton
+    @Provides
+    fun provideEvaluacionApiService(): EvaluacionApiService {
+        return RetrofitClient.evaluacionApiService
+    }
+
+    @Singleton
+    @Provides
+    fun provideUsuarioApiService(): UsuarioApiService {
+        return RetrofitClient.usuarioApiService
+    }
+
 
     // Agregar para proveer el Context
     @Provides

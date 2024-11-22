@@ -9,6 +9,7 @@ import com.agrojurado.sfmappv2.domain.repository.FincaRepository
 import com.agrojurado.sfmappv2.domain.repository.AreaRepository
 import com.agrojurado.sfmappv2.domain.repository.CargoRepository
 import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
+import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ class DataSyncManager @Inject constructor(
     private val areaRepository: AreaRepository,
     private val cargoRepository: CargoRepository,
     private val operarioRepository: OperarioRepository,
+    private val usuarioRepository: UsuarioRepository,
     @ApplicationContext private val context: Context
 ) {
     companion object {
@@ -53,7 +55,8 @@ class DataSyncManager @Inject constructor(
                     async { syncFincas() },
                     async { syncAreas() },
                     async { syncCargos() },
-                    async { syncOperarios() }
+                    async { syncOperarios() },
+                    async {SyncUsuarios()}
                 )
 
                 syncJobs.awaitAll()
@@ -120,6 +123,15 @@ class DataSyncManager @Inject constructor(
             Log.d(TAG, "Sincronización de operarios completada")
         } catch (e: Exception) {
             Log.e(TAG, "Error sincronizando operarios: ${e.message}")
+        }
+    }
+
+    private suspend fun SyncUsuarios() {
+        try {
+            usuarioRepository.syncUsuarios()
+            Log.d(TAG, "Sincronización de usuarios completada")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sincronizando usuarios: ${e.message}")
         }
     }
 }

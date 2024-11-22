@@ -24,9 +24,7 @@ class FincaRepositoryImpl @Inject constructor(
         private const val TAG = "FincaRepository"
     }
 
-    private fun isNetworkAvailable(): Boolean {
-        return Utils.isNetworkAvailable(context)
-    }
+    private fun isNetworkAvailable(): Boolean = Utils.isNetworkAvailable(context)
 
     private fun showSyncAlert(message: String) {
         Utils.showAlert(context, message)
@@ -47,43 +45,41 @@ class FincaRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertFinca(finca: Finca): Long {
-        var localId = 0L
         try {
-            localId = fincaDao.insertFinca(FincaMapper.toDatabase(finca))
-
             if (isNetworkAvailable()) {
-                val fincaRequest = FincaMapper.toRequest(finca.copy(id = localId.toInt()))
+                val fincaRequest = FincaMapper.toRequest(finca)
                 val response = fincaApiService.createFinca(fincaRequest)
+                syncFincas()
 
                 if (response.isSuccessful && response.body() != null) {
                     val serverFinca = FincaMapper.fromResponse(response.body()!!)
-                    fincaDao.updateFinca(FincaMapper.toDatabase(serverFinca))
-                    return serverFinca.id?.toLong() ?: localId
+                    val fincaWithServerId = finca.copy(id = serverFinca.id, isSynced = true)
+                    return fincaDao.insertFinca(FincaMapper.toDatabase(fincaWithServerId))
                 } else {
                     logServerError(response, "Error creando la finca en el servidor")
                     throw Exception("Error del servidor al crear la finca")
                 }
+            } else {
+                val localFinca = finca.copy(id = 0, isSynced = false)
+                val localId = fincaDao.insertFinca(FincaMapper.toDatabase(localFinca))
+                showSyncAlert("Guardado localmente, se sincronizará cuando haya conexión")
+                return localId
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error creando finca: ${e.message}")
-            if (localId == 0L) {
-                throw Exception("Error al guardar la finca: ${e.message}")
-            }
+            throw Exception("Error al guardar la finca: ${e.message}")
         }
-
-        if (!isNetworkAvailable() && localId != 0L) {
-            showSyncAlert("Finca guardada localmente, se sincronizará cuando haya conexión")
-        }
-        return localId
     }
 
     override suspend fun updateFinca(finca: Finca) {
         try {
-            fincaDao.updateFinca(FincaMapper.toDatabase(finca))
+            fincaDao.updateFinca(FincaMapper.toDatabase(finca).apply { isSynced = false })
+
             if (isNetworkAvailable() && finca.id != null) {
                 val response = fincaApiService.updateFinca(FincaMapper.toRequest(finca))
-
-                if (!response.isSuccessful) {
+                if (response.isSuccessful) {
+                    fincaDao.updateFinca(FincaMapper.toDatabase(finca).apply { isSynced = true })
+                } else {
                     logServerError(response, "Error actualizando la finca en el servidor")
                     throw Exception("Error del servidor al actualizar la finca")
                 }
@@ -100,10 +96,13 @@ class FincaRepositoryImpl @Inject constructor(
     override suspend fun deleteFinca(finca: Finca) {
         try {
             fincaDao.deleteFinca(FincaMapper.toDatabase(finca))
+
             if (isNetworkAvailable() && finca.id != null) {
                 val response = fincaApiService.deleteFinca(finca.id)
-                if (!response.isSuccessful) {
-                    logServerError(response, "Error eliminando finca en el servidor")
+                if (response.isSuccessful) {
+                    Log.d(TAG, "Finca eliminada correctamente en el servidor")
+                } else {
+                    logServerError(response, "Error al eliminar finca en el servidor")
                     throw Exception("Error del servidor al eliminar la finca")
                 }
             } else {
@@ -121,9 +120,9 @@ class FincaRepositoryImpl @Inject constructor(
         var hasLocalChanges = false
 
         try {
-            val localFincas = fincaDao.getAllFincas().first()
             fincaDao.deleteAllFincas()
             hasLocalChanges = true
+            Log.d(TAG, "Datos locales eliminados")
 
             if (isNetworkAvailable()) {
                 val serverResponse = fincaApiService.getFincas()
@@ -132,29 +131,29 @@ class FincaRepositoryImpl @Inject constructor(
                 }
 
                 val serverFincas = serverResponse.body()?.filterNotNull() ?: emptyList()
-                val allFincas = (serverFincas.map { it.id } + localFincas.mapNotNull { it.id }).distinct()
-
-                allFincas.forEach { fincaId ->
-                    fincaId?.let {
-                        val response = fincaApiService.deleteFinca(it)
+                serverFincas.forEach { serverFinca ->
+                    try {
+                        val response = fincaApiService.deleteFinca(serverFinca.id)
                         if (!response.isSuccessful) {
-                            val error = "Error al eliminar finca $it: ${response.errorBody()?.string()}"
+                            val error = "Error al eliminar finca ${serverFinca.id}: ${response.errorBody()?.string()}"
                             Log.e(TAG, error)
                             errorList.add(error)
                         }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error al eliminar finca en el servidor: ${e.message}")
+                        errorList.add("Error al eliminar finca ${serverFinca.id} en el servidor: ${e.message}")
                     }
                 }
 
                 if (errorList.isNotEmpty()) {
                     throw Exception("Errores al eliminar fincas en el servidor:\n${errorList.joinToString("\n")}")
                 }
-
-                showSyncAlert("Todas las fincas eliminadas correctamente")
+                showSyncAlert("Todas las fincas eliminadas correctamente del servidor")
             } else {
                 showSyncAlert("Sin conexión, fincas eliminadas localmente")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error en deleteAllFincas: ${e.message}")
+            Log.e(TAG, "Error al eliminar todas las fincas: ${e.message}")
             val message = if (hasLocalChanges) {
                 "Fincas eliminadas localmente, pero hubo errores en el servidor: ${e.message}"
             } else {
@@ -173,49 +172,69 @@ class FincaRepositoryImpl @Inject constructor(
         }
 
         try {
+            val unsyncedFincas = fincaDao.getAllFincas().first().filter { !it.isSynced }
+
+            if (unsyncedFincas.isNotEmpty()) {
+                Log.d(TAG, "Fincas no sincronizadas encontradas: ${unsyncedFincas.size}")
+                unsyncedFincas.forEach { localFinca ->
+                    try {
+                        val fincaRequest = FincaMapper.toRequest(FincaMapper.toDomain(localFinca))
+
+                        if (fincaRequest.id == null) {
+                            Log.e(TAG, "Campos obligatorios faltantes para la finca: ${localFinca.id}")
+                            return@forEach
+                        }
+
+                        val response = fincaApiService.createFinca(fincaRequest)
+                        if (response.isSuccessful && response.body() != null) {
+                            val serverFinca = FincaMapper.fromResponse(response.body()!!)
+                            val updatedFinca = localFinca.copy(id = serverFinca.id, isSynced = true)
+                            fincaDao.updateFinca(updatedFinca)
+                            Log.d(TAG, "Finca sincronizada correctamente con el ID: ${updatedFinca.id}")
+                        } else {
+                            Log.e(TAG, "Error al sincronizar finca ${localFinca.id}: ${response.errorBody()?.string()}")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error al sincronizar finca ${localFinca.id}: ${e.message}")
+                    }
+                }
+            }
+
             val response = fincaApiService.getFincas()
             if (!response.isSuccessful) {
+                logServerError(response, "Error obteniendo fincas del servidor")
                 throw Exception("Error al obtener fincas del servidor")
             }
 
             val serverFincas = response.body()?.filterNotNull() ?: emptyList()
-            val localFincas = fincaDao.getAllFincas().first()
-            val serverFincasMap = serverFincas.associateBy { it.id }
-            val localFincasMap = localFincas.associateBy { it.id }
+            if (serverFincas.isEmpty()) {
+                Log.d(TAG, "El servidor no tiene fincas, no se realiza la sincronización.")
+                showSyncAlert("El servidor no tiene fincas para sincronizar.")
+                return
+            }
+
+            val localFincasMap = fincaDao.getAllFincas().first().associateBy { it.id }
+
+            localFincasMap.values.filter { it.id != null && !serverFincas.any { serverFinca -> serverFinca.id == it.id } }
+                .forEach { localFinca ->
+                    fincaDao.deleteFinca(localFinca)
+                    Log.d(TAG, "Finca eliminada localmente porque no existe en el servidor: ${localFinca.id}")
+                }
 
             serverFincas.forEach { serverFinca ->
-                val localFinca = localFincasMap[serverFinca.id]
                 val domainFinca = FincaMapper.fromResponse(serverFinca)
-
+                val localFinca = localFincasMap[serverFinca.id]
                 if (localFinca == null) {
-                    fincaDao.insertFinca(FincaMapper.toDatabase(domainFinca))
+                    fincaDao.insertFinca(FincaMapper.toDatabase(domainFinca).apply { isSynced = true })
                 } else {
-                    fincaDao.updateFinca(FincaMapper.toDatabase(domainFinca))
+                    fincaDao.updateFinca(FincaMapper.toDatabase(domainFinca).apply { isSynced = true })
                 }
             }
 
-            localFincas.filter { it.id == null || !serverFincasMap.containsKey(it.id) }
-                .forEach { localFinca ->
-                    try {
-                        val domainFinca = FincaMapper.toDomain(localFinca)
-                        val createResponse = fincaApiService.createFinca(FincaMapper.toRequest(domainFinca))
-
-                        if (createResponse.isSuccessful && createResponse.body() != null) {
-                            val newServerFinca = FincaMapper.fromResponse(createResponse.body()!!)
-                            fincaDao.updateFinca(FincaMapper.toDatabase(newServerFinca))
-                        } else {
-                            logServerError(createResponse, "Error sincronizando finca local")
-                            throw Exception("Error al sincronizar finca local con el servidor")
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error sincronizando finca local: ${e.message}")
-                    }
-                }
-
-            showSyncAlert("Sincronización completada")
+            Log.d(TAG, "Sincronización completa")
         } catch (e: Exception) {
-            Log.e(TAG, "Error de sincronización: ${e.message}")
-            throw Exception("Error en la sincronización: ${e.message}")
+            Log.e(TAG, "Error durante la sincronización: ${e.message}")
+            showSyncAlert("Error durante la sincronización: ${e.message}")
         }
     }
 
@@ -228,32 +247,49 @@ class FincaRepositoryImpl @Inject constructor(
         try {
             val response = fincaApiService.getFincas()
             if (!response.isSuccessful) {
-                throw Exception("Error al obtener datos del servidor")
+                logServerError(response, "Error en la sincronización completa")
+                return false
             }
 
             val serverFincas = response.body()?.filterNotNull() ?: emptyList()
-            val localFincas = fincaDao.getAllFincas().first()
 
-            // Insertar cargos locales que no tienen ID
-            localFincas.filter { it.id == null }.forEach { localFinca ->
-                val createResponse = fincaApiService.createFinca(
-                    FincaMapper.toRequest(FincaMapper.toDomain(localFinca))
-                )
-                if (!createResponse.isSuccessful) {
-                    throw Exception("Error al sincronizar finca local")
+            fincaDao.transaction {
+                val localFincasMap = fincaDao.getAllFincas().first().associateBy { it.id }
+
+                serverFincas.forEach { serverFinca ->
+                    val domainFinca = FincaMapper.fromResponse(serverFinca)
+                    val localFinca = localFincasMap[serverFinca.id]
+
+                    if (localFinca == null) {
+                        fincaDao.insertFinca(FincaMapper.toDatabase(domainFinca).apply { isSynced = true })
+                        Log.d(TAG, "Finca insertada desde el servidor: ${domainFinca.id}")
+                    } else {
+                        fincaDao.updateFinca(FincaMapper.toDatabase(domainFinca).apply { isSynced = true })
+                        Log.d(TAG, "Finca actualizada desde el servidor: ${domainFinca.id}")
+                    }
                 }
+
+                localFincasMap.values
+                    .filter { localFinca ->
+                        !serverFincas.any { it.id == localFinca.id }
+                    }
+                    .forEach { fincaToDelete ->
+                        try {
+                            fincaDao.deleteFinca(fincaToDelete)
+                            Log.d(TAG, "Finca eliminada: ${fincaToDelete.id}")
+                        } catch (e: Exception) {
+                            Log.w(TAG, "No se pudo eliminar la finca ${fincaToDelete.id} porque tiene referencias asociadas")
+                        }
+                    }
             }
 
-            fincaDao.deleteAllFincas()
-            serverFincas.forEach { serverFinca ->
-                fincaDao.insertFinca(FincaMapper.toDatabase(FincaMapper.fromResponse(serverFinca)))
-            }
-
-            showSyncAlert("Sincronización completada")
+            Log.d(TAG, "Sincronización completa exitosa.")
+            showSyncAlert("Sincronización completa")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Error de sincronización completa: ${e.message}")
-            throw Exception("Error en la sincronización completa: ${e.message}")
+            Log.e(TAG, "Error en la sincronización completa: ${e.message}", e)
+            showSyncAlert("Error durante la sincronización completa: ${e.message}")
+            return false
         }
     }
 }

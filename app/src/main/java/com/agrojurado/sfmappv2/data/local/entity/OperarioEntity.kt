@@ -39,7 +39,6 @@ data class OperarioEntity(
     @ColumnInfo(name = "id") val id: Int = 0,
     @ColumnInfo(name = "codigo") var codigo: String,
     @ColumnInfo(name = "nombre") var nombre: String,
-    //@ColumnInfo(name = "vigente") val vigente: Int = 0,
     @ColumnInfo(name = "cargoId") val cargoId: Int,
     @ColumnInfo(name = "areaId") val areaId: Int,
     @ColumnInfo(name = "fincaId") val fincaId: Int,

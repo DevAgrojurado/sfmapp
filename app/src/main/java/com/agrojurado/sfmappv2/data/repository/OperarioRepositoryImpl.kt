@@ -285,7 +285,7 @@ class OperarioRepositoryImpl @Inject constructor(
             return false
         }
     }
-override fun searchOperarios(query: String): Flow<List<Operario>> {
+    override fun searchOperarios(query: String): Flow<List<Operario>> {
         return operarioDao.searchOperarios(query).map { list ->
             list.map { OperarioMapper.toDomain(it) }
         }

@@ -24,9 +24,7 @@ class LoteRepositoryImpl @Inject constructor(
         private const val TAG = "LoteRepository"
     }
 
-    private fun isNetworkAvailable(): Boolean {
-        return Utils.isNetworkAvailable(context)
-    }
+    private fun isNetworkAvailable(): Boolean = Utils.isNetworkAvailable(context)
 
     private fun showSyncAlert(message: String) {
         Utils.showAlert(context, message)
@@ -47,45 +45,41 @@ class LoteRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertLote(lote: Lote): Long {
-        var localId = 0L
         try {
-            localId = loteDao.insertLote(LoteMapper.toDatabase(lote))
-
             if (isNetworkAvailable()) {
-                val loteRequest = LoteMapper.toRequest(lote.copy(id = localId.toInt()))
+                val loteRequest = LoteMapper.toRequest(lote)
                 val response = loteApiService.createLote(loteRequest)
 
                 if (response.isSuccessful && response.body() != null) {
                     val serverLote = LoteMapper.fromResponse(response.body()!!)
-                    loteDao.updateLote(LoteMapper.toDatabase(serverLote))
-                    return serverLote.id?.toLong() ?: localId
+                    val loteWithServerId = lote.copy(id = serverLote.id, isSynced = true)
+                    return loteDao.insertLote(LoteMapper.toDatabase(loteWithServerId))
                 } else {
                     logServerError(response, "Error creando el lote en el servidor")
                     throw Exception("Error del servidor al crear el lote")
                 }
+            } else {
+                val localLote = lote.copy(id = 0, isSynced = false)
+                val localId = loteDao.insertLote(LoteMapper.toDatabase(localLote))
+                showSyncAlert("Guardado localmente, se sincronizará cuando haya conexión")
+                return localId
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error creando lote: ${e.message}")
-
-            if (localId == 0L) {
-                throw Exception("Error al guardar el lote: ${e.message}")
-            }
+            throw Exception("Error al guardar el lote: ${e.message}")
         }
-
-        if (!isNetworkAvailable() && localId != 0L) {
-            showSyncAlert("Lote guardado localmente, se sincronizará cuando haya conexión")
-        }
-        return localId
     }
 
     override suspend fun updateLote(lote: Lote) {
         try {
-            loteDao.updateLote(LoteMapper.toDatabase(lote))
+            loteDao.updateLote(LoteMapper.toDatabase(lote).apply { isSynced = false })
+
             if (isNetworkAvailable() && lote.id != null) {
                 val response = loteApiService.updateLote(LoteMapper.toRequest(lote))
-
-                if (!response.isSuccessful) {
-                    logServerError(response, "Error actualizando lote en el servidor")
+                if (response.isSuccessful) {
+                    loteDao.updateLote(LoteMapper.toDatabase(lote).apply { isSynced = true })
+                } else {
+                    logServerError(response, "Error actualizando el lote en el servidor")
                     throw Exception("Error del servidor al actualizar el lote")
                 }
             } else {
@@ -101,10 +95,13 @@ class LoteRepositoryImpl @Inject constructor(
     override suspend fun deleteLote(lote: Lote) {
         try {
             loteDao.deleteLote(LoteMapper.toDatabase(lote))
+
             if (isNetworkAvailable() && lote.id != null) {
                 val response = loteApiService.deleteLote(lote.id)
-                if (!response.isSuccessful) {
-                    logServerError(response, "Error eliminando lote en el servidor")
+                if (response.isSuccessful) {
+                    Log.d(TAG, "Lote eliminado correctamente en el servidor")
+                } else {
+                    logServerError(response, "Error al eliminar lote en el servidor")
                     throw Exception("Error del servidor al eliminar el lote")
                 }
             } else {
@@ -122,9 +119,9 @@ class LoteRepositoryImpl @Inject constructor(
         var hasLocalChanges = false
 
         try {
-            val localLotes = loteDao.getAllLotes().first()
             loteDao.deleteAllLotes()
             hasLocalChanges = true
+            Log.d(TAG, "Datos locales eliminados")
 
             if (isNetworkAvailable()) {
                 val serverResponse = loteApiService.getLotes()
@@ -133,29 +130,29 @@ class LoteRepositoryImpl @Inject constructor(
                 }
 
                 val serverLotes = serverResponse.body()?.filterNotNull() ?: emptyList()
-                val allLotes = (serverLotes.map { it.id } + localLotes.mapNotNull { it.id }).distinct()
-
-                allLotes.forEach { loteId ->
-                    loteId?.let {
-                        val response = loteApiService.deleteLote(it)
+                serverLotes.forEach { serverLote ->
+                    try {
+                        val response = loteApiService.deleteLote(serverLote.id)
                         if (!response.isSuccessful) {
-                            val error = "Error al eliminar lote $it: ${response.errorBody()?.string()}"
+                            val error = "Error al eliminar lote ${serverLote.id}: ${response.errorBody()?.string()}"
                             Log.e(TAG, error)
                             errorList.add(error)
                         }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error al eliminar lote en el servidor: ${e.message}")
+                        errorList.add("Error al eliminar lote ${serverLote.id} en el servidor: ${e.message}")
                     }
                 }
 
                 if (errorList.isNotEmpty()) {
                     throw Exception("Errores al eliminar lotes en el servidor:\n${errorList.joinToString("\n")}")
                 }
-
-                showSyncAlert("Todos los lotes eliminados correctamente")
+                showSyncAlert("Todos los lotes eliminados correctamente del servidor")
             } else {
                 showSyncAlert("Sin conexión, lotes eliminados localmente")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error en deleteAllLotes: ${e.message}")
+            Log.e(TAG, "Error al eliminar todos los lotes: ${e.message}")
             val message = if (hasLocalChanges) {
                 "Lotes eliminados localmente, pero hubo errores en el servidor: ${e.message}"
             } else {
@@ -168,73 +165,79 @@ class LoteRepositoryImpl @Inject constructor(
 
     override suspend fun syncLotes() {
         if (!isNetworkAvailable()) {
-            Log.d(TAG, "No connection available for synchronization")
-            showSyncAlert("No connection, using local data")
+            Log.d(TAG, "No hay conexión disponible para la sincronización")
+            showSyncAlert("Sin conexión, usando datos locales")
             return
         }
 
         try {
-            val response = loteApiService.getLotes()
-            if (!response.isSuccessful) {
-                if (response.code() == 404) {
-                    Log.w(TAG, "No se encontraron lotes en el servidor.")
-                    return // O notificar al usuario que no hay datos
-                }
-                throw Exception("Error getting lotes from the server")
+            // Obtener primero los lotes del servidor para tener una referencia
+            val serverResponse = loteApiService.getLotes()
+            if (!serverResponse.isSuccessful) {
+                throw Exception("Error al obtener lotes del servidor")
             }
+            val serverLotes = serverResponse.body()?.filterNotNull()?.associateBy { it.id } ?: emptyMap()
 
-            val serverLotes = response.body()?.filterNotNull() ?: emptyList()
-            val localLotes = loteDao.getAllLotes().first()
+            // Sincronizar lotes locales no sincronizados
+            val unsyncedLotes = loteDao.getAllLotes().first().filter { !it.isSynced }
 
-            if (localLotes.isEmpty()) {
-                // Si la base de datos local está vacía, insertamos todos los lotes del servidor
-                serverLotes.forEach { serverLote ->
-                    val domainLote = LoteMapper.fromResponse(serverLote)
-                    loteDao.insertLote(LoteMapper.toDatabase(domainLote))
-                }
-                showSyncAlert("Sincronización completada")
-                return
-            }
-
-            // Lógica de sincronización
-            val serverLotesMap = serverLotes.associateBy { it.id }
-            val localLotesMap = localLotes.associateBy { it.id }
-
-            serverLotes.forEach { serverLote ->
-                val localLote = localLotesMap[serverLote.id]
-                val domainLote = LoteMapper.fromResponse(serverLote)
-
-                if (localLote == null) {
-                    loteDao.insertLote(LoteMapper.toDatabase(domainLote))
-                } else {
-                    loteDao.updateLote(LoteMapper.toDatabase(domainLote))
-                }
-            }
-
-            localLotes.filter { it.id == null || !serverLotesMap.containsKey(it.id) }
-                .forEach { localLote ->
+            if (unsyncedLotes.isNotEmpty()) {
+                Log.d(TAG, "Lotes no sincronizados encontrados: ${unsyncedLotes.size}")
+                unsyncedLotes.forEach { localLote ->
                     try {
-                        val domainLote = LoteMapper.toDomain(localLote)
-                        val createResponse = loteApiService.createLote(LoteMapper.toRequest(domainLote))
+                        // Verificar si este lote ya existe en el servidor
+                        if (localLote.id != null && serverLotes.containsKey(localLote.id)) {
+                            // Si ya existe, solo actualizamos el estado de sincronización
+                            loteDao.updateLote(localLote.copy(isSynced = true))
+                            Log.d(TAG, "Lote ${localLote.id} ya existe en el servidor, marcado como sincronizado")
+                            return@forEach
+                        }
 
-                        if (createResponse.isSuccessful && createResponse.body() != null) {
-                            val newServerLote = LoteMapper.fromResponse(createResponse.body()!!)
-                            loteDao.updateLote(LoteMapper.toDatabase(newServerLote))
+                        val loteRequest = LoteMapper.toRequest(LoteMapper.toDomain(localLote))
+
+                        if (loteRequest.id == null) {
+                            Log.e(TAG, "Campos obligatorios faltantes para el lote: ${localLote.id}")
+                            return@forEach
+                        }
+
+                        val response = loteApiService.createLote(loteRequest)
+                        if (response.isSuccessful && response.body() != null) {
+                            val serverLote = LoteMapper.fromResponse(response.body()!!)
+                            val updatedLote = localLote.copy(id = serverLote.id, isSynced = true)
+                            loteDao.updateLote(updatedLote)
+                            Log.d(TAG, "Lote sincronizado correctamente con el ID: ${updatedLote.id}")
                         } else {
-                            logServerError(createResponse, "Error synchronizing local lote")
-                            throw Exception("Error synchronizing local lote with the server")
+                            Log.e(TAG, "Error al sincronizar lote ${localLote.id}: ${response.errorBody()?.string()}")
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error synchronizing local lote: ${e.message}")
+                        Log.e(TAG, "Error al sincronizar lote ${localLote.id}: ${e.message}")
                     }
                 }
+            }
 
-            showSyncAlert("Sincronización completada")
+            // Actualizar la base de datos local con los lotes del servidor
+            val localLotesMap = loteDao.getAllLotes().first().associateBy { it.id }
+
+            // Actualizar o insertar los lotes del servidor
+            serverLotes.values.forEach { serverLote ->
+                val domainLote = LoteMapper.fromResponse(serverLote)
+                val localLote = localLotesMap[serverLote.id]
+
+                if (localLote == null) {
+                    loteDao.insertLote(LoteMapper.toDatabase(domainLote).apply { isSynced = true })
+                } else if (!localLote.isSynced) {
+                    loteDao.updateLote(LoteMapper.toDatabase(domainLote).apply { isSynced = true })
+                }
+            }
+
+            Log.d(TAG, "Sincronización de lotes completada exitosamente")
+            showSyncAlert("Sincronización de lotes completada exitosamente")
         } catch (e: Exception) {
-            Log.e(TAG, "Synchronization error: ${e.message}")
-            throw Exception("Synchronization error: ${e.message}")
+            Log.e(TAG, "Error durante la sincronización de lotes: ${e.message}")
+            showSyncAlert("Error durante la sincronización de lotes: ${e.message}")
         }
     }
+
 
     override suspend fun fullSync(): Boolean {
         if (!isNetworkAvailable()) {
@@ -245,33 +248,49 @@ class LoteRepositoryImpl @Inject constructor(
         try {
             val response = loteApiService.getLotes()
             if (!response.isSuccessful) {
-                if (response.code() == 404) {
-                    Log.w(TAG, "No se encontraron lotes en el servidor.")
-                    return true // Considerar que la sincronización se completó sin errores
-                }
-                throw Exception("Error al obtener datos del servidor")
+                logServerError(response, "Error en la sincronización completa")
+                return false
             }
 
             val serverLotes = response.body()?.filterNotNull() ?: emptyList()
-            val localLotes = loteDao.getAllLotes().first()
 
-            // Si la base de datos local está vacía, insertamos los lotes del servidor
-            if (localLotes.isEmpty()) {
+            loteDao.transaction {
+                val localLotesMap = loteDao.getAllLotes().first().associateBy { it.id }
+
                 serverLotes.forEach { serverLote ->
-                    loteDao.insertLote(LoteMapper.toDatabase(LoteMapper.fromResponse(serverLote)))
+                    val domainLote = LoteMapper.fromResponse(serverLote)
+                    val localLote = localLotesMap[serverLote.id]
+
+                    if (localLote == null) {
+                        loteDao.insertLote(LoteMapper.toDatabase(domainLote).apply { isSynced = true })
+                        Log.d(TAG, "Lote insertado desde el servidor: ${domainLote.id}")
+                    } else {
+                        loteDao.updateLote(LoteMapper.toDatabase(domainLote).apply { isSynced = true })
+                        Log.d(TAG, "Lote actualizado desde el servidor: ${domainLote.id}")
+                    }
                 }
-            } else {
-                // Aquí va la lógica de sincronización si la base de datos no está vacía
-                localLotes.forEach { localLote ->
-                    // Lógica de sincronización entre local y servidor
-                }
+
+                localLotesMap.values
+                    .filter { localLote ->
+                        !serverLotes.any { it.id == localLote.id }
+                    }
+                    .forEach { loteToDelete ->
+                        try {
+                            loteDao.deleteLote(loteToDelete)
+                            Log.d(TAG, "Lote eliminado: ${loteToDelete.id}")
+                        } catch (e: Exception) {
+                            Log.w(TAG, "No se pudo eliminar el lote ${loteToDelete.id} porque tiene referencias asociadas")
+                        }
+                    }
             }
 
-            showSyncAlert("Sincronización completada")
+            Log.d(TAG, "Sincronización completa exitosa.")
+            showSyncAlert("Sincronización completa")
             return true
         } catch (e: Exception) {
-            Log.e(TAG, "Error de sincronización completa: ${e.message}")
-            throw Exception("Error en la sincronización completa: ${e.message}")
+            Log.e(TAG, "Error en la sincronización completa: ${e.message}", e)
+            showSyncAlert("Error durante la sincronización completa: ${e.message}")
+            return false
         }
     }
 }

@@ -2,9 +2,11 @@ package com.agrojurado.sfmappv2.presentation.ui.login
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import com.agrojurado.sfmappv2.data.sync.DataSyncManager
 import com.agrojurado.sfmappv2.databinding.ActivityLoginBinding
 import com.agrojurado.sfmappv2.presentation.common.UiState
 import com.agrojurado.sfmappv2.presentation.ui.crearcuenta.CrearCuentaActivity
@@ -13,6 +15,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import pe.pcs.libpcs.UtilsCommon
 import pe.pcs.libpcs.UtilsMessage
 import pe.pcs.libpcs.UtilsSecurity
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
@@ -55,7 +58,7 @@ class LoginActivity : AppCompatActivity() {
 
             viewModel.login(
                 binding.etEmail1.text.toString().trim(),
-                UtilsSecurity.createHashSha512(binding.etClave.text.toString().trim())
+                binding.etClave.text.toString().trim()
             )
         }
     }

@@ -12,6 +12,7 @@ import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.repository.AreaRepository
 import com.agrojurado.sfmappv2.domain.repository.CargoRepository
 import com.agrojurado.sfmappv2.domain.repository.FincaRepository
+import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import com.agrojurado.sfmappv2.domain.usecase.usuario.InsertUserAccountUseCase
 import com.agrojurado.sfmappv2.presentation.common.UiState
 import com.agrojurado.sfmappv2.presentation.common.makeCall
@@ -23,6 +24,7 @@ import javax.inject.Inject
 class   CrearCuentaViewModel @Inject constructor(
     private val insertUserAccountUseCase: InsertUserAccountUseCase,
 
+    private val usuarioRepository: UsuarioRepository,
     private val cargoRepository: CargoRepository,
     private val areaRepository: AreaRepository,
     private val fincasRepository: FincaRepository
@@ -42,8 +44,12 @@ class   CrearCuentaViewModel @Inject constructor(
     fun grabarCuenta(usuario: Usuario) = viewModelScope.launch {
         _uiStateGrabar.value = UiState.Loading
 
-        makeCall { insertUserAccountUseCase(usuario) }.let {
-            _uiStateGrabar.value = it
+        try {
+            val insertedUserId = usuarioRepository.insert(usuario)
+            usuario.id = insertedUserId.toLong().toInt()
+            _uiStateGrabar.value = UiState.Success(usuario)
+        } catch (e: Exception) {
+            _uiStateGrabar.value = UiState.Error(e.message ?: "Error al crear usuario")
         }
-    }
+        }
 }

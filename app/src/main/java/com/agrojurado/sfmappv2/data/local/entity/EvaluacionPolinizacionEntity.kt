@@ -27,7 +27,7 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.NO_ACTION
         ),
         ForeignKey(
-            entity = OperarioEntity::class,
+            entity = LoteEntity::class,
             parentColumns = ["id"],
             childColumns = ["idlote"],
             onDelete = ForeignKey.NO_ACTION
@@ -35,11 +35,12 @@ import androidx.room.PrimaryKey
     ]
 )
 data class EvaluacionPolinizacionEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    @ColumnInfo(name = "fecha") val fecha: String,
-    @ColumnInfo(name = "hora") val hora: String,
+    @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "id") var id: Int = 0,
+    @ColumnInfo(name = "fecha") val fecha: String?,
+    @ColumnInfo(name = "hora") val hora: String?,
     @ColumnInfo(name = "semana") val semana: Int,
-    @ColumnInfo(name = "ubicacion") val ubicacion: String,
+    @ColumnInfo(name = "ubicacion") val ubicacion: String?,
     @ColumnInfo(name = "idevaluador") val idevaluador: Int,
     @ColumnInfo(name = "idpolinizador") val idpolinizador: Int,
     @ColumnInfo(name = "idlote") val idlote: Int,
@@ -55,5 +56,6 @@ data class EvaluacionPolinizacionEntity(
     @ColumnInfo(name = "marcacion") val marcacion: Int?,
     @ColumnInfo(name = "repaso1") val repaso1: Int?,
     @ColumnInfo(name = "repaso2") val repaso2: Int?,
-    @ColumnInfo(name = "observaciones") val observaciones: String
+    @ColumnInfo(name = "observaciones") val observaciones: String?,
+    @ColumnInfo(name = "isSynced") var isSynced: Boolean = false
 )

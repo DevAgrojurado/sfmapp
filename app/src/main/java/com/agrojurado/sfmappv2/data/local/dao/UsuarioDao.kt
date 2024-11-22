@@ -23,6 +23,9 @@ interface UsuarioDao {
     @Delete
     suspend fun delete(usuario: UsuarioEntity): Int
 
+    @Query("DELETE FROM usuario WHERE id = :id")
+    suspend fun deleteById(id: Int): Int
+
     @Query("SELECT * FROM usuario Where nombre LIKE '%' || :nombre || '%'")
     fun listByName(nombre: String): Flow<List<UsuarioEntity>>
 
@@ -34,6 +37,9 @@ interface UsuarioDao {
 
     @Query("SELECT * FROM usuario Where id=:id")
     suspend fun getUserById(id: Int): UsuarioEntity?
+
+    @Query("DELETE FROM usuario")
+    suspend fun deleteAllUsuarios()
 
     @Query("SELECT ifnull(count(id), 0) FROM usuario")
     suspend fun existsAccount(): Int

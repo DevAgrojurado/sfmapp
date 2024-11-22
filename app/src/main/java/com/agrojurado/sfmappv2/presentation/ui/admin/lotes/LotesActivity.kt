@@ -164,7 +164,7 @@ class LotesActivity : BaseActivity() {
         setupSpinner(spinnerFinca, fincasList.map { it.descripcion })
 
         etLote.setText(lote.descripcion)
-        setSpinnerSelection(spinnerFinca, fincasList, lote.idFinca)
+        setSpinnerSelection(spinnerFinca, fincasList, lote.idFinca!!)
 
         val updateDialog = AlertDialog.Builder(this)
         updateDialog.setView(v)
@@ -242,7 +242,7 @@ class LotesActivity : BaseActivity() {
     private fun filterLotes(query: String) {
         val filteredList = viewModel.lotes.value?.filter { lote ->
             val fincaDescripcion = fincasList.find { it.id == lote.idFinca }?.descripcion ?: ""
-            lote.descripcion.contains(query, ignoreCase = true) ||
+            lote.descripcion!!.contains(query, ignoreCase = true) ||
                     fincaDescripcion.contains(query, ignoreCase = true)
         } ?: emptyList()
         lotesAdapter.updateLotes(filteredList)

@@ -6,9 +6,11 @@ import com.agrojurado.sfmappv2.data.local.dao.*
 import com.agrojurado.sfmappv2.data.local.database.AppDatabase
 import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
 import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
+import com.agrojurado.sfmappv2.data.remote.api.EvaluacionApiService
 import com.agrojurado.sfmappv2.data.remote.api.FincaApiService
 import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
 import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
+import com.agrojurado.sfmappv2.data.remote.api.UsuarioApiService
 import com.agrojurado.sfmappv2.data.repository.*
 import com.agrojurado.sfmappv2.domain.repository.*
 import dagger.Module
@@ -70,9 +72,10 @@ object RoomModule {
     @Provides
     fun provideUsuarioRepository(
         dao: UsuarioDao,
+        usuarioApiService: UsuarioApiService,
         @ApplicationContext context: Context
     ): UsuarioRepository {
-        return UsuarioRepositoryImpl(dao, context)
+        return UsuarioRepositoryImpl(dao, usuarioApiService, context)
     }
 
     @Singleton
@@ -117,9 +120,10 @@ object RoomModule {
     @Singleton
     @Provides
     fun provideEvaluacionPolinizacionRepository(
-        dao: EvaluacionPolinizacionDao
-    ): EvaluacionPolinizacionRepository {
-        return EvaluacionPolinizacionRepositoryImpl(dao)
+        dao: EvaluacionPolinizacionDao,
+        evaluacionApiService: EvaluacionApiService,
+        @ApplicationContext context: Context): EvaluacionPolinizacionRepository {
+        return EvaluacionPolinizacionRepositoryImpl(dao, evaluacionApiService, context)
     }
 
     @Singleton
