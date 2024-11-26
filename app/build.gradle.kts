@@ -84,6 +84,9 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
 
+    // okhttp3
+    implementation(libs.okhttp)
+
     // Grafico para reporte
     //implementation(libs.mpandroidchart)
 

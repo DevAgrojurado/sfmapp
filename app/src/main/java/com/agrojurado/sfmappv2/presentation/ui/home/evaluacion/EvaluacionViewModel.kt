@@ -92,6 +92,11 @@ class EvaluacionViewModel @Inject constructor(
     private val _lastUsedLoteId = MutableLiveData<Int?>()
     val lastUsedLoteId: LiveData<Int?> = _lastUsedLoteId
 
+    private val _isSaving = MutableLiveData<Boolean>()
+    val isSaving: LiveData<Boolean> = _isSaving
+
+    private var syncInProgress = false
+
     init {
         observeNetworkState()
         loadLoggedInUser()
@@ -102,19 +107,29 @@ class EvaluacionViewModel @Inject constructor(
         setCurrentWeek()
     }
 
+    // Verifica si hay sincronización en curso
+    private fun isSyncInProgress(): Boolean {
+        return syncInProgress
+    }
+
     private fun observeNetworkState() {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 _isOnline.value = true
                 viewModelScope.launch {
-                    try {
-                        _isLoading.value = true
-                        syncEvaluaciones()
-                    } catch (e: Exception) {
-                        _error.value = "Error al sincronizar: ${e.message}"
-                    } finally {
-                        _isLoading.value = false
+                    // Verificar si ya hay una sincronización en curso
+                    if (!isSyncInProgress()) {
+                        try {
+                            syncInProgress = true // Marcar sincronización en curso
+                            _isLoading.value = true
+                            syncEvaluaciones() // Llamar a la sincronización
+                        } catch (e: Exception) {
+                            _error.value = "Error al sincronizar: ${e.message}"
+                        } finally {
+                            _isLoading.value = false
+                            syncInProgress = false // Marcar sincronización como terminada
+                        }
                     }
                 }
             }
@@ -126,6 +141,8 @@ class EvaluacionViewModel @Inject constructor(
 
         connectivityManager.registerDefaultNetworkCallback(networkCallback)
     }
+
+
 
     private fun loadLoggedInUser() {
         viewModelScope.launch {
@@ -460,5 +477,10 @@ class EvaluacionViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e("EvaluacionViewModel", "Error al desregistrar network callback: ${e.message}")
         }
+    }
+
+    // Método para reiniciar el estado de guardado si es necesario
+    fun resetSavingState() {
+        _isSaving.value = false
     }
 }

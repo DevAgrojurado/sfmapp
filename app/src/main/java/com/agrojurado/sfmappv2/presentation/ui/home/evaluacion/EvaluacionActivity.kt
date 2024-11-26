@@ -21,6 +21,7 @@ class EvaluacionActivity : BaseActivity() {
     private lateinit var btnBack: Button
     private lateinit var btnForward: Button
     private val viewModel: EvaluacionViewModel by viewModels()
+    private var isSaving = false
 
     override fun getLayoutResourceId(): Int = R.layout.activity_evaluacion
     override fun getActivityTitle(): String = "Evaluación Polinización"
@@ -45,6 +46,7 @@ class EvaluacionActivity : BaseActivity() {
     private fun setupViewPager() {
         val adapter = EvaluacionPagerAdapter(this)
         viewPager.adapter = adapter
+        viewPager.isUserInputEnabled = true // Permitir deslizar entre páginas
 
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = when (position) {
@@ -72,21 +74,35 @@ class EvaluacionActivity : BaseActivity() {
 
     private fun setupNavigation() {
         btnBack.setOnClickListener {
-            when (viewPager.currentItem) {
-                0 -> finish() // Go back to previous activity
-                else -> viewPager.currentItem = viewPager.currentItem - 1
+            if (!isSaving) {
+                when (viewPager.currentItem) {
+                    0 -> finish() // Go back to previous activity
+                    else -> viewPager.currentItem = viewPager.currentItem - 1
+                }
             }
         }
 
         btnForward.setOnClickListener {
-            if (viewPager.currentItem < 2) {
-                viewPager.currentItem = viewPager.currentItem + 1
-            } else {
-                saveAllData()
+            if (!isSaving) {
+                if (viewPager.currentItem < 2) {
+                    viewPager.currentItem = viewPager.currentItem + 1
+                } else {
+                    startSaveProcess()
+                }
             }
         }
 
         updateNavigationButtons(0)
+    }
+
+    private fun startSaveProcess() {
+        if (!isSaving) {
+            isSaving = true
+            btnForward.isEnabled = false
+            btnBack.isEnabled = false
+            viewPager.isUserInputEnabled = false // Deshabilitar deslizamiento durante el guardado
+            saveAllData()
+        }
     }
 
     private fun updateNavigationButtons(position: Int) {
@@ -94,17 +110,17 @@ class EvaluacionActivity : BaseActivity() {
             0 -> {
                 btnBack.text = "Cerrar"
                 btnForward.text = "Siguiente"
-                btnForward.isEnabled = true
+                btnForward.isEnabled = !isSaving
             }
             1 -> {
                 btnBack.text = "Atrás"
                 btnForward.text = "Siguiente"
-                btnForward.isEnabled = true
+                btnForward.isEnabled = !isSaving
             }
             2 -> {
                 btnBack.text = "Atrás"
                 btnForward.text = "Guardar"
-                btnForward.isEnabled = true
+                btnForward.isEnabled = !isSaving
             }
         }
     }
@@ -124,18 +140,37 @@ class EvaluacionActivity : BaseActivity() {
 
     private fun setupObservers() {
         viewModel.saveResult.observe(this) { success ->
-            val message = if (success) "Evaluación guardada exitosamente" else "Por favor llene todos los campos requeridos"
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            if (success) finish()
+            if (success) {
+                Toast.makeText(this, "Evaluación guardada exitosamente", Toast.LENGTH_SHORT).show()
+                finish()
+            } else {
+                Toast.makeText(this, "Por favor llene todos los campos requeridos", Toast.LENGTH_SHORT).show()
+                resetSaveState()
+            }
         }
 
         viewModel.errorMessage.observe(this) { errorMessage ->
             errorMessage?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+                resetSaveState()
             }
+        }
+
+        viewModel.isSaving.observe(this) { saving ->
+            isSaving = saving
+            btnForward.isEnabled = !saving
+            btnBack.isEnabled = !saving
+            viewPager.isUserInputEnabled = !saving
         }
     }
 
-    override fun getToolbarColor(): Int = R.color.green // Replace with your desired color resource
+    private fun resetSaveState() {
+        isSaving = false
+        btnForward.isEnabled = true
+        btnBack.isEnabled = true
+        viewPager.isUserInputEnabled = true
+        updateNavigationButtons(viewPager.currentItem)
+    }
 
+    override fun getToolbarColor(): Int = R.color.green
 }

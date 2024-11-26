@@ -10,6 +10,9 @@ interface EvaluacionApiService {
     @GET("api/evaluacionpolinizacion/read.php")
     suspend fun getEvaluaciones(): Response<List<EvaluacionResponse>>
 
+    @GET("api/evaluacionpolinizacion/read_one.php")  // Nuevo endpoint para obtener una evaluación por su ID
+    suspend fun getEvaluacionById(@Query("id") id: Int): Response<EvaluacionResponse>
+
 
     @POST("api/evaluacionpolinizacion/create.php")
     suspend fun createEvaluacion(@Body evaluacion: EvaluacionRequest): Response<EvaluacionResponse>
