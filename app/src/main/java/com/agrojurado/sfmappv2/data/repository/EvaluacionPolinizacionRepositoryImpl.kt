@@ -18,6 +18,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+private val syncMutex = Mutex()
 
 class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
     private val dao: EvaluacionPolinizacionDao,
@@ -32,8 +36,12 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
     private fun isNetworkAvailable(): Boolean = Utils.isNetworkAvailable(context)
 
     private fun showSyncAlert(message: String) {
-        Utils.showAlert(context, message)
+        // Asegurarse de que el Toast se ejecute en el hilo principal
+        CoroutineScope(Dispatchers.Main).launch {
+            Utils.showAlert(context, message)
+        }
     }
+
 
     private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
         Utils.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
@@ -206,62 +214,52 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncEvaluaciones() {
-        // Verifica si hay conexión a la red
         if (!isNetworkAvailable()) {
             Log.d(TAG, "No hay conexión disponible para la sincronización")
             showSyncAlert("Sin conexión, usando datos locales")
             return
         }
 
-        // Obtener evaluaciones locales no sincronizadas
         val unsyncedEvaluaciones = dao.getEvaluaciones().first().filter { !it.isSynced }
 
         if (unsyncedEvaluaciones.isNotEmpty()) {
             Log.d(TAG, "Evaluaciones no sincronizadas encontradas: ${unsyncedEvaluaciones.size}")
 
-            // Sincronizar evaluaciones en segundo plano
             CoroutineScope(Dispatchers.IO).launch {
                 unsyncedEvaluaciones.forEach { localEvaluacion ->
-                    try {
-                        // Verifica que la evaluación no esté ya sincronizada
-                        if (localEvaluacion.id != null && !localEvaluacion.isSynced) {
-                            // Comprobar si la evaluación ya existe en el servidor antes de insertarla
-                            val responseCheck = apiService.getEvaluacionById(localEvaluacion.id!!)
-                            if (responseCheck.isSuccessful && responseCheck.body() != null) {
-                                // Si existe, no la insertamos de nuevo
-                                Log.d(TAG, "La evaluación ${localEvaluacion.id} ya existe en el servidor")
-                                val serverEvaluacion = responseCheck.body()!!
-                                // Aseguramos que el estado de la evaluación esté sincronizado correctamente
-                                dao.updateEvaluacion(localEvaluacion.copy(id = serverEvaluacion.id, isSynced = true))
-                                Log.d(TAG, "Evaluación actualizada localmente con ID: ${serverEvaluacion.id}")
-                                return@launch
-                            }
+                    syncMutex.withLock {
+                        try {
+                            if (localEvaluacion.id != null && !localEvaluacion.isSynced) {
+                                val responseCheck = apiService.getEvaluacionById(localEvaluacion.id)
+                                if (responseCheck.isSuccessful && responseCheck.body() != null) {
+                                    Log.d(TAG, "La evaluación ${localEvaluacion.id} ya existe en el servidor")
+                                    val serverEvaluacion = responseCheck.body()!!
+                                    dao.updateEvaluacion(localEvaluacion.copy(id = serverEvaluacion.id, isSynced = true))
+                                    Log.d(TAG, "Evaluación actualizada localmente con ID: ${serverEvaluacion.id}")
+                                } else {
+                                    val evaluacionRequest = EvaluacionPolinizacionMapper.toRequest(EvaluacionPolinizacionMapper.toDomain(localEvaluacion))
+                                    val response = apiService.createEvaluacion(evaluacionRequest)
 
-                            // Si no existe en el servidor, crear la evaluación en el servidor
-                            val evaluacionRequest = EvaluacionPolinizacionMapper.toRequest(EvaluacionPolinizacionMapper.toDomain(localEvaluacion))
-                            val response = apiService.createEvaluacion(evaluacionRequest)
-
-                            if (response.isSuccessful && response.body() != null) {
-                                val serverEvaluacion = EvaluacionPolinizacionMapper.fromResponse(response.body()!!)
-                                val updatedEvaluacion = localEvaluacion.copy(id = serverEvaluacion.id, isSynced = true)
-
-                                // Actualizar la base de datos local con el ID y estado sincronizado
-                                dao.updateEvaluacion(updatedEvaluacion)
-                                Log.d(TAG, "Evaluación sincronizada correctamente con el ID: ${updatedEvaluacion.id}")
+                                    if (response.isSuccessful && response.body() != null) {
+                                        val serverEvaluacion = EvaluacionPolinizacionMapper.fromResponse(response.body()!!)
+                                        val updatedEvaluacion = localEvaluacion.copy(id = serverEvaluacion.id, isSynced = true)
+                                        dao.updateEvaluacion(updatedEvaluacion)
+                                        Log.d(TAG, "Evaluación sincronizada correctamente con el ID: ${updatedEvaluacion.id}")
+                                    } else {
+                                        Log.e(TAG, "Error al sincronizar evaluación ${localEvaluacion.id}")
+                                    }
+                                }
                             } else {
-                                Log.e(TAG, "Error al sincronizar evaluación ${localEvaluacion.id}")
+                                Log.d(TAG, "La evaluación ya está sincronizada: ${localEvaluacion.id}")
                             }
-                        } else {
-                            Log.d(TAG, "La evaluación ya está sincronizada: ${localEvaluacion.id}")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error al sincronizar evaluación ${localEvaluacion.id}: ${e.message}")
                         }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error al sincronizar evaluación ${localEvaluacion.id}: ${e.message}")
                     }
                 }
             }
         }
 
-        // Sincronización de evaluaciones del servidor
         try {
             val response = apiService.getEvaluaciones()
 
@@ -277,17 +275,14 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
                 return
             }
 
-            // Obtener las evaluaciones locales
             val localEvaluacionesMap = dao.getEvaluaciones().first().associateBy { it.id }
 
-            // Eliminar las evaluaciones locales que no están en el servidor
             localEvaluacionesMap.values.filter { it.id != null && !serverEvaluaciones.any { serverEvaluacion -> serverEvaluacion.id == it.id } }
                 .forEach { localEvaluacion ->
                     dao.deleteEvaluacion(localEvaluacion)
                     Log.d(TAG, "Evaluación eliminada localmente porque no existe en el servidor: ${localEvaluacion.id}")
                 }
 
-            // Actualizar o insertar las evaluaciones del servidor
             serverEvaluaciones.forEach { serverEvaluacion ->
                 val domainEvaluacion = EvaluacionPolinizacionMapper.fromResponse(serverEvaluacion)
                 val localEvaluacion = localEvaluacionesMap[serverEvaluacion.id]
@@ -306,6 +301,7 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
             showSyncAlert("Error durante la sincronización: ${e.message}")
         }
     }
+
 
     override suspend fun fullSync(): Boolean {
         if (!isNetworkAvailable()) {

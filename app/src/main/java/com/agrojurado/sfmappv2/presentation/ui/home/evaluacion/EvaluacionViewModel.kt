@@ -18,10 +18,12 @@ import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.repository.LoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -48,8 +50,8 @@ class EvaluacionViewModel @Inject constructor(
     private val _evaluacionesPorSemana = MutableLiveData<Map<Int, List<EvaluacionPolinizacion>>>()
     val evaluacionesPorSemana: LiveData<Map<Int, List<EvaluacionPolinizacion>>> = _evaluacionesPorSemana
 
-    private val _errorMessage = MutableLiveData<String>()
-    val errorMessage: LiveData<String> = _errorMessage
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
 
     private val _loggedInUser = MutableLiveData<Usuario?>()
     val loggedInUser: LiveData<Usuario?> = _loggedInUser
@@ -94,6 +96,17 @@ class EvaluacionViewModel @Inject constructor(
 
     private val _isSaving = MutableLiveData<Boolean>()
     val isSaving: LiveData<Boolean> = _isSaving
+
+    private val _syncStatus = MutableLiveData<SyncStatus>()
+    val syncStatus: LiveData<SyncStatus> = _syncStatus
+
+    sealed class SyncStatus {
+        object Idle : SyncStatus()
+        object Loading : SyncStatus()
+        data class Success(val message: String) : SyncStatus()
+        data class Error(val message: String) : SyncStatus()
+    }
+
 
     private var syncInProgress = false
 
@@ -209,18 +222,15 @@ class EvaluacionViewModel @Inject constructor(
 
     fun performFullSync() {
         viewModelScope.launch {
+            _syncStatus.value = SyncStatus.Loading
             try {
-                _isLoading.value = true
-                val success = evaluacionRepository.fullSync()
-                if (success) {
-                    loadEvaluacionesPorSemana()
-                    loadOperarios()
-                    loadLotes()
+                // Tus operaciones de sincronización
+                withContext(Dispatchers.IO) {
+                    syncEvaluaciones()
                 }
+                _syncStatus.value = SyncStatus.Success("Sincronización completada")
             } catch (e: Exception) {
-                _error.value = "Error en la sincronización completa: ${e.message}"
-            } finally {
-                _isLoading.value = false
+                _syncStatus.value = SyncStatus.Error("Error en sincronización: ${e.message}")
             }
         }
     }
@@ -479,8 +489,8 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
-    // Método para reiniciar el estado de guardado si es necesario
-    fun resetSavingState() {
-        _isSaving.value = false
+    // Limpiar mensaje de error
+    fun clearErrorMessage() {
+        _errorMessage.value = null
     }
 }
