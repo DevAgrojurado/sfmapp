@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -16,12 +17,15 @@ import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.repository.LoteRepository
+import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
+import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -33,6 +37,7 @@ class EvaluacionViewModel @Inject constructor(
     private val operarioRepository: OperarioRepository,
     private val loteRepository: LoteRepository,
     private val evaluacionRepository: EvaluacionPolinizacionRepository,
+    private val roleAccessControl: RoleAccessControl,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -280,7 +285,34 @@ class EvaluacionViewModel @Inject constructor(
             try {
                 _isLoading.value = true
                 evaluacionRepository.getEvaluaciones().collectLatest { evaluacionesList ->
-                    val groupedEvaluaciones = evaluacionesList.groupBy { it.semana }
+                    // Obtener el usuario actual
+                    val currentUser = _loggedInUser.value
+
+                    // Filtrar evaluaciones según el rol del usuario
+                    val filteredEvaluaciones = when {
+                        // Si es admin o coordinador, mostrar todas las evaluaciones
+                        currentUser?.rol?.equals(UserRoleConstants.ROLE_ADMIN, ignoreCase = true) == true ||
+                                currentUser?.rol?.equals(UserRoleConstants.ROLE_COORDINATOR, ignoreCase = true) == true -> {
+                            evaluacionesList
+                        }
+                        // Si es evaluador, mostrar solo evaluaciones de su finca
+                        currentUser?.rol?.equals(UserRoleConstants.ROLE_EVALUATOR, ignoreCase = true) == true -> {
+                            evaluacionesList.filter { evaluacion ->
+                                // Verificar si la evaluación pertenece a un operario de la misma finca del evaluador
+                                val operariosEnFinca = operarioRepository.getAllOperarios()
+                                    .first()
+                                    .filter { it.fincaId == currentUser.idFinca }
+                                    .map { it.id }
+
+                                operariosEnFinca.contains(evaluacion.idPolinizador)
+                            }
+                        }
+                        // Por defecto, no mostrar evaluaciones
+                        else -> emptyList()
+                    }
+
+                    // Agrupar evaluaciones filtradas por semana
+                    val groupedEvaluaciones = filteredEvaluaciones.groupBy { it.semana }
                     _evaluacionesPorSemana.value = groupedEvaluaciones
                 }
             } catch (e: Exception) {
@@ -416,7 +448,7 @@ class EvaluacionViewModel @Inject constructor(
                     marcacion = evaluacion["marcacion"] as? Int,
                     repaso1 = evaluacion["repaso1"] as? Int,
                     repaso2 = evaluacion["repaso2"] as? Int,
-                    observaciones = evaluacion["observaciones"] as String
+                    observaciones = evaluacion["observaciones"] as String,
                 )
 
                 evaluacionRepository.insertEvaluacion(evaluacionPolinizacion)
@@ -436,7 +468,16 @@ class EvaluacionViewModel @Inject constructor(
 
     fun deleteEvaluacion(evaluacion: EvaluacionPolinizacion) {
         viewModelScope.launch {
+            val currentUser = _loggedInUser.value
+                ?: throw SecurityException("No authenticated user")
+
             try {
+                // Verifica los permisos del usuario
+                if (!roleAccessControl.canDeleteEvaluations(currentUser)) {
+                    throw SecurityException("User lacks permission to delete evaluations")
+                }
+
+                // Si el usuario tiene permisos, proceder con la eliminación
                 _isLoading.value = true
                 _error.value = null
                 evaluacionRepository.deleteEvaluacion(evaluacion)
@@ -445,14 +486,33 @@ class EvaluacionViewModel @Inject constructor(
                 if (_isOnline.value) {
                     syncEvaluaciones()
                 }
+
+                // Recargar evaluaciones por semana
+                loadEvaluacionesPorSemana()
+                _saveResult.value = true
+            } catch (e: SecurityException) {
+                // Capturar la SecurityException y mostrar un mensaje de error
+                _error.value = e.message
+                _saveResult.value = false
+                Log.e("EvaluacionViewModel", "Error: ${e.message}")
+                showToast("No tienes permisos para eliminar esta evaluación.")
             } catch (e: Exception) {
+                // Capturar otras excepciones
                 _errorMessage.value = "Error al eliminar la evaluación: ${e.message}"
                 _saveResult.value = false
+                Log.e("EvaluacionViewModel", "Error: ${e.message}")
+                showToast("Ocurrió un error al eliminar la evaluación.")
             } finally {
                 _isLoading.value = false
             }
         }
     }
+
+    private fun showToast(message: String) {
+        // Mostrar un mensaje en un Toast
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+    }
+
 
     fun deleteAllEvaluaciones() {
         viewModelScope.launch {

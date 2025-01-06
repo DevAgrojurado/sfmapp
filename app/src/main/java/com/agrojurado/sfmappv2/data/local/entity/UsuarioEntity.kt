@@ -45,6 +45,7 @@ data class UsuarioEntity(
     @ColumnInfo(name = "clave") val clave: String = "",
     @ColumnInfo(name = "idCargo") val idCargo: Int?,  // Nullable
     @ColumnInfo(name = "idArea") val idArea: Int?,    // Nullable
-    @ColumnInfo(name = "idFinca") val idFinca: Int?,  // Nullable
+    @ColumnInfo(name = "idFinca") val idFinca: Int?,
+    @ColumnInfo(name = "rol") val rol: String,
     @ColumnInfo(name = "vigente") val vigente: Int = 0 // Default 0
 )

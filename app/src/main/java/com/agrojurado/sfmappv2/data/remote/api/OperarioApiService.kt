@@ -11,6 +11,9 @@ interface OperarioApiService {
     @GET("api/operario/read.php")
     suspend fun getOperarios(): Response<List<OperarioResponse>>
 
+    @GET("api/operario/read.php")
+    suspend fun getOperariosByFinca(@Query("fincaId") fincaId: Int): Response<List<OperarioResponse>>
+
     @POST("api/operario/create.php")
     suspend fun createOperario(@Body operario: OperarioRequest): Response<OperarioResponse>
 

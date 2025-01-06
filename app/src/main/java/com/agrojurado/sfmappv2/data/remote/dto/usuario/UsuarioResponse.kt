@@ -13,6 +13,7 @@ data class UsuarioResponse(
     @SerializedName("idCargo") val idCargo: Int?,
     @SerializedName("idArea") val idArea: Int?,
     @SerializedName("idFinca") val idFinca: Int?,
+    @SerializedName("rol") val rol: String,
     @SerializedName("vigente") val vigente: Int
 
 )

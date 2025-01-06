@@ -4,30 +4,39 @@ import android.content.Context
 import android.util.Log
 import com.agrojurado.sfmappv2.data.local.dao.EvaluacionPolinizacionDao
 import com.agrojurado.sfmappv2.data.mapper.EvaluacionPolinizacionMapper
-import com.agrojurado.sfmappv2.data.mapper.LoteMapper
 import com.agrojurado.sfmappv2.data.remote.api.EvaluacionApiService
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.domain.repository.EvaluacionPolinizacionRepository
 import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
-import com.agrojurado.sfmappv2.data.repository.LoteRepositoryImpl.Companion
+import com.agrojurado.sfmappv2.data.remote.dto.evaluacion.EvaluacionResponse
+import com.agrojurado.sfmappv2.domain.model.Usuario
+import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
+import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
+import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-
-private val syncMutex = Mutex()
+import kotlinx.coroutines.withContext
 
 class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
     private val dao: EvaluacionPolinizacionDao,
     private val apiService: EvaluacionApiService,
+    private val usuarioRepository: UsuarioRepository,
+    private val operarioRepository: OperarioRepository,
     @ApplicationContext private val context: Context
 ) : EvaluacionPolinizacionRepository {
+
+    private val syncScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val syncMutex = Mutex()
 
     companion object {
         private const val TAG = "EvaluacionRepository"
@@ -41,7 +50,6 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
             Utils.showAlert(context, message)
         }
     }
-
 
     private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
         Utils.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
@@ -66,95 +74,107 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertEvaluacion(evaluacion: EvaluacionPolinizacion): Long {
-        // Insertar localmente de inmediato
-        val localEvaluacion = evaluacion.copy(id = 0, isSynced = false) // El id es 0 porque es una inserción nueva
-        val localId = dao.insertEvaluacion(EvaluacionPolinizacionMapper.toDatabase(localEvaluacion))
-
-        // Si hay conexión, intentar sincronizar en segundo plano
-        if (isNetworkAvailable()) {
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    // Verificar si la evaluación ya está sincronizada
-                    if (localEvaluacion.isSynced) {
-                        return@launch // Si ya está sincronizada, no se hace nada
-                    }
-
-                    val evaluacionRequest = EvaluacionPolinizacionMapper.toRequest(evaluacion)
-                    val response = apiService.createEvaluacion(evaluacionRequest)
-
-                    if (response.isSuccessful && response.body() != null) {
-                        val serverEvaluacion = EvaluacionPolinizacionMapper.fromResponse(response.body()!!)
-                        val evaluacionWithServerId = evaluacion.copy(id = serverEvaluacion.id, isSynced = true)
-
-                        // Actualizamos en la base de datos local con el ID del servidor
-                        dao.updateEvaluacion(EvaluacionPolinizacionMapper.toDatabase(evaluacionWithServerId))
-                        Log.d(TAG, "Evaluación sincronizada correctamente con el servidor: ${evaluacionWithServerId.id}")
-                    } else {
-                        logServerError(response, "Error creando la evaluación en el servidor")
-                        showSyncAlert("No se pudo sincronizar la evaluación en el servidor")
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error sincronizando evaluación: ${e.message}")
-                }
-            }
-        } else {
-            // Si no hay conexión, solo guardamos localmente
-            showSyncAlert("Evaluación guardada localmente, se sincronizará cuando haya conexión")
+        // Primero guardamos localmente de manera inmediata
+        val localId = withContext(Dispatchers.IO) {
+            dao.insertEvaluacion(
+                EvaluacionPolinizacionMapper.toDatabase(
+                    evaluacion.copy(
+                        isSynced = false,
+                        timestamp = System.currentTimeMillis()
+                    )
+                )
+            )
         }
 
-        // Devolver el ID local inmediatamente para no bloquear la UI
         return localId
     }
 
 
     override suspend fun updateEvaluacion(evaluacion: EvaluacionPolinizacion) {
-        try {
-            // Actualizar localmente
-            dao.updateEvaluacion(EvaluacionPolinizacionMapper.toDatabase(evaluacion).apply { isSynced = false })
+        // Actualizar inmediatamente en local
+        withContext(Dispatchers.IO) {
+            dao.updateEvaluacion(
+                EvaluacionPolinizacionMapper.toDatabase(evaluacion)
+                    .apply { isSynced = false }
+            )
+        }
 
-            if (isNetworkAvailable() && evaluacion.id != null) {
-                // Si hay conexión, sincronizar con el servidor
-                val response = apiService.updateEvaluacion(EvaluacionPolinizacionMapper.toRequest(evaluacion))
-                if (response.isSuccessful) {
-                    // Marcar como sincronizada
-                    dao.updateEvaluacion(EvaluacionPolinizacionMapper.toDatabase(evaluacion).apply { isSynced = true })
+        // Sincronizar en background
+        syncScope.launch {
+            try {
+                if (isNetworkAvailable()) {
+                    syncMutex.withLock {
+                        try {
+                            val evaluacionRequest = EvaluacionPolinizacionMapper.toRequest(evaluacion)
+                            val response = apiService.updateEvaluacion(evaluacion.id!!, evaluacionRequest)
+
+                            if (response.isSuccessful) {
+                                dao.updateEvaluacion(
+                                    EvaluacionPolinizacionMapper.toDatabase(evaluacion)
+                                        .apply { isSynced = true }
+                                )
+                                withContext(Dispatchers.Main) {
+                                    Utils.showToast(context, "Actualización sincronizada")
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error en sincronización background: ${e.message}")
+                            withContext(Dispatchers.Main) {
+                                Utils.showToast(context, "La actualización se sincronizará cuando haya conexión")
+                            }
+                        }
+                    }
                 } else {
-                    logServerError(response, "Error actualizando la evaluación en el servidor")
-                    throw Exception("Error del servidor al actualizar la evaluación")
+                    withContext(Dispatchers.Main) {
+                        Utils.showToast(context, "Actualización guardada localmente")
+                    }
                 }
-            } else {
-                // Sin conexión, solo actualizar localmente
-                showSyncAlert("Sin conexión, evaluación actualizada localmente")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error en proceso background: ${e.message}")
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error actualizando evaluación: ${e.message}")
-            showSyncAlert("Error al actualizar: ${e.message}")
-            throw e
         }
     }
 
 
+
     override suspend fun deleteEvaluacion(evaluacion: EvaluacionPolinizacion) {
         try {
-            // Eliminar localmente
+            // Eliminar localmente primero
             dao.deleteEvaluacion(EvaluacionPolinizacionMapper.toDatabase(evaluacion))
 
-            // Si hay conexión, eliminar también en el servidor
-            if (isNetworkAvailable() && evaluacion.id != null) {
-                val response = apiService.deleteEvaluacion(evaluacion.id)
-                if (response.isSuccessful) {
-                    Log.d(TAG, "Evaluación eliminada correctamente en el servidor")
-                } else {
-                    logServerError(response, "Error al eliminar evaluación en el servidor")
-                    throw Exception("Error del servidor al eliminar la evaluación")
+            // Si hay conexión y tenemos el ID del servidor, eliminamos también en el servidor
+            if (isNetworkAvailable()) {
+                evaluacion.serverId?.let { serverId ->
+                    val response = apiService.deleteEvaluacion(serverId)
+                    if (response.isSuccessful) {
+                        Log.d(TAG, "Evaluación eliminada correctamente en el servidor")
+                        withContext(Dispatchers.Main) {
+                            Utils.showToast(context, "Evaluación eliminada en el servidor")
+                        }
+                    } else {
+                        logServerError(response, "Error al eliminar evaluación en el servidor")
+                        // Aunque falle en el servidor, ya se eliminó localmente
+                        withContext(Dispatchers.Main) {
+                            Utils.showToast(context, "Error al eliminar en el servidor, pero se eliminó localmente")
+                        }
+                    }
+                } ?: run {
+                    // No tenía ID del servidor, solo se eliminó localmente
+                    withContext(Dispatchers.Main) {
+                        Utils.showToast(context, "Evaluación eliminada localmente")
+                    }
                 }
             } else {
                 // Sin conexión, solo eliminamos localmente
-                showSyncAlert("Sin conexión, evaluación eliminada localmente")
+                withContext(Dispatchers.Main) {
+                    Utils.showToast(context, "Sin conexión, evaluación eliminada localmente")
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error eliminando evaluación: ${e.message}")
-            showSyncAlert("Error al eliminar: ${e.message}")
+            withContext(Dispatchers.Main) {
+                Utils.showToast(context, "Error al eliminar: ${e.message}")
+            }
             throw e
         }
     }
@@ -213,143 +233,129 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun syncEvaluaciones() {
+    override suspend fun syncEvaluaciones() = withContext(Dispatchers.IO) {
         if (!isNetworkAvailable()) {
-            Log.d(TAG, "No hay conexión disponible para la sincronización")
-            showSyncAlert("Sin conexión, usando datos locales")
-            return
+            withContext(Dispatchers.Main) {
+                showSyncAlert("Sin conexión, usando datos locales")
+            }
+            return@withContext
         }
 
-        val unsyncedEvaluaciones = dao.getEvaluaciones().first().filter { !it.isSynced }
+        val currentUser = usuarioRepository.getLoggedInUserEmail()?.let { email ->
+            usuarioRepository.getUserByEmail(email).first()
+        }
 
-        if (unsyncedEvaluaciones.isNotEmpty()) {
-            Log.d(TAG, "Evaluaciones no sincronizadas encontradas: ${unsyncedEvaluaciones.size}")
+        syncMutex.withLock {
+            // First, handle local unsynced evaluaciones
+            val unsyncedEvaluaciones = dao.getEvaluaciones().first().filter { !it.isSynced }
 
-            CoroutineScope(Dispatchers.IO).launch {
-                unsyncedEvaluaciones.forEach { localEvaluacion ->
-                    syncMutex.withLock {
-                        try {
-                            if (localEvaluacion.id != null && !localEvaluacion.isSynced) {
-                                val responseCheck = apiService.getEvaluacionById(localEvaluacion.id)
-                                if (responseCheck.isSuccessful && responseCheck.body() != null) {
-                                    Log.d(TAG, "La evaluación ${localEvaluacion.id} ya existe en el servidor")
-                                    val serverEvaluacion = responseCheck.body()!!
-                                    dao.updateEvaluacion(localEvaluacion.copy(id = serverEvaluacion.id, isSynced = true))
-                                    Log.d(TAG, "Evaluación actualizada localmente con ID: ${serverEvaluacion.id}")
-                                } else {
-                                    val evaluacionRequest = EvaluacionPolinizacionMapper.toRequest(EvaluacionPolinizacionMapper.toDomain(localEvaluacion))
-                                    val response = apiService.createEvaluacion(evaluacionRequest)
+            for (localEvaluacion in unsyncedEvaluaciones) {
+                try {
+                    val evaluacionRequest = EvaluacionPolinizacionMapper.toRequest(
+                        EvaluacionPolinizacionMapper.toDomain(localEvaluacion)
+                    )
 
-                                    if (response.isSuccessful && response.body() != null) {
-                                        val serverEvaluacion = EvaluacionPolinizacionMapper.fromResponse(response.body()!!)
-                                        val updatedEvaluacion = localEvaluacion.copy(id = serverEvaluacion.id, isSynced = true)
-                                        dao.updateEvaluacion(updatedEvaluacion)
-                                        Log.d(TAG, "Evaluación sincronizada correctamente con el ID: ${updatedEvaluacion.id}")
-                                    } else {
-                                        Log.e(TAG, "Error al sincronizar evaluación ${localEvaluacion.id}")
-                                    }
-                                }
+                    val response = if (localEvaluacion.id != null) {
+                        val checkResponse = apiService.getEvaluacionById(localEvaluacion.id)
+                        if (checkResponse.isSuccessful && checkResponse.body() != null) {
+                            // La evaluación existe en el servidor
+                            if (checkResponse.body()!!.timestamp < localEvaluacion.timestamp) {
+                                // Local es más reciente, actualizar servidor
+                                apiService.updateEvaluacion(localEvaluacion.id, evaluacionRequest)
                             } else {
-                                Log.d(TAG, "La evaluación ya está sincronizada: ${localEvaluacion.id}")
+                                // Servidor es más reciente, mantener versión del servidor
+                                checkResponse
                             }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error al sincronizar evaluación ${localEvaluacion.id}: ${e.message}")
+                        } else {
+                            // No existe en el servidor, crear nueva
+                            apiService.createEvaluacion(evaluacionRequest)
+                        }
+                    } else {
+                        // No tiene ID, crear nueva
+                        apiService.createEvaluacion(evaluacionRequest)
+                    }
+
+                    if (response.isSuccessful && response.body() != null) {
+                        val serverEvaluacion = response.body()!!
+                        dao.updateEvaluacion(localEvaluacion.copy(
+                            id = serverEvaluacion.id,
+                            isSynced = true,
+                            timestamp = serverEvaluacion.timestamp
+                        ))
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error sincronizando evaluación local: ${e.message}")
+                }
+            }
+
+            // Then, get all server evaluaciones
+            try {
+                val serverResponse = apiService.getEvaluaciones()
+                if (!serverResponse.isSuccessful) {
+                    throw Exception("Error obteniendo evaluaciones del servidor")
+                }
+
+                val serverEvaluaciones = serverResponse.body()?.filterNotNull() ?: emptyList()
+                val filteredServerEvaluaciones = filterEvaluacionesByUserRole(serverEvaluaciones, currentUser)
+
+                val localEvaluacionesMap = dao.getEvaluaciones().first().associateBy { it.id }
+
+                dao.transaction {
+                    // Delete local evaluaciones not in server
+                    localEvaluacionesMap.values
+                        .filter { it.id != null && !filteredServerEvaluaciones.any { se -> se.id == it.id } }
+                        .forEach { dao.deleteEvaluacion(it) }
+
+                    // Update or insert server evaluaciones
+                    filteredServerEvaluaciones.forEach { serverEvaluacion ->
+                        val domainEvaluacion = EvaluacionPolinizacionMapper.fromResponse(serverEvaluacion)
+                        val localEvaluacion = localEvaluacionesMap[serverEvaluacion.id]
+
+                        if (localEvaluacion == null || !localEvaluacion.isSynced) {
+                            // Insert if doesn't exist or update if not synced
+                            dao.insertEvaluacion(
+                                EvaluacionPolinizacionMapper.toDatabase(domainEvaluacion)
+                                    .apply { isSynced = true }
+                            )
                         }
                     }
                 }
-            }
-        }
 
-        try {
-            val response = apiService.getEvaluaciones()
-
-            if (!response.isSuccessful) {
-                throw Exception("Error al obtener evaluaciones del servidor")
-            }
-
-            val serverEvaluaciones = response.body()?.filterNotNull() ?: emptyList()
-
-            if (serverEvaluaciones.isEmpty()) {
-                logServerError(response, "Error obteniendo evaluaciones del servidor")
-                Log.d(TAG, "El servidor no tiene evaluaciones para sincronizar")
-                return
-            }
-
-            val localEvaluacionesMap = dao.getEvaluaciones().first().associateBy { it.id }
-
-            localEvaluacionesMap.values.filter { it.id != null && !serverEvaluaciones.any { serverEvaluacion -> serverEvaluacion.id == it.id } }
-                .forEach { localEvaluacion ->
-                    dao.deleteEvaluacion(localEvaluacion)
-                    Log.d(TAG, "Evaluación eliminada localmente porque no existe en el servidor: ${localEvaluacion.id}")
+                withContext(Dispatchers.Main) {
+                    showSyncAlert("Sincronización completada exitosamente")
                 }
-
-            serverEvaluaciones.forEach { serverEvaluacion ->
-                val domainEvaluacion = EvaluacionPolinizacionMapper.fromResponse(serverEvaluacion)
-                val localEvaluacion = localEvaluacionesMap[serverEvaluacion.id]
-
-                if (localEvaluacion == null) {
-                    dao.insertEvaluacion(EvaluacionPolinizacionMapper.toDatabase(domainEvaluacion).apply { isSynced = true })
-                } else {
-                    dao.updateEvaluacion(EvaluacionPolinizacionMapper.toDatabase(domainEvaluacion).apply { isSynced = true })
+            } catch (e: Exception) {
+                Log.e(TAG, "Error en sincronización: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    showSyncAlert("Error durante la sincronización: ${e.message}")
                 }
             }
-
-            Log.d(TAG, "Sincronización completada exitosamente")
-            showSyncAlert("Sincronización completada exitosamente")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error durante la sincronización: ${e.message}")
-            showSyncAlert("Error durante la sincronización: ${e.message}")
         }
     }
 
-
-    override suspend fun fullSync(): Boolean {
-        if (!isNetworkAvailable()) {
-            showSyncAlert("Sin conexión a Internet")
-            return false
-        }
-
-        try {
-            val response = apiService.getEvaluaciones()
-            if (!response.isSuccessful) {
-                logServerError(response, "Error en la sincronización completa")
-                return false
-            }
-
-            val serverEvaluaciones = response.body()?.filterNotNull() ?: emptyList()
-
-            dao.transaction {
-                val localEvalucionesMap = dao.getEvaluaciones().first().associateBy { it.id }
-
-                // Eliminar las evaluaciones locales que no están en el servidor
-                localEvalucionesMap.values.filter { it.id != null && !serverEvaluaciones.any { serverEvaluacion -> serverEvaluacion.id == it.id } }
-                    .forEach { localEvaluacion ->
-                        dao.deleteEvaluacion(localEvaluacion)
-                        Log.d(TAG, "Evaluación eliminada localmente porque no existe en el servidor: ${localEvaluacion.id}")
+    // Helper function to filter evaluaciones based on user role
+    private fun filterEvaluacionesByUserRole(
+        serverEvaluaciones: List<EvaluacionResponse>,
+        currentUser: Usuario?
+    ): List<EvaluacionResponse> {
+        return currentUser?.let { user ->
+            when {
+                user.rol.equals(UserRoleConstants.ROLE_ADMIN, ignoreCase = true) ||
+                        user.rol.equals(UserRoleConstants.ROLE_COORDINATOR, ignoreCase = true) ->
+                    serverEvaluaciones
+                user.rol.equals(UserRoleConstants.ROLE_EVALUATOR, ignoreCase = true) -> {
+                    val operariosEnFinca = runBlocking {
+                        operarioRepository.getAllOperarios()
+                            .first()
+                            .filter { it.fincaId == user.idFinca }
+                            .map { it.id }
                     }
-
-                // Actualizar o insertar las evaluaciones del servidor
-                serverEvaluaciones.forEach { serverEvaluacion ->
-                    val domainEvaluacion = EvaluacionPolinizacionMapper.fromResponse(serverEvaluacion)
-                    val localEvaluacion = localEvalucionesMap[serverEvaluacion.id]
-
-                    if (localEvaluacion == null) {
-                        dao.insertEvaluacion(EvaluacionPolinizacionMapper.toDatabase(domainEvaluacion).apply { isSynced = true })
-                    } else {
-                        dao.updateEvaluacion(EvaluacionPolinizacionMapper.toDatabase(domainEvaluacion).apply { isSynced = true })
-                    }
+                    serverEvaluaciones.filter { operariosEnFinca.contains(it.idpolinizador) }
                 }
-
-                Log.d(TAG, "Sincronización completa exitosa.")
-                showSyncAlert("Sincronización completa")
+                else -> emptyList()
             }
-
-            return true
-        } catch (e: Exception) {
-            Log.e(TAG, "Error en la sincronización completa: ${e.message}", e)
-            showSyncAlert("Error durante la sincronización completa: ${e.message}")
-            return false
-        }
+        } ?: serverEvaluaciones
     }
+
 
 }

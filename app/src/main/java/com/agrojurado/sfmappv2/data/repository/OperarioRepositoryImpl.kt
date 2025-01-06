@@ -8,15 +8,21 @@ import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
 import com.agrojurado.sfmappv2.domain.model.Operario
 import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
 import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
+import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
+import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 class OperarioRepositoryImpl @Inject constructor(
     private val operarioDao: OperarioDao,
     private val operarioApiService: OperarioApiService,
+    private val usuarioRepository: UsuarioRepository,
+    private val roleAccessControl: RoleAccessControl,
     @ApplicationContext private val context: Context
 ) : OperarioRepository {
 
@@ -36,7 +42,19 @@ class OperarioRepositoryImpl @Inject constructor(
 
     override fun getAllOperarios(): Flow<List<Operario>> {
         return operarioDao.getAllOperarios().map { entities ->
-            entities.map(OperarioMapper::toDomain)
+            val domainOperarios = entities.map(OperarioMapper::toDomain)
+
+            // Get current logged-in user
+            val currentUser = usuarioRepository.getLoggedInUserEmail()?.let { email ->
+                runBlocking {
+                    usuarioRepository.getUserByEmail(email).first()
+                }
+            }
+
+            // If user exists, filter lots based on their role
+            currentUser?.let { user ->
+                roleAccessControl.filterOperariosForUser(user, domainOperarios)
+            } ?: domainOperarios
         }
     }
 
@@ -171,13 +189,49 @@ class OperarioRepositoryImpl @Inject constructor(
             return
         }
 
+        // Obtener el usuario actual
+        val currentUser = usuarioRepository.getLoggedInUserEmail()?.let { email ->
+            usuarioRepository.getUserByEmail(email).first()
+        }
+
         try {
+            // Obtener operarios del servidor
+            val serverResponse = currentUser?.idFinca?.let {
+                operarioApiService.getOperariosByFinca(it)
+            } ?: operarioApiService.getOperarios()
+
+            if (!serverResponse.isSuccessful) {
+                throw Exception("Error al obtener operarios del servidor")
+            }
+
+            val serverOperarios = serverResponse.body()?.filterNotNull() ?: emptyList()
+
+            // Filtrar operarios si es un evaluador
+            val filteredServerOperarios = currentUser?.let { user ->
+                if (roleAccessControl.hasRole(user, UserRoleConstants.ROLE_EVALUATOR)) {
+                    user.idFinca?.let { farmId ->
+                        serverOperarios.filter { it.fincaId == farmId }
+                    } ?: emptyList()
+                } else {
+                    serverOperarios
+                }
+            } ?: serverOperarios
+
+            // Sincronizar operarios locales no sincronizados
             val unsyncedOperarios = operarioDao.getAllOperarios().first().filter { !it.isSynced }
 
             if (unsyncedOperarios.isNotEmpty()) {
                 Log.d(TAG, "Operarios no sincronizados encontrados: ${unsyncedOperarios.size}")
                 unsyncedOperarios.forEach { localOperario ->
                     try {
+                        // Verificar si este operario ya existe en el servidor
+                        if (localOperario.id != null && filteredServerOperarios.any { it.id == localOperario.id }) {
+                            // Si ya existe, solo actualizamos el estado de sincronización
+                            operarioDao.updateOperario(localOperario.copy(isSynced = true))
+                            Log.d(TAG, "Operario ${localOperario.id} ya existe en el servidor, marcado como sincronizado")
+                            return@forEach
+                        }
+
                         val operarioRequest = OperarioMapper.toRequest(OperarioMapper.toDomain(localOperario))
 
                         if (operarioRequest.id == null || operarioRequest.nombre.isNullOrBlank()) {
@@ -200,44 +254,30 @@ class OperarioRepositoryImpl @Inject constructor(
                 }
             }
 
-            val response = operarioApiService.getOperarios()
-            if (!response.isSuccessful) {
-                logServerError(response, "Error obteniendo operarios del servidor")
-                throw Exception("Error al obtener operarios del servidor")
-            }
+            // Actualizar la base de datos local con los operarios del servidor
+            operarioDao.transaction {
+                val localOperariosMap = operarioDao.getAllOperarios().first().associateBy { it.id }
 
-            val serverOperarios = response.body()?.filterNotNull() ?: emptyList()
-            if (serverOperarios.isEmpty()) {
-                Log.d(TAG, "El servidor no tiene operarios, no se realiza la sincronización.")
-                showSyncAlert("El servidor no tiene operarios para sincronizar.")
-                return
-            }
+                filteredServerOperarios.forEach { serverOperario ->
+                    val domainOperario = OperarioMapper.fromResponse(serverOperario)
+                    val localOperario = localOperariosMap[serverOperario.id]
 
-            val localOperariosMap = operarioDao.getAllOperarios().first().associateBy { it.id }
-
-            localOperariosMap.values.filter { it.id != null && !serverOperarios.any { serverOperario -> serverOperario.id == it.id } }
-                .forEach { localOperario ->
-                    operarioDao.deleteOperario(localOperario)
-                    Log.d(TAG, "Operario eliminado localmente porque no existe en el servidor: ${localOperario.id}")
-                }
-
-            serverOperarios.forEach { serverOperario ->
-                val domainOperario = OperarioMapper.fromResponse(serverOperario)
-                val localOperario = localOperariosMap[serverOperario.id]
-                if (localOperario == null) {
-                    operarioDao.insertOperario(OperarioMapper.toDatabase(domainOperario).apply { isSynced = true })
-                } else {
-                    operarioDao.updateOperario(OperarioMapper.toDatabase(domainOperario).apply { isSynced = true })
+                    if (localOperario == null) {
+                        operarioDao.insertOperario(OperarioMapper.toDatabase(domainOperario).apply { isSynced = true })
+                    } else {
+                        operarioDao.updateOperario(OperarioMapper.toDatabase(domainOperario).apply { isSynced = true })
+                    }
                 }
             }
 
-            Log.d(TAG, "Sincronización completa")
-            showSyncAlert("Sincronización completada exitosamente.")
+            Log.d(TAG, "Sincronización de operarios completada exitosamente")
+            showSyncAlert("Sincronización de operarios completada exitosamente")
         } catch (e: Exception) {
-            Log.e(TAG, "Error durante la sincronización: ${e.message}")
-            showSyncAlert("Error durante la sincronización: ${e.message}")
+            Log.e(TAG, "Error durante la sincronización de operarios: ${e.message}")
+            showSyncAlert("Error durante la sincronización de operarios: ${e.message}")
         }
     }
+
 
     override suspend fun fullSync(): Boolean {
         if (!isNetworkAvailable()) {

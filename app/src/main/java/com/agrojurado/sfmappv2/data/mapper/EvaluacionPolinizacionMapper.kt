@@ -10,6 +10,7 @@ object EvaluacionPolinizacionMapper {
     fun toDomain(entity: EvaluacionPolinizacionEntity): EvaluacionPolinizacion {
         return EvaluacionPolinizacion(
             id = entity.id,
+            serverId = entity.serverId,
             fecha = entity.fecha,
             hora = entity.hora,
             semana = entity.semana,
@@ -30,12 +31,15 @@ object EvaluacionPolinizacionMapper {
             repaso1 = entity.repaso1,
             repaso2 = entity.repaso2,
             observaciones = entity.observaciones,
+            timestamp = entity.timestamp,
+            isSynced = entity.isSynced,
         )
     }
 
     fun toDatabase(domain: EvaluacionPolinizacion): EvaluacionPolinizacionEntity {
         return EvaluacionPolinizacionEntity(
-            id = domain.id,
+            id = domain.id ?: 0,
+            serverId = domain.serverId,
             fecha = domain.fecha,
             hora = domain.hora,
             semana = domain.semana,
@@ -56,12 +60,15 @@ object EvaluacionPolinizacionMapper {
             repaso1 = domain.repaso1,
             repaso2 = domain.repaso2,
             observaciones = domain.observaciones,
+            timestamp = domain.timestamp,
+            isSynced = domain.isSynced
         )
     }
 
     fun fromResponse(response: EvaluacionResponse): EvaluacionPolinizacion {
         return EvaluacionPolinizacion(
-            id = response.id,
+            id = 0, // El id local se generará automáticamente
+            serverId = response.id, // Guardamos el id del servidor en serverId
             fecha = response.fecha,
             hora = response.hora,
             semana = response.semana,
@@ -81,13 +88,15 @@ object EvaluacionPolinizacionMapper {
             marcacion = response.marcacion,
             repaso1 = response.repaso1,
             repaso2 = response.repaso2,
-            observaciones = response.observaciones
+            observaciones = response.observaciones,
+            timestamp = response.timestamp,
+            isSynced = true
         )
     }
 
     fun toRequest(domain: EvaluacionPolinizacion): EvaluacionRequest {
         return EvaluacionRequest(
-            id = domain.id,
+            id = domain.serverId, // Usamos el serverId para comunicación con el servidor
             fecha = domain.fecha,
             hora = domain.hora,
             semana = domain.semana,
@@ -107,7 +116,8 @@ object EvaluacionPolinizacionMapper {
             marcacion = domain.marcacion,
             repaso1 = domain.repaso1,
             repaso2 = domain.repaso2,
-            observaciones = domain.observaciones
+            observaciones = domain.observaciones,
+            timestamp = domain.timestamp
         )
     }
 }

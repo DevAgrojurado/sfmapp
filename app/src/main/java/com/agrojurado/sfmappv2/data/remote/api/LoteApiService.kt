@@ -11,6 +11,9 @@ interface LoteApiService {
     @GET("api/lote/read.php")
     suspend fun getLotes(): Response<List<LoteResponse>>
 
+    @GET("api/lote/read.php")
+    suspend fun getLotesByFinca(@Query("fincaId") fincaId: Int): Response<List<LoteResponse>>
+
     @POST("api/lote/create.php")
     suspend fun createLote(@Body lote: LoteRequest): Response<LoteResponse>
 

@@ -10,5 +10,6 @@ data class Usuario(
     var idCargo: Int?,    // Nullable
     var idArea: Int?,
     var idFinca: Int?,
+    val rol: String,
     var vigente: Int = 0  // Default 0
 )

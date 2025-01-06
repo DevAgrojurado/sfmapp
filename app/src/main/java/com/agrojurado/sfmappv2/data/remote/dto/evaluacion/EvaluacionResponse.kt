@@ -23,5 +23,7 @@ data class EvaluacionResponse(
     @SerializedName("marcacion") val marcacion: Int?,
     @SerializedName("repaso1") val repaso1: Int?,
     @SerializedName("repaso2") val repaso2: Int?,
-    @SerializedName("observaciones") val observaciones: String
+    @SerializedName("observaciones") val observaciones: String,
+    @SerializedName("timestamp") val timestamp: Long,
+    @SerializedName("tempId") val tempId: String?
 )

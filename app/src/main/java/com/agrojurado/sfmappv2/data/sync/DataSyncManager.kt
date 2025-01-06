@@ -2,21 +2,16 @@ package com.agrojurado.sfmappv2.data.sync
 
 import android.content.Context
 import android.util.Log
+import android.widget.ProgressBar
 import android.widget.Toast
 import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
-import com.agrojurado.sfmappv2.domain.repository.LoteRepository
-import com.agrojurado.sfmappv2.domain.repository.FincaRepository
-import com.agrojurado.sfmappv2.domain.repository.AreaRepository
-import com.agrojurado.sfmappv2.domain.repository.CargoRepository
-import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
-import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
+import com.agrojurado.sfmappv2.domain.repository.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,6 +23,7 @@ class DataSyncManager @Inject constructor(
     private val cargoRepository: CargoRepository,
     private val operarioRepository: OperarioRepository,
     private val usuarioRepository: UsuarioRepository,
+    private val evaluacionRepository: EvaluacionPolinizacionRepository,
     @ApplicationContext private val context: Context
 ) {
     companion object {
@@ -40,32 +36,59 @@ class DataSyncManager @Inject constructor(
         return Utils.isNetworkAvailable(context)
     }
 
-    fun syncAllData(onSyncComplete: () -> Unit) {
+    fun syncAllData(progressBar: ProgressBar, onSyncComplete: () -> Unit) {
         if (!isNetworkAvailable()) {
             Toast.makeText(context, "Sin Conexión a Internet", Toast.LENGTH_SHORT).show()
             Log.d(TAG, "No hay conexión a Internet disponible para sincronización")
-            onSyncComplete() // Asegúrate de llamar al callback incluso si no hay conexión
+            onSyncComplete()
             return
         }
 
         coroutineScope.launch {
             try {
-                val syncJobs = listOf(
-                    async { syncLotes() },
-                    async { syncFincas() },
-                    async { syncAreas() },
-                    async { syncCargos() },
-                    async { syncOperarios() },
-                    async {SyncUsuarios()}
+                // Definir las operaciones de sincronización sin incluir evaluaciones
+                val syncOperations = listOf<suspend () -> Unit>(
+                    { syncData("fincas", progressBar) { fincaRepository.syncFincas() } },
+                    { syncData("áreas", progressBar) { areaRepository.syncAreas() } },
+                    { syncData("lotes", progressBar) { loteRepository.syncLotes() } },
+                    { syncData("cargos", progressBar) { cargoRepository.syncCargos() } },
+                    { syncData("operarios", progressBar) { operarioRepository.syncOperarios() } },
+                    { syncData("usuarios", progressBar) { usuarioRepository.syncUsuarios() } }
                 )
 
-                syncJobs.awaitAll()
+                val totalOperations = syncOperations.size + 1 // +1 para evaluaciones
+                for ((index, syncOperation) in syncOperations.withIndex()) {
+                    syncOperation()
+                    withContext(Dispatchers.Main) {
+                        progressBar.progress = ((index + 1) * 100) / totalOperations
+                        progressBar.visibility = ProgressBar.VISIBLE
+                    }
+                }
+
+                // Sincronizar evaluaciones como último paso
+                syncData("evaluaciones", progressBar) { evaluacionRepository.syncEvaluaciones() }
+                withContext(Dispatchers.Main) {
+                    progressBar.progress = 100
+                }
+
                 Log.d(TAG, "Sincronización completa de todos los datos")
             } catch (e: Exception) {
                 Log.e(TAG, "Error durante la sincronización: ${e.message}")
             } finally {
-                onSyncComplete() // Llama al callback al finalizar
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = ProgressBar.GONE
+                }
+                onSyncComplete()
             }
+        }
+    }
+
+    private suspend fun syncData(dataType: String, progressBar: ProgressBar, syncOperation: suspend () -> Unit) {
+        try {
+            syncOperation()
+            Log.d(TAG, "Sincronización de $dataType completada")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sincronizando $dataType: ${e.message}")
         }
     }
 
@@ -74,64 +97,10 @@ class DataSyncManager @Inject constructor(
             while (true) {
                 delay(5000) // Verificar cada 5 segundos
                 if (isNetworkAvailable()) {
-                    syncAllData {}
+                    syncAllData(ProgressBar(context)) {} // Pasa una ProgressBar dummy si es necesario
                     break // Salir del bucle una vez sincronizado
                 }
             }
-        }
-    }
-
-    private suspend fun syncLotes() {
-        try {
-            loteRepository.syncLotes()
-            Log.d(TAG, "Sincronización de lotes completada")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sincronizando lotes: ${e.message}")
-        }
-    }
-
-    private suspend fun syncFincas() {
-        try {
-            fincaRepository.syncFincas()
-            Log.d(TAG, "Sincronización de fincas completada")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sincronizando fincas: ${e.message}")
-        }
-    }
-
-    private suspend fun syncAreas() {
-        try {
-            areaRepository.syncAreas()
-            Log.d(TAG, "Sincronización de áreas completada")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sincronizando áreas: ${e.message}")
-        }
-    }
-
-    private suspend fun syncCargos() {
-        try {
-            cargoRepository.syncCargos()
-            Log.d(TAG, "Sincronización de cargos completada")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sincronizando cargos: ${e.message}")
-        }
-    }
-
-    private suspend fun syncOperarios() {
-        try {
-            operarioRepository.syncOperarios()
-            Log.d(TAG, "Sincronización de operarios completada")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sincronizando operarios: ${e.message}")
-        }
-    }
-
-    private suspend fun SyncUsuarios() {
-        try {
-            usuarioRepository.syncUsuarios()
-            Log.d(TAG, "Sincronización de usuarios completada")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sincronizando usuarios: ${e.message}")
         }
     }
 }

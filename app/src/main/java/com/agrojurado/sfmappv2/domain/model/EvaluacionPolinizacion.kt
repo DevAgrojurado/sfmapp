@@ -1,7 +1,10 @@
 package com.agrojurado.sfmappv2.domain.model
 
+import java.util.UUID
+
 data class EvaluacionPolinizacion(
-    val id: Int = 0,
+    var id: Int = 0,
+    var serverId: Int? = null,
     val fecha: String?,
     val hora: String?,
     val semana: Int,
@@ -22,5 +25,6 @@ data class EvaluacionPolinizacion(
     val repaso1: Int?,
     val repaso2: Int?,
     val observaciones: String?,
-    var isSynced: Boolean = false
+    var isSynced: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis()
 )

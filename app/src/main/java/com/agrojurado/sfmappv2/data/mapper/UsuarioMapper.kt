@@ -18,7 +18,8 @@ object UsuarioMapper {
             vigente = entity.vigente,
             idCargo = entity.idCargo,
             idArea = entity.idArea,
-            idFinca = entity.idFinca
+            idFinca = entity.idFinca,
+            rol = entity.rol
         )
     }
 
@@ -33,7 +34,8 @@ object UsuarioMapper {
             vigente = model.vigente,
             idCargo = model.idCargo,
             idArea = model.idArea,
-            idFinca = model.idFinca
+            idFinca = model.idFinca,
+            rol = model.rol
         )
     }
 
@@ -48,7 +50,8 @@ object UsuarioMapper {
             vigente = domain.vigente,
             idCargo = domain.idCargo,
             idArea = domain.idArea,
-            idFinca = domain.idFinca
+            idFinca = domain.idFinca,
+            rol = domain.rol
         )
     }
 
@@ -64,7 +67,8 @@ object UsuarioMapper {
             vigente = response.vigente ?: 0,
             idCargo = response.idCargo,
             idArea = response.idArea,
-            idFinca = response.idFinca
+            idFinca = response.idFinca,
+            rol = response.rol?: ""
         )
     }
 }

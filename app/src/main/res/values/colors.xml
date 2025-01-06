@@ -19,6 +19,7 @@
     <color name="transparentColor_30">#4DFFFFFF</color>
     <color name="transparentColor_15">#26FFFFFF</color>
     <color name="transparentColor_0">#00FFFFFF</color>
+    <color name="semi_transparent">#80000000</color>
 
     <color name="primaryTextColor">#212121</color>
     <color name="windowBackgroundColor">#EEEEEE</color>

@@ -35,4 +35,9 @@ object Utils {
     fun <T> validateInput(input: T?): Boolean {
         return input != null && input.toString().isNotBlank()
     }
+
+    fun showToast(context: Context, message: String) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
+
 }

@@ -31,6 +31,19 @@ interface EvaluacionPolinizacionDao {
     @Query("SELECT COUNT(*) FROM evaluacionpolinizacion WHERE semana = :semana AND idlote = :idlote AND palma = :palma AND idPolinizador = :idPolinizador")
     suspend fun checkPalmExists(semana: Int, idlote: Int, palma: Int, idPolinizador: Int): Int
 
+    @Query("DELETE FROM evaluacionpolinizacion WHERE id = :id")
+    suspend fun deleteEvaluacionById(id: Int)
+
     @Transaction
     suspend fun transaction(block: suspend () -> Unit) = block()
+
+    @Transaction
+    suspend fun insertOrUpdate(evaluacion: EvaluacionPolinizacionEntity) {
+        val existing = getEvaluacionById(evaluacion.id!!)
+        if (existing != null) {
+            updateEvaluacion(evaluacion)
+        } else {
+            insertEvaluacion(evaluacion)
+        }
+    }
 }

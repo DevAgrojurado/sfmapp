@@ -3,20 +3,27 @@ package com.agrojurado.sfmappv2.presentation.ui.admin.operarios
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.util.Log
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.agrojurado.sfmappv2.domain.model.Area
 import com.agrojurado.sfmappv2.domain.model.Cargo
 import com.agrojurado.sfmappv2.domain.model.Finca
 import com.agrojurado.sfmappv2.domain.model.Operario
+import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.repository.AreaRepository
 import com.agrojurado.sfmappv2.domain.repository.CargoRepository
 import com.agrojurado.sfmappv2.domain.repository.FincaRepository
 import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
+import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
+import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -26,11 +33,20 @@ class OperariosViewModel @Inject constructor(
     private val cargoRepository: CargoRepository,
     private val areaRepository: AreaRepository,
     private val fincaRepository: FincaRepository,
+    private val roleAccessControl: RoleAccessControl,
+    private val usuarioRepository: UsuarioRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
+    private val _loggedInUser = MutableLiveData<Usuario?>()
+    val loggedInUser: LiveData<Usuario?> = _loggedInUser
+
     private val _operarios = MutableStateFlow<List<Operario>>(emptyList())
     val operarios: StateFlow<List<Operario>> = _operarios
+
+    private val _filteredOperarios = MutableStateFlow<List<Operario>>(emptyList())
+    val filteredOperarios: StateFlow<List<Operario>> = _filteredOperarios
+
 
     private val _cargos = MutableStateFlow<List<Cargo>>(emptyList())
     val cargos: StateFlow<List<Cargo>> = _cargos
@@ -52,10 +68,53 @@ class OperariosViewModel @Inject constructor(
 
     init {
         observeNetworkState()
+        setupOperarioObservation()
         loadOperarios()
         loadCargos()
         loadAreas()
         loadFincas()
+        loadLoggedInUser()
+    }
+
+    private fun setupOperarioObservation() {
+        viewModelScope.launch {
+            operarioRepository.getAllOperarios().collect { allOperarios ->
+                _operarios.value = allOperarios
+                applyRoleBasedFiltering(allOperarios)
+            }
+        }
+    }
+
+    private fun applyRoleBasedFiltering(allOperarios: List<Operario>) {
+        val currentUser = _loggedInUser.value
+        if (currentUser != null) {
+            val filteredList = roleAccessControl.filterOperariosForUser(currentUser, allOperarios)
+            _filteredOperarios.value = filteredList
+        } else {
+            _filteredOperarios.value = emptyList()
+        }
+    }
+
+    private fun loadLoggedInUser() {
+        viewModelScope.launch {
+            try {
+                val email = usuarioRepository.getLoggedInUserEmail()
+                email?.let {
+                    usuarioRepository.getUserByEmail(it).collectLatest { user ->
+                        _loggedInUser.value = user
+                        // Reapply filtering when user is loaded
+                        _operarios.value.let { currentOperarios ->
+                            applyRoleBasedFiltering(currentOperarios)
+                        }
+                        Log.d("LotesViewModel", "Usuario cargado: $user")
+                    }
+                } ?: run {
+                    Log.d("LotesViewModel", "No se encontró usuario logueado")
+                }
+            } catch (e: Exception) {
+                Log.e("LotesViewModel", "Error al cargar usuario: ${e.message}")
+            }
+        }
     }
 
     private fun observeNetworkState() {
@@ -201,13 +260,7 @@ class OperariosViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val success = operarioRepository.fullSync()
-                if (success) {
-                    loadOperarios() // Recargar los operarios después de la sincronización completa
-                    loadCargos() // También recargamos los datos relacionados
-                    loadAreas()
-                    loadFincas()
-                }
+                operarioRepository.syncOperarios()
             } catch (e: Exception) {
                 _error.value = "Error en la sincronización completa: ${e.message}"
             } finally {

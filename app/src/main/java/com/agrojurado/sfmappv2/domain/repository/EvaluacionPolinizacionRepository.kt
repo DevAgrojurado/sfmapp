@@ -21,7 +21,7 @@ interface EvaluacionPolinizacionRepository {
 
     suspend fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int): Boolean
 
-    suspend fun fullSync(): Boolean
+    //suspend fun fullSync(): Boolean
 
     suspend fun syncEvaluaciones()
 }

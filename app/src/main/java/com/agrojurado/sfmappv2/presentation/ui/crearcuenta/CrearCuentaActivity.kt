@@ -2,6 +2,7 @@ package com.agrojurado.sfmappv2.presentation.ui.crearcuenta
 
 import android.os.Bundle
 import android.widget.ArrayAdapter
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -12,11 +13,11 @@ import com.agrojurado.sfmappv2.domain.model.Area
 import com.agrojurado.sfmappv2.domain.model.Cargo
 import com.agrojurado.sfmappv2.domain.model.Finca
 import com.agrojurado.sfmappv2.domain.model.Usuario
+import com.agrojurado.sfmappv2.domain.model.UserRoles
 import com.agrojurado.sfmappv2.presentation.common.UiState
 import dagger.hilt.android.AndroidEntryPoint
 import pe.pcs.libpcs.UtilsCommon
 import pe.pcs.libpcs.UtilsMessage
-import pe.pcs.libpcs.UtilsSecurity
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -26,9 +27,11 @@ class CrearCuentaActivity : AppCompatActivity() {
     lateinit var dataSyncManager: DataSyncManager
     private lateinit var binding: ActivityCrearCuentaBinding
     private val viewModel: CrearCuentaViewModel by viewModels()
+
     private lateinit var cargoAdapter: ArrayAdapter<String>
     private lateinit var areaAdapter: ArrayAdapter<String>
     private lateinit var fincaAdapter: ArrayAdapter<String>
+    private lateinit var rolAdapter: ArrayAdapter<String>
 
     private var cargosList: List<Cargo> = listOf()
     private var areasList: List<Area> = listOf()
@@ -39,13 +42,16 @@ class CrearCuentaActivity : AppCompatActivity() {
         binding = ActivityCrearCuentaBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        val progressBar: ProgressBar = binding.progressBar
+
         setupUI()
         setupListeners()
         setupObservers()
         setupCargoSpinner()
         setupAreaSpinner()
         setupFincaSpinner()
-        initializeSync()
+        setupRoleSpinner()
+        initializeSync(progressBar)
         dataSyncManager.autoSyncOnReconnect()
     }
 
@@ -77,7 +83,8 @@ class CrearCuentaActivity : AppCompatActivity() {
                     etEmail.text.toString().isNotBlank() &&
                     etCedula.text.toString().isNotBlank() &&
                     etNombre.text.toString().isNotBlank() &&
-                    etCodigo.text.toString().isNotBlank()
+                    etCodigo.text.toString().isNotBlank() &&
+                    spinnerRol.selectedItem != null
         }
     }
 
@@ -85,6 +92,7 @@ class CrearCuentaActivity : AppCompatActivity() {
         val selectedCargoPosition = binding.spinnerCargoU.selectedItemPosition
         val selectedAreaPosition = binding.spinnerAreaU.selectedItemPosition
         val selectedFincaPosition = binding.spinnerFincaU.selectedItemPosition
+        val selectedRolPosition = binding.spinnerRol.selectedItemPosition
 
         val selectedCargo = if (selectedCargoPosition >= 0 && selectedCargoPosition < cargosList.size) {
             cargosList[selectedCargoPosition]
@@ -98,20 +106,34 @@ class CrearCuentaActivity : AppCompatActivity() {
             fincasList[selectedFincaPosition]
         } else null
 
+        val selectedRol = if (selectedRolPosition >= 0 && selectedRolPosition < UserRoles.entries.size) {
+            UserRoles.entries[selectedRolPosition].name
+        } else UserRoles.EVALUADOR.name
+
         val nuevoUsuario = Usuario(
             codigo = binding.etCodigo.text.toString().trim(),
             nombre = binding.etNombre.text.toString().trim(),
             cedula = binding.etCedula.text.toString().trim(),
             email = binding.etEmail.text.toString().trim(),
-            //clave = UtilsSecurity.createHashSha512(binding.etContraseA.text.toString().trim()),
             clave = binding.etContraseA.text.toString().trim(),
             idCargo = selectedCargo?.id,
             idArea = selectedArea?.id,
             idFinca = selectedFinca?.id,
+            rol = selectedRol,
             vigente = 1
         )
 
         viewModel.grabarCuenta(nuevoUsuario)
+    }
+
+    private fun setupRoleSpinner() {
+        rolAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            UserRoles.entries.map { it.name }
+        )
+        rolAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerRol.adapter = rolAdapter
     }
 
     private fun handleUiState(state: UiState<Usuario?>?) {
@@ -163,11 +185,12 @@ class CrearCuentaActivity : AppCompatActivity() {
         binding.spinnerAreaU.adapter = areaAdapter
     }
 
-    private fun setupFincaSpinner(){
+    private fun setupFincaSpinner() {
         fincaAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, mutableListOf())
         fincaAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerFincaU.adapter = fincaAdapter
     }
+
 
     private fun showValidationError() {
         UtilsMessage.showAlertOk(
@@ -176,8 +199,9 @@ class CrearCuentaActivity : AppCompatActivity() {
             this
         )
     }
-    private fun initializeSync() {
-        dataSyncManager.syncAllData {
+
+    private fun initializeSync(progressBar: ProgressBar) {
+        dataSyncManager.syncAllData(progressBar) {
             runOnUiThread {
                 Toast.makeText(this, "Sincronización completada", Toast.LENGTH_SHORT).show()
             }

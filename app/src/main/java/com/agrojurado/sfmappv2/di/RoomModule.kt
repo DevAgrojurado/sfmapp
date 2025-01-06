@@ -13,6 +13,7 @@ import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
 import com.agrojurado.sfmappv2.data.remote.api.UsuarioApiService
 import com.agrojurado.sfmappv2.data.repository.*
 import com.agrojurado.sfmappv2.domain.repository.*
+import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -103,8 +104,15 @@ object RoomModule {
     fun provideOperarioRepository(
         dao: OperarioDao,
         operarioApiService: OperarioApiService,
+        usuarioRepository: UsuarioRepository,
+        roleAccessControl: RoleAccessControl,
         @ApplicationContext context: Context): OperarioRepository {
-        return OperarioRepositoryImpl(dao, operarioApiService, context)
+        return OperarioRepositoryImpl(
+            operarioDao = dao,
+            operarioApiService = operarioApiService,
+            usuarioRepository = usuarioRepository,
+            roleAccessControl = roleAccessControl,
+            context = context)
     }
 
     @Singleton
@@ -122,8 +130,10 @@ object RoomModule {
     fun provideEvaluacionPolinizacionRepository(
         dao: EvaluacionPolinizacionDao,
         evaluacionApiService: EvaluacionApiService,
+        usuarioRepository: UsuarioRepository,
+        operarioRepository: OperarioRepository,
         @ApplicationContext context: Context): EvaluacionPolinizacionRepository {
-        return EvaluacionPolinizacionRepositoryImpl(dao, evaluacionApiService, context)
+        return EvaluacionPolinizacionRepositoryImpl(dao, evaluacionApiService, usuarioRepository, operarioRepository, context)
     }
 
     @Singleton
@@ -131,7 +141,16 @@ object RoomModule {
     fun provideLoteRepository(
         dao: LoteDao,
         loteApiService: LoteApiService,
-        @ApplicationContext context: Context): LoteRepository {
-        return LoteRepositoryImpl(dao, loteApiService, context)
+        usuarioRepository: UsuarioRepository,
+        roleAccessControl: RoleAccessControl,
+        @ApplicationContext context: Context
+    ): LoteRepository {
+        return LoteRepositoryImpl(
+            loteDao = dao,
+            loteApiService = loteApiService,
+            usuarioRepository = usuarioRepository,
+            roleAccessControl = roleAccessControl,
+            context = context
+        )
     }
 }

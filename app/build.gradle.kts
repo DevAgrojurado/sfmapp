@@ -18,7 +18,7 @@ plugins {
 
 android {
     namespace = "com.agrojurado.sfmappv2"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.agrojurado.sfmappv2"
@@ -68,6 +68,7 @@ dependencies {
     implementation(libs.androidx.benchmark.common)
     implementation(libs.androidx.gridlayout)
     implementation(libs.play.services.maps)
+    implementation(libs.androidx.hilt.common)
     ksp(libs.androidx.room.compiler)
 
     // Dagger - Hilt
@@ -86,6 +87,8 @@ dependencies {
 
     // okhttp3
     implementation(libs.okhttp)
+
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Grafico para reporte
     //implementation(libs.mpandroidchart)

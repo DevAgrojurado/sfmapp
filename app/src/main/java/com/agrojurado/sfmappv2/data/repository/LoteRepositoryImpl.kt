@@ -8,15 +8,21 @@ import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
 import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.repository.LoteRepository
 import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
+import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
+import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 class LoteRepositoryImpl @Inject constructor(
     private val loteDao: LoteDao,
     private val loteApiService: LoteApiService,
+    private val usuarioRepository: UsuarioRepository,
+    private val roleAccessControl: RoleAccessControl,
     @ApplicationContext private val context: Context
 ) : LoteRepository {
 
@@ -36,7 +42,19 @@ class LoteRepositoryImpl @Inject constructor(
 
     override fun getAllLotes(): Flow<List<Lote>> {
         return loteDao.getAllLotes().map { entities ->
-            entities.map(LoteMapper::toDomain)
+            val domainLotes = entities.map(LoteMapper::toDomain)
+
+            // Get current logged-in user
+            val currentUser = usuarioRepository.getLoggedInUserEmail()?.let { email ->
+                runBlocking {
+                    usuarioRepository.getUserByEmail(email).first()
+                }
+            }
+
+            // If user exists, filter lots based on their role
+            currentUser?.let { user ->
+                roleAccessControl.filterLotsForUser(user, domainLotes)
+            } ?: domainLotes
         }
     }
 
@@ -170,13 +188,33 @@ class LoteRepositoryImpl @Inject constructor(
             return
         }
 
+        // Obtener el usuario actual
+        val currentUser = usuarioRepository.getLoggedInUserEmail()?.let { email ->
+            usuarioRepository.getUserByEmail(email).first()
+        }
+
         try {
-            // Obtener primero los lotes del servidor para tener una referencia
-            val serverResponse = loteApiService.getLotes()
+            // Obtener lotes del servidor
+            val serverResponse = currentUser?.idFinca?.let {
+                loteApiService.getLotesByFinca(it)
+            } ?: loteApiService.getLotes()
+
             if (!serverResponse.isSuccessful) {
                 throw Exception("Error al obtener lotes del servidor")
             }
-            val serverLotes = serverResponse.body()?.filterNotNull()?.associateBy { it.id } ?: emptyMap()
+
+            val serverLotes = serverResponse.body()?.filterNotNull() ?: emptyList()
+
+            // Filtrar lotes si es un evaluador
+            val filteredServerLotes = currentUser?.let { user ->
+                if (roleAccessControl.hasRole(user, UserRoleConstants.ROLE_EVALUATOR)) {
+                    user.idFinca?.let { farmId ->
+                        serverLotes.filter { it.idFinca == farmId }
+                    } ?: emptyList()
+                } else {
+                    serverLotes
+                }
+            } ?: serverLotes
 
             // Sincronizar lotes locales no sincronizados
             val unsyncedLotes = loteDao.getAllLotes().first().filter { !it.isSynced }
@@ -186,7 +224,7 @@ class LoteRepositoryImpl @Inject constructor(
                 unsyncedLotes.forEach { localLote ->
                     try {
                         // Verificar si este lote ya existe en el servidor
-                        if (localLote.id != null && serverLotes.containsKey(localLote.id)) {
+                        if (localLote.id != null && filteredServerLotes.any { it.id == localLote.id }) {
                             // Si ya existe, solo actualizamos el estado de sincronización
                             loteDao.updateLote(localLote.copy(isSynced = true))
                             Log.d(TAG, "Lote ${localLote.id} ya existe en el servidor, marcado como sincronizado")
@@ -216,17 +254,18 @@ class LoteRepositoryImpl @Inject constructor(
             }
 
             // Actualizar la base de datos local con los lotes del servidor
-            val localLotesMap = loteDao.getAllLotes().first().associateBy { it.id }
+            loteDao.transaction {
+                val localLotesMap = loteDao.getAllLotes().first().associateBy { it.id }
 
-            // Actualizar o insertar los lotes del servidor
-            serverLotes.values.forEach { serverLote ->
-                val domainLote = LoteMapper.fromResponse(serverLote)
-                val localLote = localLotesMap[serverLote.id]
+                filteredServerLotes.forEach { serverLote ->
+                    val domainLote = LoteMapper.fromResponse(serverLote)
+                    val localLote = localLotesMap[serverLote.id]
 
-                if (localLote == null) {
-                    loteDao.insertLote(LoteMapper.toDatabase(domainLote).apply { isSynced = true })
-                } else if (!localLote.isSynced) {
-                    loteDao.updateLote(LoteMapper.toDatabase(domainLote).apply { isSynced = true })
+                    if (localLote == null) {
+                        loteDao.insertLote(LoteMapper.toDatabase(domainLote).apply { isSynced = true })
+                    } else if (!localLote.isSynced) {
+                        loteDao.updateLote(LoteMapper.toDatabase(domainLote).apply { isSynced = true })
+                    }
                 }
             }
 
@@ -237,7 +276,6 @@ class LoteRepositoryImpl @Inject constructor(
             showSyncAlert("Error durante la sincronización de lotes: ${e.message}")
         }
     }
-
 
     override suspend fun fullSync(): Boolean {
         if (!isNetworkAvailable()) {
