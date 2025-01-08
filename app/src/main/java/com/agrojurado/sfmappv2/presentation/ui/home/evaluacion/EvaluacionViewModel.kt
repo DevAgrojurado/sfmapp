@@ -96,6 +96,9 @@ class EvaluacionViewModel @Inject constructor(
     private val _lotes = MutableLiveData<List<Pair<String, Lote>>>()
     val lotes: LiveData<List<Pair<String, Lote>>> = _lotes
 
+    private val _loteMap = MutableLiveData<Map<Int, String>>()
+    val loteMap: LiveData<Map<Int, String>> = _loteMap
+
     private val _lastUsedLoteId = MutableLiveData<Int?>()
     val lastUsedLoteId: LiveData<Int?> = _lastUsedLoteId
 
@@ -123,6 +126,7 @@ class EvaluacionViewModel @Inject constructor(
         loadLastUsedOperario()
         loadLastUsedLote()
         setCurrentWeek()
+        loadLoteMap()
     }
 
     // Verifica si hay sincronización en curso
@@ -215,6 +219,15 @@ class EvaluacionViewModel @Inject constructor(
             }
         }
     }
+
+    private fun loadLoteMap() {
+        viewModelScope.launch {
+            loteRepository.getAllLotes().collectLatest { lotesList ->
+                _loteMap.value = lotesList.associate { it.id to (it.descripcion ?: "") }
+            }
+        }
+    }
+
 
     private suspend fun syncEvaluaciones() {
         try {
@@ -481,11 +494,6 @@ class EvaluacionViewModel @Inject constructor(
                 _isLoading.value = true
                 _error.value = null
                 evaluacionRepository.deleteEvaluacion(evaluacion)
-
-                // Sincronizar si está en línea
-                if (_isOnline.value) {
-                    syncEvaluaciones()
-                }
 
                 // Recargar evaluaciones por semana
                 loadEvaluacionesPorSemana()

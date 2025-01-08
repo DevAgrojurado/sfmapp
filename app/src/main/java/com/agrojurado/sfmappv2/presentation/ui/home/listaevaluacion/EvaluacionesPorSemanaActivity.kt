@@ -181,7 +181,14 @@ class EvaluacionesPorSemanaActivity : BaseActivity() {
 
         try {
             val nombreEvaluador = viewModel.evaluador.value?.get(evaluacion.idEvaluador) ?: "Desconocido"
-            val dialog = EvaluacionDetalleDialog(evaluacion, nombrePolinizador, nombreEvaluador)
+            val descripcionLote = viewModel.loteMap.value?.get(evaluacion.idlote) ?: "Desconocido"
+
+            val dialog = EvaluacionDetalleDialog(
+                evaluacion,
+                nombrePolinizador,
+                nombreEvaluador,
+                descripcionLote
+            )
             dialog.show(supportFragmentManager, "EvaluacionDetalleDialog")
         } catch (e: Exception) {
             Log.e("EvaluacionesActivity", "Error al mostrar diálogo: ${e.message}")

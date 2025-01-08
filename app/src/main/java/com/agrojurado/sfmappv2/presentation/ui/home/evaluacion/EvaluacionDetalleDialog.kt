@@ -1,48 +1,57 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
 
+import android.annotation.SuppressLint
 import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.fragment.app.DialogFragment
-import com.agrojurado.sfmappv2.R
+import com.agrojurado.sfmappv2.databinding.DialogEvaluacionDetalleBinding
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 
 class EvaluacionDetalleDialog(
     private val evaluacion: EvaluacionPolinizacion,
     private val nombrePolinizador: String,
-    private val nombreEvaluador: String
+    private val nombreEvaluador: String,
+    private val descripcionLote: String,
 ) : DialogFragment() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.dialog_evaluacion_detalle, container, false)
+    private lateinit var binding: DialogEvaluacionDetalleBinding
+
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View {
+        // Asegúrate de inflar correctamente el binding
+        binding = DialogEvaluacionDetalleBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
+    @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        view.findViewById<TextView>(R.id.tvFecha).text = "Fecha: ${evaluacion.fecha}"
-        view.findViewById<TextView>(R.id.tvHora).text = "Hora: ${evaluacion.hora}"
-        view.findViewById<TextView>(R.id.tvSemana).text = "Semana: ${evaluacion.semana}"
-        view.findViewById<TextView>(R.id.tvUbicacion).text = "Ubicación: ${evaluacion.ubicacion}"
-        view.findViewById<TextView>(R.id.tvEvaluador).text = "Evaluador: $nombreEvaluador"
-        view.findViewById<TextView>(R.id.tvPolinizador).text = "Polinizador: $nombrePolinizador"
-        view.findViewById<TextView>(R.id.tvLote).text = "Lote: ${evaluacion.idlote}"
-        view.findViewById<TextView>(R.id.tvSeccion).text = "Sección: ${evaluacion.seccion}"
-        view.findViewById<TextView>(R.id.tvPalma).text = "Palma: ${evaluacion.palma}"
-        view.findViewById<TextView>(R.id.tvInflorescencia).text = "Inflorescencia: ${evaluacion.inflorescencia}"
-        view.findViewById<TextView>(R.id.tvAntesis).text = "Antesis: ${evaluacion.antesis}"
-        view.findViewById<TextView>(R.id.tvPostAntesis).text = "Post Antesis: ${evaluacion.postAntesis}"
-        view.findViewById<TextView>(R.id.tvAntesisDejadas).text = "Antesis Dejadas: ${evaluacion.antesisDejadas}"
-        view.findViewById<TextView>(R.id.tvPostAntesisDejadas).text = "Post Antesis Dejadas: ${evaluacion.postAntesisDejadas}"
-        view.findViewById<TextView>(R.id.tvEspate).text = "Espate: ${evaluacion.espate}"
-        view.findViewById<TextView>(R.id.tvAplicacion).text = "Aplicación: ${evaluacion.aplicacion}"
-        view.findViewById<TextView>(R.id.tvMarcacion).text = "Marcación: ${evaluacion.marcacion}"
-        view.findViewById<TextView>(R.id.tvRepaso1).text = "Repaso 1: ${evaluacion.repaso1}"
-        view.findViewById<TextView>(R.id.tvRepaso2).text = "Repaso 2: ${evaluacion.repaso2}"
-        view.findViewById<TextView>(R.id.tvObservaciones).text = "Observaciones: ${evaluacion.observaciones}"
+        // Usando el binding para acceder a las vistas
+        binding.tvFecha.text = "Fecha: ${evaluacion.fecha}"
+        binding.tvHora.text = "Hora: ${evaluacion.hora}"
+        binding.tvSemana.text = "Semana: ${evaluacion.semana}"
+        binding.tvUbicacion.text = "Ubicación: ${evaluacion.ubicacion}"
+        binding.tvEvaluador.text = "Evaluador: $nombreEvaluador"
+        binding.tvPolinizador.text = "Polinizador: $nombrePolinizador"
+        binding.tvLote.text = "Lote: $descripcionLote"
+        binding.tvSeccion.text = "Sección: ${evaluacion.seccion}"
+        binding.tvPalma.text = "Palma: ${evaluacion.palma}"
+        binding.tvInflorescencia.text = "Inflorescencia: ${evaluacion.inflorescencia}"
+        binding.tvAntesis.text = "Antesis: ${evaluacion.antesis}"
+        binding.tvPostAntesis.text = "Post Antesis: ${evaluacion.postAntesis}"
+        binding.tvAntesisDejadas.text = "Antesis Dejadas: ${evaluacion.antesisDejadas}"
+        binding.tvPostAntesisDejadas.text = "Post Antesis Dejadas: ${evaluacion.postAntesisDejadas}"
+        binding.tvEspate.text = "Espate: ${evaluacion.espate}"
+        binding.tvAplicacion.text = "Aplicación: ${evaluacion.aplicacion}"
+        binding.tvMarcacion.text = "Marcación: ${evaluacion.marcacion}"
+        binding.tvRepaso1.text = "Repaso 1: ${evaluacion.repaso1}"
+        binding.tvRepaso2.text = "Repaso 2: ${evaluacion.repaso2}"
+        binding.tvObservaciones.text = "Observaciones: ${evaluacion.observaciones}"
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {

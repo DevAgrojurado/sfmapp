@@ -10,6 +10,9 @@ interface EvaluacionPolinizacionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEvaluacion(evaluacion: EvaluacionPolinizacionEntity): Long
 
+    @Insert
+    suspend fun insertEvaluaciones(evaluaciones: List<EvaluacionPolinizacionEntity>)
+
     @Update
     suspend fun updateEvaluacion(evaluacion: EvaluacionPolinizacionEntity)
 
