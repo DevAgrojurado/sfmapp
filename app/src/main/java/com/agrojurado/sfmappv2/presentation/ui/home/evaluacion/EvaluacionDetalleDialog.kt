@@ -1,13 +1,16 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
 
-import android.annotation.SuppressLint
 import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import androidx.fragment.app.DialogFragment
-import com.agrojurado.sfmappv2.databinding.DialogEvaluacionDetalleBinding
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 
 class EvaluacionDetalleDialog(
@@ -17,41 +20,60 @@ class EvaluacionDetalleDialog(
     private val descripcionLote: String,
 ) : DialogFragment() {
 
-    private lateinit var binding: DialogEvaluacionDetalleBinding
+    private lateinit var recyclerView: RecyclerView
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View {
-        // Asegúrate de inflar correctamente el binding
-        binding = DialogEvaluacionDetalleBinding.inflate(inflater, container, false)
-        return binding.root
+    override fun onStart() {
+        super.onStart()
+        dialog?.window?.setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            resources.getDimensionPixelSize(R.dimen.dialog_height)
+        )
     }
 
-    @SuppressLint("SetTextI18n")
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return inflater.inflate(R.layout.dialog_evaluacion_detalle, container, false)
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Usando el binding para acceder a las vistas
-        binding.tvFecha.text = "Fecha: ${evaluacion.fecha}"
-        binding.tvHora.text = "Hora: ${evaluacion.hora}"
-        binding.tvSemana.text = "Semana: ${evaluacion.semana}"
-        binding.tvUbicacion.text = "Ubicación: ${evaluacion.ubicacion}"
-        binding.tvEvaluador.text = "Evaluador: $nombreEvaluador"
-        binding.tvPolinizador.text = "Polinizador: $nombrePolinizador"
-        binding.tvLote.text = "Lote: $descripcionLote"
-        binding.tvSeccion.text = "Sección: ${evaluacion.seccion}"
-        binding.tvPalma.text = "Palma: ${evaluacion.palma}"
-        binding.tvInflorescencia.text = "Inflorescencia: ${evaluacion.inflorescencia}"
-        binding.tvAntesis.text = "Antesis: ${evaluacion.antesis}"
-        binding.tvPostAntesis.text = "Post Antesis: ${evaluacion.postAntesis}"
-        binding.tvAntesisDejadas.text = "Antesis Dejadas: ${evaluacion.antesisDejadas}"
-        binding.tvPostAntesisDejadas.text = "Post Antesis Dejadas: ${evaluacion.postAntesisDejadas}"
-        binding.tvEspate.text = "Espate: ${evaluacion.espate}"
-        binding.tvAplicacion.text = "Aplicación: ${evaluacion.aplicacion}"
-        binding.tvMarcacion.text = "Marcación: ${evaluacion.marcacion}"
-        binding.tvRepaso1.text = "Repaso 1: ${evaluacion.repaso1}"
-        binding.tvRepaso2.text = "Repaso 2: ${evaluacion.repaso2}"
-        binding.tvObservaciones.text = "Observaciones: ${evaluacion.observaciones}"
+        // Configurar botón de cierre
+        view.findViewById<ImageButton>(R.id.btnClose).setOnClickListener {
+            dismiss()
+        }
+
+        recyclerView = view.findViewById(R.id.rvDetalleEvaluacion)
+        recyclerView.layoutManager = LinearLayoutManager(context)
+        recyclerView.addItemDecoration(DividerItemDecoration(context, DividerItemDecoration.VERTICAL))
+
+        val items = listOf(
+            "Fecha:" to (evaluacion.fecha ?: ""),
+            "Hora:" to (evaluacion.hora ?: ""),
+            "Semana:" to evaluacion.semana.toString(),
+            "Ubicación:" to (evaluacion.ubicacion ?: ""),
+            "Evaluador:" to nombreEvaluador,
+            "Polinizador:" to nombrePolinizador,
+            "Lote:" to descripcionLote,
+            "Sección:" to (evaluacion.seccion.toString()),
+            "Palma:" to (evaluacion.palma?.toString() ?: ""),
+            "Inflorescencia:" to (evaluacion.inflorescencia?.toString() ?: ""),
+            "Antesis:" to (evaluacion.antesis?.toString() ?: ""),
+            "Post Antesis:" to (evaluacion.postAntesis?.toString() ?: ""),
+            "Antesis Dejadas:" to (evaluacion.antesisDejadas?.toString() ?: ""),
+            "Post Antesis Dejadas:" to (evaluacion.postAntesisDejadas?.toString() ?: ""),
+            "Espate:" to (evaluacion.espate?.toString() ?: ""),
+            "Aplicación:" to (evaluacion.aplicacion?.toString() ?: ""),
+            "Marcación:" to (evaluacion.marcacion?.toString() ?: ""),
+            "Repaso 1:" to (evaluacion.repaso1?.toString() ?: ""),
+            "Repaso 2:" to (evaluacion.repaso2?.toString() ?: ""),
+            "Observaciones:" to (evaluacion.observaciones ?: "")
+        )
+
+        recyclerView.adapter = DetalleEvaluacionAdapter(items)
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
