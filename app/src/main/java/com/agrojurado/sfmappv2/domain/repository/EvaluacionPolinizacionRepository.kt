@@ -11,7 +11,7 @@ interface EvaluacionPolinizacionRepository {
 
     suspend fun deleteEvaluacion(evaluacion: EvaluacionPolinizacion)
 
-    suspend fun deleteAllEvaluaciones()
+    //suspend fun deleteAllEvaluaciones()
 
     fun getEvaluaciones(): Flow<List<EvaluacionPolinizacion>>
 

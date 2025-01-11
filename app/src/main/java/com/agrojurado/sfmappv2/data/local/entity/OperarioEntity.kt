@@ -42,6 +42,7 @@ data class OperarioEntity(
     @ColumnInfo(name = "cargoId") val cargoId: Int,
     @ColumnInfo(name = "areaId") val areaId: Int,
     @ColumnInfo(name = "fincaId") val fincaId: Int,
+    @ColumnInfo(name = "activo") var activo: Boolean = true,
     @ColumnInfo(name = "isSynced") var isSynced: Boolean = false
 
 )

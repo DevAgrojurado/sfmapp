@@ -1,9 +1,7 @@
 package com.agrojurado.sfmappv2.domain.model
 
-import java.util.UUID
-
 data class EvaluacionPolinizacion(
-    var id: Int = 0,
+    var id: Int? = 0,
     var serverId: Int? = null,
     val fecha: String?,
     val hora: String?,

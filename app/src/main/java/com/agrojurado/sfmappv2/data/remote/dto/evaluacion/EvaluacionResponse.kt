@@ -3,7 +3,7 @@ package com.agrojurado.sfmappv2.data.remote.dto.evaluacion
 import com.google.gson.annotations.SerializedName
 
 data class EvaluacionResponse(
-    @SerializedName("id") val id: Int=0,
+    @SerializedName("id") val id: Int,
     @SerializedName("fecha") val fecha: String,
     @SerializedName("hora") val hora: String,
     @SerializedName("semana") val semana: Int,

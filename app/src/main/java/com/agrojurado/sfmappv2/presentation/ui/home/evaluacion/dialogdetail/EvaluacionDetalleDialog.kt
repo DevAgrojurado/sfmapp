@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.dialogdetail
 
 import android.app.Dialog
 import android.os.Bundle

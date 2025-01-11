@@ -522,28 +522,6 @@ class EvaluacionViewModel @Inject constructor(
     }
 
 
-    fun deleteAllEvaluaciones() {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                evaluacionRepository.deleteAllEvaluaciones()
-
-                // Sincronizar si está en línea
-                if (_isOnline.value) {
-                    syncEvaluaciones()
-                }
-
-                loadEvaluacionesPorSemana()
-                _saveResult.value = true
-            } catch (e: Exception) {
-                _error.value = "Error al eliminar todas las evaluaciones: ${e.message}"
-                _saveResult.value = false
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
     override fun onCleared() {
         super.onCleared()
         // Aquí podrías limpiar cualquier recurso si es necesario

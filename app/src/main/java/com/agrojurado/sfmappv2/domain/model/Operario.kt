@@ -7,6 +7,6 @@ data class Operario(
     var cargoId: Int,
     var areaId: Int,
     var fincaId: Int,
+    var activo: Boolean = true,
     val isSynced: Boolean = false
-
 )

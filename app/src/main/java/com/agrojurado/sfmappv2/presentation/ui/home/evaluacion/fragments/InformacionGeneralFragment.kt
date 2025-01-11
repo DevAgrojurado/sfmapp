@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.fragments
 
 import android.Manifest
 import android.content.Context
@@ -9,7 +9,6 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,6 +22,7 @@ import androidx.fragment.app.activityViewModels
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.model.Operario
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionViewModel
 import com.google.android.material.textfield.TextInputEditText
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat

@@ -11,6 +11,7 @@ import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.Area
@@ -31,6 +32,8 @@ class OperariosAdapter(
         var codigo: TextView = v.findViewById(R.id.tvCodigo)
         var nombre: TextView = v.findViewById(R.id.tvNombre)
         var cargo: TextView = v.findViewById(R.id.tvCargo)
+        var estado: TextView = v.findViewById(R.id.tvEstado)
+        var switchActivo: SwitchCompat = v.findViewById(R.id.switchActivo)
         var mMenus: ImageView = v.findViewById(R.id.mMenus)
 
         init {
@@ -45,39 +48,7 @@ class OperariosAdapter(
             popupMenus.setOnMenuItemClickListener {
                 when (it.itemId) {
                     R.id.editText -> {
-                        val dialogView = LayoutInflater.from(context).inflate(R.layout.add_operario, null)
-                        val etCodigo = dialogView.findViewById<EditText>(R.id.et_codigo)
-                        val etNombre = dialogView.findViewById<EditText>(R.id.et_nombre)
-                        val spinnerCargo = dialogView.findViewById<Spinner>(R.id.spinnerCargo)
-                        val spinnerArea = dialogView.findViewById<Spinner>(R.id.spinnerArea)
-                        val spinnerFinca = dialogView.findViewById<Spinner>(R.id.spinnerFinca)
-
-                        etCodigo.setText(operario.codigo)
-                        etNombre.setText(operario.nombre)
-
-                        setupSpinner(spinnerCargo, cargosList.map { it.descripcion })
-                        setupSpinner(spinnerArea, areasList.map { it.descripcion })
-                        setupSpinner(spinnerFinca, fincasList.map { it.descripcion })
-
-                        setSpinnerSelection(spinnerCargo, cargosList, operario.cargoId)
-                        setSpinnerSelection(spinnerArea, areasList, operario.areaId)
-                        setSpinnerSelection(spinnerFinca, fincasList, operario.fincaId)
-
-                        AlertDialog.Builder(context)
-                            .setView(dialogView)
-                            .setPositiveButton("OK") { dialog, _ ->
-                                operario.codigo = etCodigo.text.toString()
-                                operario.nombre = etNombre.text.toString()
-                                operario.cargoId = cargosList[spinnerCargo.selectedItemPosition].id
-                                operario.areaId = areasList[spinnerArea.selectedItemPosition].id
-                                operario.fincaId = fincasList[spinnerFinca.selectedItemPosition].id
-                                onOperarioAction(operario, "update")
-                                notifyItemChanged(position)
-                                dialog.dismiss()
-                            }
-                            .setNegativeButton("Cancelar") { dialog, _ -> dialog.dismiss() }
-                            .create()
-                            .show()
+                        onOperarioAction(operario, "update")
                         true
                     }
                     R.id.delete -> {
@@ -99,6 +70,7 @@ class OperariosAdapter(
             }
             popupMenus.show()
         }
+
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): OperarioViewHolder {
@@ -109,9 +81,22 @@ class OperariosAdapter(
 
     override fun onBindViewHolder(holder: OperarioViewHolder, position: Int) {
         val operario = operariosList[position]
+
         holder.codigo.text = operario.codigo
         holder.nombre.text = operario.nombre
         holder.cargo.text = cargosList.find { it.id == operario.cargoId }?.descripcion ?: "Sin cargo"
+
+        // Evita disparar el listener mientras configuras el estado inicial
+        holder.switchActivo.setOnCheckedChangeListener(null)
+        holder.switchActivo.isChecked = operario.activo
+        holder.estado.text = if (operario.activo) "Activo" else "Inactivo"
+
+        // Configura el listener para el switch
+        holder.switchActivo.setOnCheckedChangeListener { _, isChecked ->
+            holder.estado.text = if (isChecked) "Activo" else "Inactivo"
+            val updatedOperario = operario.copy(activo = isChecked)
+            onOperarioAction(updatedOperario, "updateState")
+        }
     }
 
     override fun getItemCount(): Int = operariosList.size

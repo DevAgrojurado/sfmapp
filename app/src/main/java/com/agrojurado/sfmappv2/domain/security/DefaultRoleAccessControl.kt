@@ -39,17 +39,17 @@ class DefaultRoleAccessControl : RoleAccessControl {
 
     override fun filterOperariosForUser(user: Usuario, allOperarios: List<Operario>): List<Operario> {
         return when {
-            hasRole(user, UserRoleConstants.ROLE_ADMIN) -> allOperarios
-            hasRole(user, UserRoleConstants.ROLE_COORDINATOR) -> allOperarios
+            hasRole(user, UserRoleConstants.ROLE_ADMIN) -> allOperarios // Admin ve todos
+            hasRole(user, UserRoleConstants.ROLE_COORDINATOR) -> allOperarios.filter { it.activo } // Coordinador ve solo activos
             hasRole(user, UserRoleConstants.ROLE_EVALUATOR) -> {
-                // If user is an evaluator, only show lots from their assigned farm
                 user.idFinca?.let { assignedFarmId ->
-                    allOperarios.filter { it.fincaId == assignedFarmId }
+                    allOperarios.filter { it.fincaId == assignedFarmId && it.activo } // Evaluador ve solo activos de su finca
                 } ?: emptyList()
             }
             else -> emptyList()
         }
     }
+
 
     // Evaluador puede ver evaluaciones solo de su finca asignada
     override fun canViewEvaluations(user: Usuario): Boolean {
@@ -90,4 +90,6 @@ class DefaultRoleAccessControl : RoleAccessControl {
             else -> false
         }
     }
+
+
 }

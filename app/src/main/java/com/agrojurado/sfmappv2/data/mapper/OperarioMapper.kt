@@ -13,7 +13,8 @@ object OperarioMapper {
             nombre = entity.nombre,
             cargoId = entity.cargoId,
             areaId = entity.areaId,
-            fincaId = entity.fincaId
+            fincaId = entity.fincaId,
+            activo = entity.activo
         )
     }
 
@@ -24,7 +25,8 @@ object OperarioMapper {
             nombre = domain.nombre,
             cargoId = domain.cargoId,
             areaId = domain.areaId,
-            fincaId = domain.fincaId
+            fincaId = domain.fincaId,
+            activo = domain.activo
         )
     }
 
@@ -35,7 +37,8 @@ object OperarioMapper {
             nombre = domain.nombre,
             cargoId = domain.cargoId,
             areaId = domain.areaId,
-            fincaId = domain.fincaId
+            fincaId = domain.fincaId,
+            activo = domain.activo
         )
     }
 
@@ -46,7 +49,8 @@ object OperarioMapper {
             nombre = response.nombre,
             cargoId = response.cargoId,
             areaId = response.areaId,
-            fincaId = response.fincaId
+            fincaId = response.fincaId,
+            activo = response.activo
         )
     }
 }

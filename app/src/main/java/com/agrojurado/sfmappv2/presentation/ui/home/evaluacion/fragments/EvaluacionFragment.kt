@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.fragments
 
 import android.os.Bundle
 import androidx.fragment.app.Fragment

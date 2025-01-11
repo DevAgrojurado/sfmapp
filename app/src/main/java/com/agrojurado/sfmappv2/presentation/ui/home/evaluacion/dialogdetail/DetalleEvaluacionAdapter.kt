@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.dialogdetail
 
 import android.view.LayoutInflater
 import android.view.View
@@ -18,7 +18,7 @@ class DetalleEvaluacionAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_detalle_evaluacion, parent, false)
+            .inflate(R.layout.item_dialog_evaluacion, parent, false)
         return ViewHolder(view)
     }
 

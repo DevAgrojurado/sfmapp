@@ -9,6 +9,6 @@ data class OperarioResponse(
     @SerializedName("nombre") val nombre: String,
     @SerializedName("cargoId") val cargoId: Int,
     @SerializedName("areaId") val areaId: Int,
-    @SerializedName("fincaId") val fincaId: Int
-
+    @SerializedName("fincaId") val fincaId: Int,
+    @SerializedName("activo") val activo: Boolean
 )

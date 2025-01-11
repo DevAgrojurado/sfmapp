@@ -11,7 +11,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.agrojurado.sfmappv2.databinding.FragmentHomeBinding
-import com.agrojurado.sfmappv2.presentation.ui.home.listaevaluacion.ListaEvaluacionActivity
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.listaevaluacion.ListaEvaluacionActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch

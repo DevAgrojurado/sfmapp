@@ -176,60 +176,6 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteAllEvaluaciones() {
-        val errorList = mutableListOf<String>()
-        var hasLocalChanges = false
-
-        try {
-            // Eliminar todas las evaluaciones locales
-            dao.deleteAllEvaluaciones()
-            hasLocalChanges = true
-            Log.d(TAG, "Evaluaciones locales eliminadas.")
-
-            if (isNetworkAvailable()) {
-                // Eliminar del servidor las evaluaciones que están localmente
-                val response = apiService.getEvaluaciones()
-                if (!response.isSuccessful) {
-                    throw Exception("Error al obtener evaluaciones del servidor")
-                }
-
-                val serverEvaluaciones = response.body()?.filterNotNull() ?: emptyList()
-
-                serverEvaluaciones.forEach { serverEvaluacion ->
-                    try {
-                        val response = apiService.deleteEvaluacion(serverEvaluacion.id)
-                        if (!response.isSuccessful) {
-                            val error = "Error al eliminar evaluación ${serverEvaluacion.id}: ${response.errorBody()?.string()}"
-                            Log.e(TAG, error)
-                            errorList.add(error)
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error al eliminar evaluación ${serverEvaluacion.id}: ${e.message}")
-                        errorList.add("Error al eliminar evaluación ${serverEvaluacion.id}: ${e.message}")
-                    }
-                }
-
-                if (errorList.isNotEmpty()) {
-                    throw Exception("Errores al eliminar evaluación en el servidor:\n${errorList.joinToString("\n")}")
-                }
-
-                showSyncAlert("Todas las evaluaciones eliminadas correctamente del servidor")
-            } else {
-                // Sin conexión, solo eliminamos localmente
-                showSyncAlert("Sin conexión, evaluaciones eliminadas localmente")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error al eliminar todas las evaluaciones: ${e.message}")
-            val message = if (hasLocalChanges) {
-                "Evaluaciones eliminadas localmente, pero hubo errores en el servidor: ${e.message}"
-            } else {
-                "Error al eliminar evaluaciones: ${e.message}"
-            }
-            showSyncAlert(message)
-            throw Exception(message)
-        }
-    }
-
     override suspend fun syncEvaluaciones() {
         if (!isNetworkAvailable()) {
             notifyUser("Sin conexión, usando datos locales")
@@ -254,7 +200,7 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
 
                     // Subir evaluaciones locales no sincronizadas
                     val unsyncedEvaluaciones = dao.getEvaluaciones().first()
-                        .filter { !it.isSynced && it.serverId == 0 }
+                        .filter { !it.isSynced && it.serverId == null }
                         .chunked(BATCH_SIZE)
 
                     unsyncedEvaluaciones.forEach { batch ->
@@ -268,12 +214,14 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
 
                                 if (response.isSuccessful && response.body() != null) {
                                     val serverEvaluacion = response.body()!!
-                                    // Actualizar registro local con ID del servidor y marcar como sincronizado
-                                    dao.updateEvaluacion(
-                                        localEvaluacion.copy(
-                                            serverId = serverEvaluacion.id,
-                                            isSynced = true
-                                        )
+                                    // Eliminamos la versión local no sincronizada
+                                    dao.deleteEvaluacionById(localEvaluacion.id)
+
+                                    // Insertamos la versión del servidor
+                                    val domainEvaluacion = EvaluacionPolinizacionMapper.fromResponse(serverEvaluacion)
+                                    dao.insertEvaluacion(
+                                        EvaluacionPolinizacionMapper.toDatabase(domainEvaluacion)
+                                            .copy(isSynced = true)
                                     )
                                 }
                             } catch (e: Exception) {
@@ -329,7 +277,6 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
             }
         }
     }
-
 
     // Helper function to filter evaluaciones based on user role
     private fun filterEvaluacionesByUserRole(

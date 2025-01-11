@@ -6,10 +6,12 @@ import android.view.Menu
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Spinner
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -67,10 +69,31 @@ class OperariosActivity : BaseActivity() {
             when (action) {
                 "update" -> updateOperario(operario)
                 "delete" -> deleteOperario(operario)
+                "updateState" -> updateOperarioState(operario)
             }
         }
         recv.layoutManager = LinearLayoutManager(this)
         recv.adapter = operariosAdapter
+    }
+
+    // Añade esta nueva función para manejar la actualización del estado
+    private fun updateOperarioState(operario: Operario) {
+        lifecycleScope.launch {
+            try {
+                viewModel.updateOperario(operario)
+                Toast.makeText(
+                    this@OperariosActivity,
+                    "Estado actualizado",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@OperariosActivity,
+                    "Error al actualizar estado: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     private fun setupListeners() {
@@ -147,6 +170,13 @@ class OperariosActivity : BaseActivity() {
         val spinnerCargo = v.findViewById<Spinner>(R.id.spinnerCargo)
         val spinnerArea = v.findViewById<Spinner>(R.id.spinnerArea)
         val spinnerFinca = v.findViewById<Spinner>(R.id.spinnerFinca)
+        val switchActivo = v.findViewById<SwitchCompat>(R.id.switchActivoForm)
+        val tvEstado = v.findViewById<TextView>(R.id.tvEstadoForm)
+
+        // Configurar el listener del switch
+        switchActivo.setOnCheckedChangeListener { _, isChecked ->
+            tvEstado.text = if (isChecked) "Activo" else "Inactivo"
+        }
 
         setupSpinner(spinnerCargo, cargosList.map { it.descripcion })
         setupSpinner(spinnerArea, areasList.map { it.descripcion })
@@ -165,7 +195,16 @@ class OperariosActivity : BaseActivity() {
                 if (codigo.isNotEmpty() && nombre.isNotEmpty()) {
                     lifecycleScope.launch {
                         try {
-                            viewModel.insertOperario(Operario(codigo = codigo, nombre = nombre, cargoId = cargoId, areaId = areaId, fincaId = fincaId))
+                            viewModel.insertOperario(
+                                Operario(
+                                    codigo = codigo,
+                                    nombre = nombre,
+                                    cargoId = cargoId,
+                                    areaId = areaId,
+                                    fincaId = fincaId,
+                                    activo = switchActivo.isChecked
+                                )
+                            )
                             Toast.makeText(this@OperariosActivity, "Operario agregado con éxito", Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
                             Toast.makeText(
@@ -195,6 +234,17 @@ class OperariosActivity : BaseActivity() {
         val spinnerCargo = v.findViewById<Spinner>(R.id.spinnerCargo)
         val spinnerArea = v.findViewById<Spinner>(R.id.spinnerArea)
         val spinnerFinca = v.findViewById<Spinner>(R.id.spinnerFinca)
+        val switchActivo = v.findViewById<SwitchCompat>(R.id.switchActivoForm)
+        val tvEstado = v.findViewById<TextView>(R.id.tvEstadoForm)
+
+        // Configurar estado inicial
+        switchActivo.isChecked = operario.activo
+        tvEstado.text = if (operario.activo) "Activo" else "Inactivo"
+
+        // Configurar el listener del switch
+        switchActivo.setOnCheckedChangeListener { _, isChecked ->
+            tvEstado.text = if (isChecked) "Activo" else "Inactivo"
+        }
 
         setupSpinner(spinnerCargo, cargosList.map { it.descripcion })
         setupSpinner(spinnerArea, areasList.map { it.descripcion })
@@ -219,7 +269,16 @@ class OperariosActivity : BaseActivity() {
             if (codigo.isNotEmpty() && nombre.isNotEmpty()) {
                 lifecycleScope.launch {
                     try {
-                        viewModel.updateOperario(operario.copy(codigo = codigo, nombre = nombre, cargoId = cargoId, areaId = areaId, fincaId = fincaId))
+                        viewModel.updateOperario(
+                            operario.copy(
+                                codigo = codigo,
+                                nombre = nombre,
+                                cargoId = cargoId,
+                                areaId = areaId,
+                                fincaId = fincaId,
+                                activo = switchActivo.isChecked
+                            )
+                        )
                         Toast.makeText(this@OperariosActivity, "Operario actualizado", Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) {
                         Toast.makeText(

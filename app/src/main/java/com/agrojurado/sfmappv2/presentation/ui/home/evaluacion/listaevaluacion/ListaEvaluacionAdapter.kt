@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.listaevaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.listaevaluacion
 
 import android.view.LayoutInflater
 import android.view.View
@@ -7,10 +7,10 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
 
-class SemanaEvaluacionAdapter(
+class ListaEvaluacionAdapter(
     private val semanas: List<Int>,
     private val onItemClick: (Int) -> Unit
-) : RecyclerView.Adapter<SemanaEvaluacionAdapter.SemanaViewHolder>() {
+) : RecyclerView.Adapter<ListaEvaluacionAdapter.SemanaViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SemanaViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_semana, parent, false)

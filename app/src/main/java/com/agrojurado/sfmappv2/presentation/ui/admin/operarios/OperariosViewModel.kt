@@ -217,10 +217,6 @@ class OperariosViewModel @Inject constructor(
                 _isLoading.value = true
                 _error.value = null
                 operarioRepository.updateOperario(operario)
-
-                if (_isOnline.value) {
-                    syncOperarios()
-                }
             } catch (e: Exception) {
                 _error.value = "Error al actualizar operario: ${e.message}"
             } finally {
@@ -235,10 +231,6 @@ class OperariosViewModel @Inject constructor(
                 _isLoading.value = true
                 _error.value = null
                 operarioRepository.deleteOperario(operario)
-
-                if (_isOnline.value) {
-                    syncOperarios()
-                }
             } catch (e: Exception) {
                 _error.value = "Error al eliminar operario: ${e.message}"
             } finally {

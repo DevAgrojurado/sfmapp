@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciondetalle
 
 import android.app.AlertDialog
 import android.view.LayoutInflater
@@ -16,7 +16,9 @@ import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 class EvaluacionAdapter(
     private val onItemClick: (EvaluacionPolinizacion, String) -> Unit,
     private val onEvaluacionAction: (EvaluacionPolinizacion, String) -> Unit
-) : ListAdapter<EvaluacionPolinizacion, EvaluacionAdapter.EvaluacionViewHolder>(EvaluacionDiffCallback()) {
+) : ListAdapter<EvaluacionPolinizacion, EvaluacionAdapter.EvaluacionViewHolder>(
+    EvaluacionDiffCallback()
+) {
 
     private var operarioMap: Map<Int, String> = emptyMap()
 

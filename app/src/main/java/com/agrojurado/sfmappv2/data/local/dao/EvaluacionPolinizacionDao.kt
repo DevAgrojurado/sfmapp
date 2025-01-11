@@ -19,8 +19,8 @@ interface EvaluacionPolinizacionDao {
     @Delete
     suspend fun deleteEvaluacion(evaluacion: EvaluacionPolinizacionEntity)
 
-    @Query("DELETE FROM evaluacionpolinizacion")
-    suspend fun deleteAllEvaluaciones()
+    //@Query("DELETE FROM evaluacionpolinizacion")
+    //suspend fun deleteAllEvaluaciones()
 
     @Query("SELECT * FROM evaluacionpolinizacion")
     fun getEvaluaciones(): Flow<List<EvaluacionPolinizacionEntity>>

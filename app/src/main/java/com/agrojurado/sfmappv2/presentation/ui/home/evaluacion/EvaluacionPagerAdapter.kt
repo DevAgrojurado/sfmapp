@@ -3,6 +3,9 @@ package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.fragments.DetallesPolinizacionFragment
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.fragments.EvaluacionFragment
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.fragments.InformacionGeneralFragment
 
 class EvaluacionPagerAdapter(activity: FragmentActivity) : FragmentStateAdapter(activity) {
     private val fragments = mutableListOf<Fragment>()

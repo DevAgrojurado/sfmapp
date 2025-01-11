@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.listaevaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.listaevaluacion
 
 import android.app.ProgressDialog
 import android.content.Intent
@@ -14,6 +14,7 @@ import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.presentation.ui.base.BaseActivity
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionActivity
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionViewModel
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.operarioevaluacion.OperarioEvaluacionActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -21,7 +22,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class ListaEvaluacionActivity : BaseActivity() {
     private lateinit var addsBtn: FloatingActionButton
     private lateinit var recyclerView: RecyclerView
-    private lateinit var semanaAdapter: SemanaEvaluacionAdapter
+    private lateinit var semanaAdapter: ListaEvaluacionAdapter
     private lateinit var progressDialog: ProgressDialog
     private val viewModel: EvaluacionViewModel by viewModels()
 
@@ -57,8 +58,8 @@ class ListaEvaluacionActivity : BaseActivity() {
         // Observar evaluaciones por semana
         viewModel.evaluacionesPorSemana.observe(this) { evaluacionesPorSemana ->
             val semanas = evaluacionesPorSemana.keys.toList().sorted()
-            semanaAdapter = SemanaEvaluacionAdapter(semanas) { semana ->
-                val intent = Intent(this, EvaluacionesPorSemanaActivity::class.java)
+            semanaAdapter = ListaEvaluacionAdapter(semanas) { semana ->
+                val intent = Intent(this, OperarioEvaluacionActivity::class.java)
                 intent.putExtra("semana", semana)
                 startActivity(intent)
             }

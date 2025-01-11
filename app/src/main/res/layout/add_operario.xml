@@ -64,16 +64,14 @@
             android:layout_marginRight="15dp"
             android:text="Cargo:"
             android:textSize="18sp"
-            android:textStyle="bold"
-
-            />
+            android:textStyle="bold" />
 
         <Spinner
             android:id="@+id/spinnerCargo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
             android:layout_marginLeft="15dp"
+            android:layout_marginTop="6dp"
             android:layout_marginRight="15dp"
             android:layout_marginBottom="5dp"
             android:paddingBottom="15dp"
@@ -87,16 +85,14 @@
             android:layout_marginRight="15dp"
             android:text="Area:"
             android:textSize="18sp"
-            android:textStyle="bold"
-
-            />
+            android:textStyle="bold" />
 
         <Spinner
             android:id="@+id/spinnerArea"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
             android:layout_marginLeft="15dp"
+            android:layout_marginTop="6dp"
             android:layout_marginRight="15dp"
             android:layout_marginBottom="5dp"
             android:paddingBottom="15dp"
@@ -110,16 +106,14 @@
             android:layout_marginRight="15dp"
             android:text="Finca:"
             android:textSize="18sp"
-            android:textStyle="bold"
-
-            />
+            android:textStyle="bold" />
 
         <Spinner
             android:id="@+id/spinnerFinca"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
             android:layout_marginLeft="15dp"
+            android:layout_marginTop="6dp"
             android:layout_marginRight="15dp"
             android:layout_marginBottom="5dp"
             android:paddingBottom="15dp"
@@ -128,9 +122,40 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="end"
+            android:layout_marginLeft="15dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginRight="15dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Estado:"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvEstadoForm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_weight="1"
+                android:text="Inactivo"
+                android:textColor="@color/black"
+                android:textSize="16sp" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchActivoForm"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:orientation="horizontal">
         </LinearLayout>
 
     </LinearLayout>

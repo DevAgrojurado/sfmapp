@@ -4,5 +4,5 @@ import com.agrojurado.sfmappv2.domain.repository.EvaluacionPolinizacionRepositor
 import javax.inject.Inject
 
 class DeleteAllEvalucionesUseCase @Inject constructor(private val repository: EvaluacionPolinizacionRepository) {
-    suspend operator fun invoke() = repository.deleteAllEvaluaciones()
+
 }

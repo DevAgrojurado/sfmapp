@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.listaevaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciondetalle
 
 import android.os.Bundle
 import android.view.Menu
@@ -11,13 +11,13 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.lifecycle.lifecycleScope
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionAdapter
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionDetalleDialog
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import com.agrojurado.sfmappv2.presentation.ui.base.BaseActivity
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.dialogdetail.EvaluacionDetalleDialog
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
@@ -28,6 +28,8 @@ class EvaluacionesPorSemanaActivity : BaseActivity() {
     private val adapter get() = _adapter!!
     private val viewModel: EvaluacionViewModel by viewModels()
     private var isActivityDestroyed = false
+    private var idPolinizador: Int = -1
+    private var nombrePolinizador: String = ""
 
     override fun getLayoutResourceId(): Int = R.layout.activity_evaluaciones_por_semana
     override fun getActivityTitle(): String = "Evaluaciones"
@@ -38,10 +40,16 @@ class EvaluacionesPorSemanaActivity : BaseActivity() {
         lifecycleScope.launch(Dispatchers.Main) {
             try {
                 val semana = validateAndGetSemana()
-                if (semana != -1) {
+                idPolinizador = intent.getIntExtra("idPolinizador", -1)
+                nombrePolinizador = intent.getStringExtra("nombrePolinizador") ?: "Desconocido"
+
+                if (semana != -1 && idPolinizador != -1) {
                     initializeViews()
                     setupRecyclerView()
                     observeViewModel(semana)
+                    observeConnectivityState()
+                } else {
+                    throw IllegalArgumentException("Parámetros inválidos")
                 }
             } catch (e: Exception) {
                 Log.e("EvaluacionesActivity", "Error en onCreate: ${e.message}")
@@ -105,7 +113,11 @@ class EvaluacionesPorSemanaActivity : BaseActivity() {
             if (!isActivityDestroyed) {
                 try {
                     val evaluacionesSemana = evaluacionesPorSemana[semana] ?: emptyList()
-                    _adapter?.submitList(evaluacionesSemana)
+                    // Filtrar solo las evaluaciones del polinizador seleccionado
+                    val evaluacionesPolinizador = evaluacionesSemana.filter {
+                        it.idPolinizador == idPolinizador
+                    }
+                    _adapter?.submitList(evaluacionesPolinizador)
                 } catch (e: Exception) {
                     Log.e("EvaluacionesActivity", "Error al observar evaluaciones: ${e.message}")
                     showError("Error al cargar evaluaciones")
@@ -133,13 +145,13 @@ class EvaluacionesPorSemanaActivity : BaseActivity() {
         lifecycleScope.launch {
             try {
                 val semana = intent.getIntExtra("semana", -1)
-                val filteredList = viewModel.evaluacionesPorSemana.value?.get(semana)?.filter { evaluacion ->
-                    val nombrePolinizador = viewModel.operarioMap.value?.get(evaluacion.idPolinizador) ?: ""
-                    nombrePolinizador.contains(query, ignoreCase = true) ||
-                            evaluacion.fecha!!.contains(query, ignoreCase = true) ||
-                            evaluacion.hora!!.contains(query, ignoreCase = true) ||
-                            evaluacion.observaciones!!.contains(query, ignoreCase = true)
-                } ?: emptyList()
+                val filteredList = viewModel.evaluacionesPorSemana.value?.get(semana)
+                    ?.filter { evaluacion ->
+                        evaluacion.idPolinizador == idPolinizador &&
+                                (evaluacion.fecha!!.contains(query, ignoreCase = true) ||
+                                        evaluacion.hora!!.contains(query, ignoreCase = true) ||
+                                        evaluacion.observaciones!!.contains(query, ignoreCase = true))
+                    } ?: emptyList()
 
                 if (!isActivityDestroyed) {
                     _adapter?.submitList(filteredList)
@@ -199,6 +211,14 @@ class EvaluacionesPorSemanaActivity : BaseActivity() {
     private fun showError(message: String) {
         if (!isActivityDestroyed) {
             Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun observeConnectivityState() {
+        lifecycleScope.launch {
+            viewModel.isOnline.collectLatest { isOnline ->
+                viewModel.loadEvaluacionesPorSemana()
+            }
         }
     }
 

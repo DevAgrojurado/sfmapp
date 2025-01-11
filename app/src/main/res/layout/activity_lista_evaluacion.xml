@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".presentation.ui.home.listaevaluacion.ListaEvaluacionActivity">
+    tools:context=".presentation.ui.home.evaluacion.listaevaluacion.ListaEvaluacionActivity">
 
     <LinearLayout
         android:orientation="vertical"
