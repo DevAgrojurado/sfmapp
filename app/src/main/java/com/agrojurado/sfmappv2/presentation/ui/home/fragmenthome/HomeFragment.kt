@@ -9,9 +9,10 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.databinding.FragmentHomeBinding
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.listaevaluacion.ListaEvaluacionActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -72,10 +73,8 @@ class HomeFragment : Fragment() {
             // Maneja el clic en el ítem aquí
             when (item.title) {
                 "Evaluacion Polinización" -> {
-                    val intent = Intent(requireContext(), ListaEvaluacionActivity::class.java)
-                    startActivity(intent)
+                    findNavController().navigate(R.id.action_nav_home_to_listaEvaluacionFragment)
                 }
-                // Agrega más casos para otros ítems si es necesario
             }
         }
         binding.rvHome.layoutManager = LinearLayoutManager(requireContext())

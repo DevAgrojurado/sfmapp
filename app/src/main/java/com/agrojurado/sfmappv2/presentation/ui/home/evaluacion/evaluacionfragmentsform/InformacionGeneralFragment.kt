@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.fragments
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform
 
 import android.Manifest
 import android.content.Context
@@ -22,7 +22,6 @@ import androidx.fragment.app.activityViewModels
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.model.Operario
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionViewModel
 import com.google.android.material.textfield.TextInputEditText
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat

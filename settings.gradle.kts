@@ -21,6 +21,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "sfm app v2"
+rootProject.name = "Sfm App"
 include(":app")
  

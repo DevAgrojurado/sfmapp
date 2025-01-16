@@ -4,13 +4,30 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
 
 class ListaEvaluacionAdapter(
-    private val semanas: List<Int>,
+    private var semanas: List<Int>,
     private val onItemClick: (Int) -> Unit
-) : RecyclerView.Adapter<ListaEvaluacionAdapter.SemanaViewHolder>() {
+) : ListAdapter<Int, ListaEvaluacionAdapter.SemanaViewHolder>(SemanaDiffCallback()) {
+
+    fun updateItems(newItems: List<Int>) {
+        semanas = newItems
+        notifyDataSetChanged()
+    }
+
+    class SemanaDiffCallback : DiffUtil.ItemCallback<Int>() {
+        override fun areItemsTheSame(oldItem: Int, newItem: Int): Boolean {
+            return oldItem == newItem
+        }
+
+        override fun areContentsTheSame(oldItem: Int, newItem: Int): Boolean {
+            return oldItem == newItem
+        }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SemanaViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_semana, parent, false)

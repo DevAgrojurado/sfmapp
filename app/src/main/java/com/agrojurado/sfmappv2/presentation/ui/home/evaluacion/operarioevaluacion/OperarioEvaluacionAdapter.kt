@@ -9,12 +9,12 @@ import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 
 class OperarioEvaluacionAdapter(
-    private var items: List<ItemOperarioEvaluacion>,
-    private val onItemClick: (ItemOperarioEvaluacion) -> Unit
+    private var evaluacionesPorPolinizador: Map<Pair<Int, String>, List<EvaluacionPolinizacion>> = emptyMap(),
+    private val onItemClick: (Int, String) -> Unit
 ) : RecyclerView.Adapter<OperarioEvaluacionAdapter.ViewHolder>() {
 
-    fun updateItems(newItems: List<ItemOperarioEvaluacion>) {
-        items = newItems
+    fun updateItems(newItems: Map<Pair<Int, String>, List<EvaluacionPolinizacion>>) {
+        evaluacionesPorPolinizador = newItems
         notifyDataSetChanged()
     }
 
@@ -25,20 +25,23 @@ class OperarioEvaluacionAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = items[position]
-        holder.bind(item)
-        holder.itemView.setOnClickListener { onItemClick(item) }
+        val polinizador = evaluacionesPorPolinizador.keys.toList()[position]
+        val evaluaciones = evaluacionesPorPolinizador[polinizador] ?: emptyList()
+        holder.bind(polinizador.second, evaluaciones.size)
+        holder.itemView.setOnClickListener {
+            onItemClick(polinizador.first, polinizador.second)
+        }
     }
 
-    override fun getItemCount() = items.size
+    override fun getItemCount() = evaluacionesPorPolinizador.size
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val tvNombrePolinizador: TextView = view.findViewById(R.id.tvPolinizadorNombre)
         private val tvCantidadEvaluaciones: TextView = view.findViewById(R.id.tvCantidadEvaluaciones)
 
-        fun bind(item: ItemOperarioEvaluacion) {
-            tvNombrePolinizador.text = item.nombrePolinizador
-            tvCantidadEvaluaciones.text = "Evaluaciones: ${item.evaluaciones.size}"
+        fun bind(nombrePolinizador: String, cantidadEvaluaciones: Int) {
+            tvNombrePolinizador.text = nombrePolinizador
+            tvCantidadEvaluaciones.text = "Evaluaciones: $cantidadEvaluaciones"
         }
     }
 }

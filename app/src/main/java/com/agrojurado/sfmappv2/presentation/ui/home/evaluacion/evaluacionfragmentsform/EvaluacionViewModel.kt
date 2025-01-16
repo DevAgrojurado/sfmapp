@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -25,7 +25,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -106,17 +108,16 @@ class EvaluacionViewModel @Inject constructor(
     val isSaving: LiveData<Boolean> = _isSaving
 
     private val _syncStatus = MutableLiveData<SyncStatus>()
-    val syncStatus: LiveData<SyncStatus> = _syncStatus
 
     sealed class SyncStatus {
-        object Idle : SyncStatus()
         object Loading : SyncStatus()
         data class Success(val message: String) : SyncStatus()
         data class Error(val message: String) : SyncStatus()
     }
 
-
     private var syncInProgress = false
+    private var cachedEvaluaciones: Map<Int, List<EvaluacionPolinizacion>>? = null
+    private var cachedOperariosIds: Set<Int>? = null
 
     init {
         observeNetworkState()
@@ -297,37 +298,24 @@ class EvaluacionViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                evaluacionRepository.getEvaluaciones().collectLatest { evaluacionesList ->
-                    // Obtener el usuario actual
-                    val currentUser = _loggedInUser.value
-
-                    // Filtrar evaluaciones según el rol del usuario
-                    val filteredEvaluaciones = when {
-                        // Si es admin o coordinador, mostrar todas las evaluaciones
-                        currentUser?.rol?.equals(UserRoleConstants.ROLE_ADMIN, ignoreCase = true) == true ||
-                                currentUser?.rol?.equals(UserRoleConstants.ROLE_COORDINATOR, ignoreCase = true) == true -> {
-                            evaluacionesList
-                        }
-                        // Si es evaluador, mostrar solo evaluaciones de su finca
-                        currentUser?.rol?.equals(UserRoleConstants.ROLE_EVALUATOR, ignoreCase = true) == true -> {
-                            evaluacionesList.filter { evaluacion ->
-                                // Verificar si la evaluación pertenece a un operario de la misma finca del evaluador
-                                val operariosEnFinca = operarioRepository.getAllOperarios()
-                                    .first()
-                                    .filter { it.fincaId == currentUser.idFinca }
-                                    .map { it.id }
-
-                                operariosEnFinca.contains(evaluacion.idPolinizador)
-                            }
-                        }
-                        // Por defecto, no mostrar evaluaciones
-                        else -> emptyList()
-                    }
-
-                    // Agrupar evaluaciones filtradas por semana
-                    val groupedEvaluaciones = filteredEvaluaciones.groupBy { it.semana }
-                    _evaluacionesPorSemana.value = groupedEvaluaciones
+                // Usar caché si está disponible
+                cachedEvaluaciones?.let {
+                    _evaluacionesPorSemana.value = it
+                    _isLoading.value = false
+                    return@launch
                 }
+
+                // Si no hay caché, cargar de la base de datos
+                evaluacionRepository.getEvaluaciones()
+                    .map { evaluacionesList ->
+                        filterEvaluacionesByRole(_loggedInUser.value, evaluacionesList)
+                            .groupBy { it.semana }
+                    }
+                    .distinctUntilChanged()
+                    .collectLatest { groupedEvaluaciones ->
+                        cachedEvaluaciones = groupedEvaluaciones
+                        _evaluacionesPorSemana.value = groupedEvaluaciones
+                    }
             } catch (e: Exception) {
                 _error.value = "Error al cargar evaluaciones: ${e.message}"
             } finally {
@@ -336,10 +324,42 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
+    // Limpiar caché cuando sea necesario
+    fun clearCache() {
+        cachedEvaluaciones = null
+    }
+
+
+    private suspend fun filterEvaluacionesByRole(user: Usuario?, evaluacionesList: List<EvaluacionPolinizacion>): List<EvaluacionPolinizacion> {
+        return when {
+            user?.rol?.equals(UserRoleConstants.ROLE_ADMIN, ignoreCase = true) == true ||
+                    user?.rol?.equals(UserRoleConstants.ROLE_COORDINATOR, ignoreCase = true) == true -> {
+                evaluacionesList
+            }
+            user?.rol?.equals(UserRoleConstants.ROLE_EVALUATOR, ignoreCase = true) == true -> {
+                // Usar caché de operarios si está disponible
+                val operariosIds = cachedOperariosIds ?: run {
+                    operarioRepository.getAllOperarios()
+                        .first()
+                        .filter { it.fincaId == user.idFinca }
+                        .map { it.id }
+                        .toSet()
+                        .also { cachedOperariosIds = it }
+                }
+
+                evaluacionesList.filter { evaluacion ->
+                    operariosIds.contains(evaluacion.idPolinizador)
+                }
+            }
+            else -> emptyList()
+        }
+    }
+
     private fun loadOperarioMap() {
         viewModelScope.launch {
             operarioRepository.getAllOperarios().collectLatest { operariosList ->
                 _operarioMap.value = operariosList.associate { it.id to it.nombre }
+                clearOperariosCache() // Limpiar caché cuando se actualicen los operarios
             }
         }
     }
@@ -521,6 +541,9 @@ class EvaluacionViewModel @Inject constructor(
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
 
+    private fun clearOperariosCache() {
+        cachedOperariosIds = null
+    }
 
     override fun onCleared() {
         super.onCleared()
@@ -533,6 +556,7 @@ class EvaluacionViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e("EvaluacionViewModel", "Error al desregistrar network callback: ${e.message}")
         }
+        clearOperariosCache()
     }
 
     // Limpiar mensaje de error

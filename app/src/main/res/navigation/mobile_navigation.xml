@@ -9,7 +9,11 @@
         android:id="@+id/nav_home"
         android:name="com.agrojurado.sfmappv2.presentation.ui.home.fragmenthome.HomeFragment"
         android:label="@string/menu_home"
-        tools:layout="@layout/fragment_home" />
+        tools:layout="@layout/fragment_home">
+        <action
+            android:id="@+id/action_nav_home_to_listaEvaluacionFragment"
+            app:destination="@id/listaEvaluacionFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_admin"
@@ -17,4 +21,51 @@
         android:label="@string/menu_admin"
         tools:layout="@layout/fragment_admin" />
 
+    <fragment
+        android:id="@+id/listaEvaluacionFragment"
+        android:name="com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.listaevaluacion.ListaEvaluacionFragment"
+        android:label="Lista de Evaluaciones"
+        tools:layout="@layout/fragment_lista_evaluacion">
+        <action
+            android:id="@+id/action_listaEvaluacion_to_evaluacionFragment"
+            app:destination="@id/evaluacionFragment" />
+        <action
+            android:id="@+id/action_listaEvaluacion_to_operarioEvaluacionFragment"
+            app:destination="@id/operarioEvaluacionFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/evaluacionFragment"
+        android:name="com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionFragment"
+        android:label="Evaluación"
+        tools:layout="@layout/fragment_evaluacion" />
+
+    <fragment
+        android:id="@+id/operarioEvaluacionFragment"
+        android:name="com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.operarioevaluacion.OperarioEvaluacionFragment"
+        android:label="Evaluaciones por Semana"
+        tools:layout="@layout/fragment_lista_evaluacion">
+        <argument
+            android:name="semana"
+            app:argType="integer" />
+        <action
+            android:id="@+id/action_operarioEvaluacion_to_evaluacionDetalle"
+            app:destination="@id/evaluacionDetalleFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/evaluacionDetalleFragment"
+        android:name="com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciondetalle.EvaluacionDetalleFragment"
+        android:label="Detalle de Evaluación"
+        tools:layout="@layout/fragment_lista_evaluacion">
+        <argument
+            android:name="semana"
+            app:argType="integer" />
+        <argument
+            android:name="idPolinizador"
+            app:argType="integer" />
+        <argument
+            android:name="nombrePolinizador"
+            app:argType="string" />
+    </fragment>
 </navigation>

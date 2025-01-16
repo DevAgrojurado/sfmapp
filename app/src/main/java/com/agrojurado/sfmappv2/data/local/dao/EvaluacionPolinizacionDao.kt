@@ -2,7 +2,6 @@ package com.agrojurado.sfmappv2.data.local.dao
 
 import androidx.room.*
 import com.agrojurado.sfmappv2.data.local.entity.EvaluacionPolinizacionEntity
-import com.agrojurado.sfmappv2.data.local.entity.OperarioEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -10,17 +9,11 @@ interface EvaluacionPolinizacionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEvaluacion(evaluacion: EvaluacionPolinizacionEntity): Long
 
-    @Insert
-    suspend fun insertEvaluaciones(evaluaciones: List<EvaluacionPolinizacionEntity>)
-
     @Update
     suspend fun updateEvaluacion(evaluacion: EvaluacionPolinizacionEntity)
 
     @Delete
     suspend fun deleteEvaluacion(evaluacion: EvaluacionPolinizacionEntity)
-
-    //@Query("DELETE FROM evaluacionpolinizacion")
-    //suspend fun deleteAllEvaluaciones()
 
     @Query("SELECT * FROM evaluacionpolinizacion")
     fun getEvaluaciones(): Flow<List<EvaluacionPolinizacionEntity>>
@@ -42,7 +35,7 @@ interface EvaluacionPolinizacionDao {
 
     @Transaction
     suspend fun insertOrUpdate(evaluacion: EvaluacionPolinizacionEntity) {
-        val existing = getEvaluacionById(evaluacion.id!!)
+        val existing = getEvaluacionById(evaluacion.id)
         if (existing != null) {
             updateEvaluacion(evaluacion)
         } else {

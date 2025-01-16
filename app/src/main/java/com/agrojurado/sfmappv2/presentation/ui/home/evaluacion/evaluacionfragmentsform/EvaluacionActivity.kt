@@ -1,4 +1,4 @@
-package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion
+package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform
 
 import android.os.Bundle
 import android.widget.Button
@@ -9,9 +9,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.viewpager2.widget.ViewPager2
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.presentation.ui.base.BaseActivity
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.fragments.DetallesPolinizacionFragment
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.fragments.EvaluacionFragment
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.fragments.InformacionGeneralFragment
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint

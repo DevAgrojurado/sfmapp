@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".presentation.ui.home.evaluacion.fragments.DetallesPolinizacionFragment">
+    tools:context=".presentation.ui.home.evaluacion.evaluacionfragmentsform.DetallesPolinizacionFragment">
 
     <ScrollView
         android:layout_width="match_parent"

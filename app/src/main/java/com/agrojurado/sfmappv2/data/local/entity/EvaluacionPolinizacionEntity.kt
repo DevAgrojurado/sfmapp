@@ -40,7 +40,7 @@ import java.util.UUID
 data class EvaluacionPolinizacionEntity(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "id") var id: Int = 0,
-    @ColumnInfo(name = "serverId") var serverId: Int? = null,
+    @ColumnInfo(name = "serverId") var serverId: Int?,
     @ColumnInfo(name = "fecha") val fecha: String?,
     @ColumnInfo(name = "hora") val hora: String?,
     @ColumnInfo(name = "semana") val semana: Int,
