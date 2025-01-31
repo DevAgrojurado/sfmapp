@@ -19,6 +19,7 @@ import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.repository.LoteRepository
 import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
 import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
+import com.agrojurado.sfmappv2.utils.EvaluacionPdfGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -121,13 +122,15 @@ class EvaluacionViewModel @Inject constructor(
 
     init {
         observeNetworkState()
-        loadLoggedInUser()
-        loadOperarioMap()
-        loadEvaluadorMap()
-        loadLastUsedOperario()
-        loadLastUsedLote()
-        setCurrentWeek()
-        loadLoteMap()
+        viewModelScope.launch {
+            loadLoggedInUser()
+            loadOperarioMap()
+            loadEvaluadorMap()
+            loadLastUsedOperario()
+            loadLastUsedLote()
+            setCurrentWeek()
+            loadLoteMap()
+        }
     }
 
     // Verifica si hay sincronización en curso
@@ -281,15 +284,24 @@ class EvaluacionViewModel @Inject constructor(
         _currentWeek.value = calendar.get(Calendar.WEEK_OF_YEAR)
     }
 
+    fun countUniquePalms(evaluaciones: List<EvaluacionPolinizacion>): Int {
+        return evaluaciones
+            .map { Pair(it.idlote, it.palma) }
+            .distinct()
+            .count()
+    }
+
+    // Actualizar la función existente para usar el nuevo método
     fun updateTotalPalmas(idPolinizador: Int) {
         viewModelScope.launch {
             val week = _currentWeek.value ?: return@launch
             evaluacionRepository.getEvaluaciones().collectLatest { evaluaciones ->
-                val total = evaluaciones.count {
+                val polinizadorEvaluaciones = evaluaciones.filter {
                     it.idPolinizador == idPolinizador && it.semana == week
                 }
-                _totalPalmas.value = total
-                Log.d("EvaluacionViewModel", "Total palmas para polinizador $idPolinizador en semana $week: $total")
+                val uniquePalmsCount = countUniquePalms(polinizadorEvaluaciones)
+                _totalPalmas.value = uniquePalmsCount
+                Log.d("EvaluacionViewModel", "Total palmas únicas para polinizador $idPolinizador en semana $week: $uniquePalmsCount")
             }
         }
     }
@@ -396,17 +408,17 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
-    fun checkPalmExists(semana: Int?, lote: Int?, palma: Int?, idPolinizador: Int?) {
+    fun checkPalmExists(semana: Int?, lote: Int?, palma: Int?, idPolinizador: Int?, seccion: Int?) {
         viewModelScope.launch {
             try {
-                if (semana == null || lote == null || palma == null || idPolinizador == null) {
+                if (semana == null || lote == null || palma == null || idPolinizador == null || seccion == null) {
                     _palmExists.value = false
                     return@launch
                 }
 
-                val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador)
+                val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador, seccion)
                 _palmExists.value = exists
-                Log.d("EvaluacionViewModel", "Palma existente: $exists (Semana: $semana, Lote: $lote, Palma: $palma, IdPolinizador: $idPolinizador)")
+                Log.d("EvaluacionViewModel", "Palma existente: $exists (Semana: $semana, Lote: $lote, Palma: $palma, Seccion: $seccion, IdPolinizador: $idPolinizador)")
             } catch (e: Exception) {
                 Log.e("EvaluacionViewModel", "Error al verificar la palma: ${e.message}")
                 _errorMessage.value = "Error al verificar la palma: ${e.message}"
@@ -429,74 +441,141 @@ class EvaluacionViewModel @Inject constructor(
         evaluacion: Map<String, Any?>
     ) {
         viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            _saveResult.value = false
+
             try {
-                _isLoading.value = true
-                val requiredFields = listOf("etFecha", "etHora", "etSemana", "spinnerPolinizador", "spinnerLote", "etSeccion", "etPalma")
-                for (field in requiredFields) {
-                    if (informacionGeneral[field] == null) {
-                        throw IllegalArgumentException("El campo $field es obligatorio")
-                    }
-                }
+                // Comprehensive validation of required fields
+                validateRequiredFields(informacionGeneral, evaluacion)
 
-                if (_ubicacion.value.isNullOrEmpty()) {
-                    throw IllegalArgumentException("La ubicación es obligatoria")
-                }
-
-                if (evaluacion["observaciones"] == null || (evaluacion["observaciones"] as? String)?.isEmpty() == true) {
-                    throw IllegalArgumentException("Las observaciones son obligatorias")
-                }
                 val fecha = informacionGeneral["etFecha"] as String
                 val hora = informacionGeneral["etHora"] as String
-                val semana = (informacionGeneral["etSemana"] as? Int) ?: throw IllegalArgumentException("Semana inválida")
-                val lote = (informacionGeneral["spinnerLote"] as? Int) ?: throw IllegalArgumentException("Lote inválido")
-                val palma = (informacionGeneral["etPalma"] as? Int) ?: throw IllegalArgumentException("Palma inválida")
-                val idPolinizador = (informacionGeneral["spinnerPolinizador"] as? Int) ?: throw IllegalArgumentException("ID del polinizador inválido")
+                val semana = (informacionGeneral["etSemana"] as? Int)
+                    ?: throw IllegalArgumentException("Semana inválida")
+                val lote = (informacionGeneral["spinnerLote"] as? Int)
+                    ?: throw IllegalArgumentException("Lote inválido")
+                val palma = (informacionGeneral["etPalma"] as? Int)
+                    ?: throw IllegalArgumentException("Palma inválida")
+                val idPolinizador = (informacionGeneral["spinnerPolinizador"] as? Int)
+                    ?: throw IllegalArgumentException("ID del polinizador inválido")
+                val seccion = (informacionGeneral["etSeccion"] as? Int)
+                    ?: throw IllegalArgumentException("Sección inválida")
 
-                // Verificar si la palma ya existe
-                val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador)
+                // Check if palm already exists
+                val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador, seccion)
                 if (exists) {
                     _palmExists.value = true
-                    _errorMessage.value = "Palma existente"
-                    _saveResult.value = false
+                    _errorMessage.value = "Palma existente en la misma sección"
                     return@launch
                 }
 
-                val evaluacionPolinizacion = EvaluacionPolinizacion(
-                    fecha = fecha,
-                    hora = hora,
-                    semana = semana,
-                    ubicacion = _ubicacion.value ?: "",
-                    idEvaluador = _loggedInUser.value?.id ?: throw IllegalArgumentException("ID del evaluador no disponible"),
-                    idPolinizador = idPolinizador,
-                    idlote = lote,
-                    seccion = (informacionGeneral["etSeccion"] as? Int) ?: throw IllegalArgumentException("Sección inválida"),
-                    palma = palma,
-                    inflorescencia = _inflorescencia.value,
-                    antesis = detallesPolinizacion["antesis"] as? Int,
-                    postAntesis = detallesPolinizacion["postAntesis"] as? Int,
-                    antesisDejadas = detallesPolinizacion["antesisDejadas"] as? Int,
-                    postAntesisDejadas = detallesPolinizacion["postAntesisDejadas"] as? Int,
-                    espate = evaluacion["espate"] as? Int,
-                    aplicacion = evaluacion["aplicacion"] as? Int,
-                    marcacion = evaluacion["marcacion"] as? Int,
-                    repaso1 = evaluacion["repaso1"] as? Int,
-                    repaso2 = evaluacion["repaso2"] as? Int,
-                    observaciones = evaluacion["observaciones"] as String,
+                val evaluacionPolinizacion = createEvaluacionPolinizacion(
+                    fecha, hora, semana, lote, palma,
+                    idPolinizador, seccion,
+                    informacionGeneral,
+                    detallesPolinizacion,
+                    evaluacion
                 )
 
+                // Save evaluation
                 evaluacionRepository.insertEvaluacion(evaluacionPolinizacion)
+
+                // Post-save operations
+                updateAfterSuccessfulSave(idPolinizador, lote)
+
                 _saveResult.value = true
                 _palmExists.value = false
 
-                Log.d("EvaluacionViewModel", "Evaluación guardada exitosamente.")
             } catch (e: Exception) {
-                _saveResult.value = false
-                Log.e("EvaluacionViewModel", "Error al guardar la evaluación: ${e.message}")
-                _errorMessage.value = e.message ?: "Error desconocido al guardar la evaluación"
+                handleSaveError(e)
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    private fun validateRequiredFields(
+        informacionGeneral: Map<String, Any?>,
+        evaluacion: Map<String, Any?>
+    ) {
+        val requiredGeneralFields = listOf(
+            "etFecha" to "Fecha",
+            "etHora" to "Hora",
+            "etSemana" to "Semana",
+            "spinnerPolinizador" to "Polinizador",
+            "spinnerLote" to "Lote",
+            "etSeccion" to "Sección",
+            "etPalma" to "Palma"
+        )
+
+        val missingFields = requiredGeneralFields
+            .filter { informacionGeneral[it.first] == null }
+            .map { it.second }
+
+        if (missingFields.isNotEmpty()) {
+            throw IllegalArgumentException("Campos obligatorios sin completar: ${missingFields.joinToString(", ")}")
+        }
+
+        if (_ubicacion.value.isNullOrEmpty()) {
+            throw IllegalArgumentException("La ubicación es obligatoria")
+        }
+
+        if (evaluacion["observaciones"] == null ||
+            (evaluacion["observaciones"] as? String)?.isEmpty() == true) {
+            throw IllegalArgumentException("Las observaciones son obligatorias")
+        }
+    }
+
+    private fun createEvaluacionPolinizacion(
+        fecha: String, hora: String, semana: Int, lote: Int,
+        palma: Int, idPolinizador: Int, seccion: Int,
+        informacionGeneral: Map<String, Any?>,
+        detallesPolinizacion: Map<String, Any?>,
+        evaluacion: Map<String, Any?>
+    ): EvaluacionPolinizacion = EvaluacionPolinizacion(
+        id = 0,
+        serverId = null,
+        fecha = fecha,
+        hora = hora,
+        semana = semana,
+        ubicacion = _ubicacion.value ?: "",
+        idEvaluador = _loggedInUser.value?.id
+            ?: throw IllegalArgumentException("ID del evaluador no disponible"),
+        idPolinizador = idPolinizador,
+        idlote = lote,
+        seccion = seccion,
+        palma = palma,
+        inflorescencia = _inflorescencia.value,
+        antesis = detallesPolinizacion["antesis"] as? Int,
+        postAntesis = detallesPolinizacion["postAntesis"] as? Int,
+        antesisDejadas = detallesPolinizacion["antesisDejadas"] as? Int,
+        postAntesisDejadas = detallesPolinizacion["postAntesisDejadas"] as? Int,
+        espate = evaluacion["espate"] as? Int,
+        aplicacion = evaluacion["aplicacion"] as? Int,
+        marcacion = evaluacion["marcacion"] as? Int,
+        repaso1 = evaluacion["repaso1"] as? Int,
+        repaso2 = evaluacion["repaso2"] as? Int,
+        observaciones = evaluacion["observaciones"] as String,
+        isSynced = false,
+        timestamp = System.currentTimeMillis()
+    )
+
+    private fun updateAfterSuccessfulSave(idPolinizador: Int, lote: Int) {
+        updateTotalPalmas(idPolinizador)
+        clearCache()
+        loadEvaluacionesPorSemana()
+        _lastUsedLoteId.value = lote
+        _lastUsedOperarioId.value = idPolinizador
+    }
+
+    private fun handleSaveError(e: Exception) {
+        _saveResult.value = false
+        _errorMessage.value = when (e) {
+            is IllegalArgumentException -> e.message
+            else -> "Error al guardar la evaluación: ${e.message}"
+        }
+        Log.e("EvaluacionViewModel", "Error al guardar la evaluación", e)
     }
 
     fun deleteEvaluacion(evaluacion: EvaluacionPolinizacion) {
@@ -530,6 +609,39 @@ class EvaluacionViewModel @Inject constructor(
                 _saveResult.value = false
                 Log.e("EvaluacionViewModel", "Error: ${e.message}")
                 showToast("Ocurrió un error al eliminar la evaluación.")
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun exportToPdf(context: Context) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+
+                // Obtener todos los datos necesarios
+                val evaluacionesList = evaluacionRepository.getEvaluaciones().first()
+                val evaluadorMap = _evaluador.value ?: emptyMap()
+                val operarioMap = _operarioMap.value ?: emptyMap()
+                val loteMap = _loteMap.value ?: emptyMap()
+
+                // Generar PDF
+                val pdfGenerator = EvaluacionPdfGenerator(context)
+                val pdfFile = pdfGenerator.generatePdf(
+                    evaluaciones = evaluacionesList,
+                    evaluadorMap = evaluadorMap,
+                    operarioMap = operarioMap,
+                    loteMap = loteMap
+                )
+
+                // Notificar éxito
+                _saveResult.value = true
+                showToast("PDF generado exitosamente: ${pdfFile.name}")
+
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al generar PDF: ${e.message}"
+                _saveResult.value = false
             } finally {
                 _isLoading.value = false
             }

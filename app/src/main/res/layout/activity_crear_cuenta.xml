@@ -50,7 +50,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginEnd="16dp">
+                android:layout_marginEnd="16dp"
+                app:boxStrokeColor="#4CAF50"
+                app:hintTextColor="#4CAF50">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_codigo"
@@ -65,7 +67,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginEnd="16dp">
+                android:layout_marginEnd="16dp"
+                app:boxStrokeColor="#4CAF50"
+                app:hintTextColor="#4CAF50">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_nombre"
@@ -80,7 +84,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginEnd="16dp">
+                android:layout_marginEnd="16dp"
+                app:boxStrokeColor="#4CAF50"
+                app:hintTextColor="#4CAF50">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_cedula"
@@ -95,7 +101,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginEnd="16dp">
+                android:layout_marginEnd="16dp"
+                app:boxStrokeColor="#4CAF50"
+                app:hintTextColor="#4CAF50">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_email"
@@ -111,7 +119,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginEnd="16dp">
+                android:layout_marginEnd="16dp"
+                app:boxStrokeColor="#4CAF50"
+                app:hintTextColor="#4CAF50"
+                app:passwordToggleEnabled="true">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_contraseña"
@@ -129,7 +140,9 @@
                 android:textStyle="bold"
                 android:layout_marginStart="16dp"
                 android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp" />
+                android:layout_marginBottom="8dp"
+                app:boxStrokeColor="#4CAF50"
+                app:hintTextColor="#4CAF50"/>
 
             <Spinner
                 android:id="@+id/spinnerCargoU"

@@ -100,6 +100,8 @@ dependencies {
     // Libreria
     implementation(libs.libreria.pcs)
 
+    implementation(libs.com.itextpdf.itextg)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

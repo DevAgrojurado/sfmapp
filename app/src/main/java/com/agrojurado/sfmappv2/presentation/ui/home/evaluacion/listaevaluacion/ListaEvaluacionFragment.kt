@@ -18,6 +18,7 @@ import com.agrojurado.sfmappv2.databinding.FragmentListaEvaluacionBinding
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionActivity
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionViewModel
+import com.agrojurado.sfmappv2.utils.PdfUtils.exportPdf
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -70,12 +71,36 @@ class ListaEvaluacionFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        semanaAdapter = ListaEvaluacionAdapter(emptyList()) { semana ->
-            findNavController().navigate(
-                ListaEvaluacionFragmentDirections
-                    .actionListaEvaluacionToOperarioEvaluacionFragment(semana)
-            )
-        }
+        semanaAdapter = ListaEvaluacionAdapter(emptyList(),
+            onItemClick = { semana ->
+                findNavController().navigate(
+                    ListaEvaluacionFragmentDirections
+                        .actionListaEvaluacionToOperarioEvaluacionFragment(semana)
+                )
+            },
+            onExportPdfClick = { semana ->
+                val evaluaciones = viewModel.evaluacionesPorSemana.value?.get(semana) ?: emptyList()
+                if (evaluaciones.isNotEmpty()) {
+                    exportPdf(
+                        evaluaciones = evaluaciones,
+                        evaluadorMap = viewModel.evaluador.value ?: emptyMap(),
+                        operarioMap = viewModel.operarioMap.value ?: emptyMap(),
+                        loteMap = viewModel.loteMap.value ?: emptyMap()
+                    )
+                    Toast.makeText(
+                        requireContext(),
+                        "Exportando evaluaciones de Semana $semana",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "No hay evaluaciones para exportar",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        )
         binding.rvEvaluacion.layoutManager = LinearLayoutManager(requireContext())
         binding.rvEvaluacion.adapter = semanaAdapter
     }
@@ -89,6 +114,25 @@ class ListaEvaluacionFragment : Fragment() {
         binding.swipeRefresh?.setOnRefreshListener {
             viewModel.loadEvaluacionesPorSemana()
             binding.swipeRefresh?.isRefreshing = false
+        }
+
+        binding.btnExportAllPdf.setOnClickListener {
+            val evaluaciones =
+                viewModel.evaluacionesPorSemana.value?.values?.flatten() ?: emptyList()
+            if (evaluaciones.isNotEmpty()) {
+                exportPdf(
+                    evaluaciones = evaluaciones,
+                    evaluadorMap = viewModel.evaluador.value ?: emptyMap(),
+                    operarioMap = viewModel.operarioMap.value ?: emptyMap(),
+                    loteMap = viewModel.loteMap.value ?: emptyMap()
+                )
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    "No hay evaluaciones para exportar",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 

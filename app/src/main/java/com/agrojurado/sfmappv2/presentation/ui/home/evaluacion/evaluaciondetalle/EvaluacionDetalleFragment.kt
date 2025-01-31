@@ -54,6 +54,15 @@ class EvaluacionDetalleFragment : Fragment() {
         observeConnectivityState()
         observeLoadingState()
         setupListeners()
+        setupInitialViewState()
+    }
+
+    private fun setupInitialViewState() {
+        binding.apply {
+            rvEvaluacion.visibility = View.GONE
+            loadingIndicator?.visibility = View.VISIBLE
+            btnExportAllPdf.visibility = View.GONE
+        }
     }
 
     private fun observeLoadingState() {
@@ -119,6 +128,15 @@ class EvaluacionDetalleFragment : Fragment() {
                 Log.e("EvaluacionDetalleFragment", "Error al observar evaluaciones: ${e.message}")
                 showError("Error al cargar evaluaciones")
                 hideLoadingIndicators()
+            }
+            viewModel.loteMap.observe(viewLifecycleOwner) { loteMap ->
+                try {
+                    adapter.setLoteMap(loteMap)
+                } catch (e: Exception) {
+                    Log.e("EvaluacionDetalleFragment", "Error al observar lotes: ${e.message}")
+                    showError("Error al cargar lotes")
+                    hideLoadingIndicators()
+                }
             }
         }
 

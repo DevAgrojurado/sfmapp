@@ -8,10 +8,12 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.agrojurado.sfmappv2.R
+import com.google.android.material.button.MaterialButton
 
 class ListaEvaluacionAdapter(
     private var semanas: List<Int>,
-    private val onItemClick: (Int) -> Unit
+    private val onItemClick: (Int) -> Unit,
+    private val onExportPdfClick: (Int) -> Unit
 ) : ListAdapter<Int, ListaEvaluacionAdapter.SemanaViewHolder>(SemanaDiffCallback()) {
 
     fun updateItems(newItems: List<Int>) {
@@ -38,13 +40,14 @@ class ListaEvaluacionAdapter(
         val semana = semanas[position]
         holder.bind(semana)
         holder.itemView.setOnClickListener { onItemClick(semana) }
+        holder.btnExportPdf.setOnClickListener { onExportPdfClick(semana) }
     }
 
     override fun getItemCount(): Int = semanas.size
 
     class SemanaViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val tvSemana: TextView = itemView.findViewById(R.id.tvSemana)
-
+        val btnExportPdf: MaterialButton = itemView.findViewById(R.id.btnExportPdf)
         fun bind(semana: Int) {
             tvSemana.text = "Semana $semana"
         }

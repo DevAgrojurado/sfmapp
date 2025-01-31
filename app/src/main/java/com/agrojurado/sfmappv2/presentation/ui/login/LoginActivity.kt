@@ -41,10 +41,6 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun initListener() {
-        binding.tvCrearCuenta.setOnClickListener {
-            UtilsCommon.hideKeyboard(this, it)
-            viewModel.existeCuenta()
-        }
 
         binding.btAcceder.setOnClickListener {
             UtilsCommon.hideKeyboard(this, it)

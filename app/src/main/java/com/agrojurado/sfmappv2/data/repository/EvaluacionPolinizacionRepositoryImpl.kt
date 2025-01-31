@@ -77,8 +77,8 @@ class EvaluacionPolinizacionRepositoryImpl @Inject constructor(
         return dao.getLastEvaluacion()?.let(EvaluacionPolinizacionMapper::toDomain)
     }
 
-    override suspend fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int): Boolean {
-        return dao.checkPalmExists(semana, lote, palma, idPolinizador) > 0
+    override suspend fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int, seccion: Int): Boolean {
+        return dao.checkPalmExists(semana, lote, palma, idPolinizador, seccion) > 0
     }
 
     override suspend fun insertEvaluacion(evaluacion: EvaluacionPolinizacion): Long {

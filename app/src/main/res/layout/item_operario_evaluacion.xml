@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -7,43 +7,69 @@
     app:cardCornerRadius="8dp"
     app:cardElevation="4dp">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:padding="16dp">
 
-        <!-- Contenedor para los textos -->
-        <LinearLayout
+        <!-- Contenedor superior para nombre y estadísticas -->
+        <TextView
+            android:id="@+id/tvPolinizadorNombre"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/tvPalmas"
+            android:layout_marginEnd="16dp"/>
 
-            <TextView
-                android:id="@+id/tvPolinizadorNombre"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+        <!-- Contenedor para los otros textos (tvPalmas y tvEventos) -->
+        <TextView
+            android:id="@+id/tvPalmas"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:layout_marginBottom="4dp"
+            app:layout_constraintTop_toTopOf="@+id/tvPolinizadorNombre"
+            app:layout_constraintStart_toEndOf="@+id/tvPolinizadorNombre"
+            app:layout_constraintEnd_toStartOf="@+id/btnExportarPdf"/>
 
-            <TextView
-                android:id="@+id/tvCantidadEvaluaciones"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:textSize="14sp" />
+        <TextView
+            android:id="@+id/tvEventos"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@+id/tvPalmas"
+            app:layout_constraintStart_toStartOf="@+id/tvPalmas"
+            app:layout_constraintEnd_toEndOf="@+id/tvPalmas"/>
 
-        </LinearLayout>
+        <!-- Botón de exportar PDF solo con icono -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExportarPdf"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="47dp"
+            android:layout_height="38dp"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:icon="@drawable/ic_pdf"
+            app:iconGravity="textStart"
+            app:iconSize="24dp"
+            app:layout_constraintBottom_toBottomOf="@+id/tvPolinizadorNombre"
+            app:layout_constraintEnd_toStartOf="@+id/icRight"
+            app:layout_constraintTop_toTopOf="@+id/tvPolinizadorNombre" />
 
-        <!-- Icono alineado al centro vertical derecha -->
+        <!-- Icono de flecha derecha -->
         <ImageView
             android:id="@+id/icRight"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_right"
-            android:layout_gravity="center_vertical" />
+            android:paddingStart="0dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/tvPolinizadorNombre"
+            app:layout_constraintBottom_toBottomOf="@+id/tvPolinizadorNombre" />
 
-    </LinearLayout>
-
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

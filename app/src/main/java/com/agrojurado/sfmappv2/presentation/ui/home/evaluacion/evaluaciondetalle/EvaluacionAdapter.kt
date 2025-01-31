@@ -21,9 +21,15 @@ class EvaluacionAdapter(
 ) {
 
     private var operarioMap: Map<Int, String> = emptyMap()
+    private var loteMap: Map<Int, String> = emptyMap()  // Nuevo mapa para los lotes
 
     fun setOperarioMap(map: Map<Int, String>) {
         operarioMap = map
+        notifyDataSetChanged()
+    }
+
+    fun setLoteMap(map: Map<Int, String>) {  // Nuevo método para actualizar el mapa de lotes
+        loteMap = map
         notifyDataSetChanged()
     }
 
@@ -35,7 +41,8 @@ class EvaluacionAdapter(
     override fun onBindViewHolder(holder: EvaluacionViewHolder, position: Int) {
         val evaluacion = getItem(position)
         val nombrePolinizador = operarioMap[evaluacion.idPolinizador] ?: "Desconocido"
-        holder.bind(evaluacion, nombrePolinizador)
+        val descripcionLote = loteMap[evaluacion.idlote] ?: "Lote ${evaluacion.idlote}"  // Usar la descripción del lote
+        holder.bind(evaluacion, nombrePolinizador, descripcionLote)
 
         holder.mMenus.setOnClickListener { view ->
             showPopupMenu(view, evaluacion, nombrePolinizador)
@@ -82,12 +89,12 @@ class EvaluacionAdapter(
         private val tvPolinizador: TextView = itemView.findViewById(R.id.tvPolinizador)
         private val tvLote: TextView = itemView.findViewById(R.id.tvLote)
         private val tvFecha: TextView = itemView.findViewById(R.id.tvFecha)
-        val mMenus: ImageView = itemView.findViewById(R.id.mMenus) // Inicialización de mMenus
+        val mMenus: ImageView = itemView.findViewById(R.id.mMenus)
 
-        fun bind(evaluacion: EvaluacionPolinizacion, nombrePolinizador: String) {
+        fun bind(evaluacion: EvaluacionPolinizacion, nombrePolinizador: String, descripcionLote: String) {
             tvPolinizador.text = nombrePolinizador
             tvFecha.text = evaluacion.fecha
-            tvLote.text = "Lote: ${evaluacion.idlote}"
+            tvLote.text = "Lote:\n$descripcionLote" // Mostrar la descripción del lote directamente
         }
     }
 

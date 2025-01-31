@@ -13,6 +13,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.databinding.FragmentHomeBinding
+import com.agrojurado.sfmappv2.presentation.ui.home.maps.MapsActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -70,10 +71,14 @@ class HomeFragment : Fragment() {
 
     private fun setupRecyclerView() {
         adapter = HomeAdapter { item ->
-            // Maneja el clic en el ítem aquí
+            // Manejar el clic en el ítem aquí
             when (item.title) {
                 "Evaluacion Polinización" -> {
                     findNavController().navigate(R.id.action_nav_home_to_listaEvaluacionFragment)
+                }
+                "Mapas" -> {
+                    val intent = Intent(requireContext(), MapsActivity::class.java)
+                    startActivity(intent)
                 }
             }
         }

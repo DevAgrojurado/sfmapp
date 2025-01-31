@@ -1,8 +1,8 @@
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".presentation.ui.home.evaluacion.evaluacionfragmentsform.InformacionGeneralFragment">
 
     <ScrollView
@@ -19,7 +19,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Fecha"
-                android:visibility="gone">
+                android:visibility="gone"
+                app:boxStrokeColor="#4CAF50"
+                app:hintTextColor="#4CAF50">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etFecha"
@@ -45,15 +47,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Semana"
-                android:visibility="visible">
+                android:visibility="gone">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etSemana"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:enabled="false"
                     android:inputType="number"
-                    android:visibility="visible"
-                    android:enabled="false"/>
+                    android:visibility="visible" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -136,7 +138,9 @@
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Seccion">
+                android:hint="Seccion"
+                app:boxStrokeColor="#4CAF50"
+                app:hintTextColor="#4CAF50">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etSeccion"
@@ -149,7 +153,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="Palma"
-                android:visibility="visible">
+                android:visibility="visible"
+                app:boxStrokeColor="#4CAF50"
+                app:hintTextColor="#4CAF50">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etPalma"
@@ -163,47 +169,48 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Inflorescencia"
+                android:text="Eventos"
                 android:textStyle="bold"
                 android:layout_marginBottom="8dp"
                 android:layout_marginTop="16dp"/>
 
-            <RadioGroup
-                android:id="@+id/rgInflorescencia"
+            <LinearLayout
+                android:id="@+id/toggleGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
 
-                <RadioButton
-                    android:id="@+id/rb1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1" />
+                <ToggleButton
+                    android:id="@+id/toggle1"
+                    style="@style/ToggleButtonStyle"
+                    android:textOn="1"
+                    android:textOff="1"/>
 
-                <RadioButton
-                    android:id="@+id/rb2"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="2" />
+                <ToggleButton
+                    android:id="@+id/toggle2"
+                    style="@style/ToggleButtonStyle"
+                    android:textOn="2"
+                    android:textOff="2"/>
 
-                <RadioButton
-                    android:id="@+id/rb3"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="3" />
+                <ToggleButton
+                    android:id="@+id/toggle3"
+                    style="@style/ToggleButtonStyle"
+                    android:textOn="3"
+                    android:textOff="3"/>
 
-                <RadioButton
-                    android:id="@+id/rb4"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="4" />
+                <ToggleButton
+                    android:id="@+id/toggle4"
+                    style="@style/ToggleButtonStyle"
+                    android:textOn="4"
+                    android:textOff="4"/>
 
-                <RadioButton
-                    android:id="@+id/rb5"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="5" />
-            </RadioGroup>
+                <ToggleButton
+                    android:id="@+id/toggle5"
+                    style="@style/ToggleButtonStyle"
+                    android:textOn="5"
+                    android:textOff="5"/>
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

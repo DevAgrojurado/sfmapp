@@ -16,6 +16,7 @@ import com.agrojurado.sfmappv2.databinding.FragmentListaEvaluacionBinding
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionActivity
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionViewModel
+import com.agrojurado.sfmappv2.utils.PdfUtils.exportPdf
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -55,20 +56,49 @@ class OperarioEvaluacionFragment : Fragment() {
         binding.apply {
             rvEvaluacion.visibility = View.GONE
             loadingIndicator?.visibility = View.VISIBLE
+            btnExportAllPdf.visibility = View.GONE
         }
     }
 
     private fun setupRecyclerView() {
-        adapter = OperarioEvaluacionAdapter { idPolinizador, nombrePolinizador ->
-            findNavController().navigate(
-                OperarioEvaluacionFragmentDirections
-                    .actionOperarioEvaluacionToEvaluacionDetalle(
-                        semana = args.semana,
-                        idPolinizador = idPolinizador,
-                        nombrePolinizador = nombrePolinizador
+        adapter = OperarioEvaluacionAdapter(
+            onItemClick = { idPolinizador, nombrePolinizador ->
+                findNavController().navigate(
+                    OperarioEvaluacionFragmentDirections
+                        .actionOperarioEvaluacionToEvaluacionDetalle(
+                            semana = args.semana,
+                            idPolinizador = idPolinizador,
+                            nombrePolinizador = nombrePolinizador
+                        )
+                )
+            },
+            onExportPdfClick = { evaluaciones, nombreOperario ->
+                if (evaluaciones.isNotEmpty()) {
+                    exportPdf(
+                        evaluaciones = evaluaciones,
+                        evaluadorMap = viewModel.evaluador.value ?: emptyMap(),
+                        operarioMap = viewModel.operarioMap.value ?: emptyMap(),
+                        loteMap = viewModel.loteMap.value ?: emptyMap()
                     )
-            )
-        }
+                    Toast.makeText(
+                        requireContext(),
+                        "Exportando evaluaciones de $nombreOperario",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "No hay evaluaciones para exportar",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            countUniquePalms = { evaluaciones ->
+                viewModel.countUniquePalms(evaluaciones)
+            },
+            getEvaluadorMap = { viewModel.evaluador.value ?: emptyMap() },
+            getLoteMap = { viewModel.loteMap.value ?: emptyMap() }
+        )
         binding.rvEvaluacion.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@OperarioEvaluacionFragment.adapter

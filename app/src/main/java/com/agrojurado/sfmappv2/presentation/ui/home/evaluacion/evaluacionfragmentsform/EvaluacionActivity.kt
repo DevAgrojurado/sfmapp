@@ -142,9 +142,6 @@ class EvaluacionActivity : BaseActivity() {
             if (success) {
                 Toast.makeText(this, "Evaluación guardada exitosamente", Toast.LENGTH_SHORT).show()
                 finish()
-            } else {
-                Toast.makeText(this, "Por favor llene todos los campos requeridos", Toast.LENGTH_SHORT).show()
-                resetSaveState()
             }
         }
 

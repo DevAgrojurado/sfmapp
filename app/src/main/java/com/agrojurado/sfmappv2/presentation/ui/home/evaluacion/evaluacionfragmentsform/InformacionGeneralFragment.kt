@@ -8,6 +8,8 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
@@ -30,7 +32,6 @@ import java.util.*
 @AndroidEntryPoint
 class InformacionGeneralFragment : Fragment(), LocationListener {
 
-    private lateinit var rgInflorescencia: RadioGroup
     private lateinit var etFecha: TextInputEditText
     private lateinit var etHora: TextInputEditText
     private lateinit var etSemana: TextInputEditText
@@ -41,12 +42,13 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
     private lateinit var etPalma: TextInputEditText
     private lateinit var tvTotalPalmas: TextView
     private lateinit var etUbicacion: TextInputEditText
+    private lateinit var toggleGroup: LinearLayout
+    private lateinit var toggleButtons: List<ToggleButton>
     private lateinit var locationManager: LocationManager
 
     private val viewModel: EvaluacionViewModel by activityViewModels()
     private var operarios: List<Pair<String, Operario>> = emptyList()
     private var lotes: List<Pair<String, Lote>> = emptyList()
-
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1
@@ -73,7 +75,6 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
     }
 
     private fun initializeViews(view: View) {
-        rgInflorescencia = view.findViewById(R.id.rgInflorescencia)
         etFecha = view.findViewById(R.id.etFecha)
         etHora = view.findViewById(R.id.etHora)
         etSemana = view.findViewById(R.id.etSemana)
@@ -84,6 +85,14 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         etPalma = view.findViewById(R.id.etPalma)
         tvTotalPalmas = view.findViewById(R.id.tvTotalPalmas)
         etUbicacion = view.findViewById(R.id.etUbicacion)
+        toggleGroup = view.findViewById(R.id.toggleGroup)
+        toggleButtons = listOf(
+            view.findViewById(R.id.toggle1),
+            view.findViewById(R.id.toggle2),
+            view.findViewById(R.id.toggle3),
+            view.findViewById(R.id.toggle4),
+            view.findViewById(R.id.toggle5)
+        )
         tvTotalPalmas.visibility = View.VISIBLE
     }
 
@@ -124,14 +133,22 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
             tvTotalPalmas.text = "$total"
         }
 
-        viewModel.palmExists.observe(viewLifecycleOwner) { exists ->
-            if (exists) {
-                etPalma.setText("")
-            }
-        }
-
         viewModel.ubicacion.observe(viewLifecycleOwner) { ubicacion ->
             etUbicacion.setText(ubicacion)
+        }
+
+        viewModel.lotes.observe(viewLifecycleOwner) { lotesList ->
+            lotes = lotesList
+            setupLotesSpinner(lotesList)
+        }
+
+        viewModel.lastUsedLoteId.observe(viewLifecycleOwner) { lastUsedLoteId ->
+            lastUsedLoteId?.let { id ->
+                val position = lotes.indexOfFirst { it.second.id == id }
+                if (position != -1) {
+                    spinnerLote.setSelection(position)
+                }
+            }
         }
     }
 
@@ -149,21 +166,6 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
                 // No hacer nada
-            }
-        }
-
-
-        viewModel.lotes.observe(viewLifecycleOwner) { lotesList ->
-            lotes = lotesList
-            setupLotesSpinner(lotesList)
-        }
-
-        viewModel.lastUsedLoteId.observe(viewLifecycleOwner) { lastUsedLoteId ->
-            lastUsedLoteId?.let { id ->
-                val position = lotes.indexOfFirst { it.second.id == id }
-                if (position != -1) {
-                    spinnerLote.setSelection(position)
-                }
             }
         }
     }
@@ -184,34 +186,65 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         }
     }
 
+    private val handler = Handler(Looper.getMainLooper())
+    private var checkPalmRunnable: Runnable? = null
+
     private fun setupListeners() {
-        rgInflorescencia.setOnCheckedChangeListener { _, checkedId ->
-            val selectedInflorescencia = when (checkedId) {
-                R.id.rb1 -> 1
-                R.id.rb2 -> 2
-                R.id.rb3 -> 3
-                R.id.rb4 -> 4
-                R.id.rb5 -> 5
-                else -> 0
+        toggleButtons.forEachIndexed { index, toggleButton ->
+            toggleButton.setOnCheckedChangeListener { buttonView, isChecked ->
+                if (isChecked) {
+                    toggleButtons.forEach { btn ->
+                        if (btn != buttonView) btn.isChecked = false
+                    }
+                    viewModel.setInflorescencia(index + 1)
+                } else {
+                    if (!toggleButtons.any { it.isChecked }) {
+                        viewModel.setInflorescencia(0)
+                    }
+                }
             }
-            viewModel.setInflorescencia(selectedInflorescencia)
         }
 
         etSemana.doAfterTextChanged { checkPalmExists() }
         etSeccion.doAfterTextChanged { checkPalmExists() }
-        etPalma.doAfterTextChanged { checkPalmExists() }
+
+        etPalma.doAfterTextChanged { text ->
+            checkPalmRunnable?.let { handler.removeCallbacks(it) }
+            checkPalmRunnable = Runnable {
+                val semana = etSemana.text.toString().toIntOrNull()
+                val idLote = lotes.getOrNull(spinnerLote.selectedItemPosition)?.second?.id
+                val palma = text.toString()
+                val idPolinizador = operarios.getOrNull(spinnerPolinizador.selectedItemPosition)?.second?.id
+                val seccion = etSeccion.text.toString().toIntOrNull()
+
+                if (semana != null && idLote != null && palma.isNotBlank() && idPolinizador != null && seccion != null) {
+                    viewModel.checkPalmExists(semana, idLote, palma.toIntOrNull(), idPolinizador, seccion)
+                }
+            }
+            handler.postDelayed(checkPalmRunnable!!, 100) // Ejecuta después de 500ms
+        }
+
+        viewModel.palmExists.observe(viewLifecycleOwner) { exists ->
+            if (exists) {
+                etPalma.error = "Esta palma ya existe en esta sección"
+            } else {
+                etPalma.error = null
+            }
+        }
     }
 
     private fun checkPalmExists() {
         val semana = etSemana.text.toString().toIntOrNull()
         val idLote = lotes.getOrNull(spinnerLote.selectedItemPosition)?.second?.id
         val palma = etPalma.text.toString().toIntOrNull()
-        val idPolinizador = (spinnerPolinizador.selectedItem as? Pair<String, Operario>)?.second?.id
+        val idPolinizador = operarios.getOrNull(spinnerPolinizador.selectedItemPosition)?.second?.id
+        val seccion = etSeccion.text.toString().toIntOrNull()
 
-        if (semana != null && idLote != null && palma != null && idPolinizador != null) {
-            viewModel.checkPalmExists(semana, idLote, palma, idPolinizador)
+        if (semana != null && idLote != null && palma != null && idPolinizador != null && seccion != null) {
+            viewModel.checkPalmExists(semana, idLote, palma, idPolinizador, seccion)
         }
     }
+
 
     private fun checkLocationPermission() {
         if (ContextCompat.checkSelfPermission(
@@ -297,7 +330,17 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         }
     }
 
+    fun setInflorescencia(value: Int) {
+        toggleButtons.forEachIndexed { index, toggleButton ->
+            toggleButton.isChecked = (index + 1) == value
+        }
+    }
+
     fun getValues(): Map<String, Any?> {
+        val inflorescencia = toggleButtons.indexOfFirst { it.isChecked }.let {
+            if (it == -1) 0 else it + 1
+        }
+
         return mapOf(
             "etFecha" to etFecha.text.toString(),
             "etHora" to etHora.text.toString(),
@@ -307,7 +350,8 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
             "spinnerLote" to (lotes.getOrNull(spinnerLote.selectedItemPosition)?.second?.id),
             "etSeccion" to etSeccion.text.toString().toIntOrNull(),
             "etPalma" to etPalma.text.toString().toIntOrNull(),
-            "etUbicacion" to etUbicacion.text.toString()
+            "etUbicacion" to etUbicacion.text.toString(),
+            "inflorescencia" to inflorescencia
         )
     }
 }
