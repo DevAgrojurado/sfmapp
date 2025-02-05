@@ -15,13 +15,12 @@ import com.agrojurado.sfmappv2.domain.repository.FincaRepository
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import com.agrojurado.sfmappv2.domain.usecase.usuario.InsertUserAccountUseCase
 import com.agrojurado.sfmappv2.presentation.common.UiState
-import com.agrojurado.sfmappv2.presentation.common.makeCall
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class   CrearCuentaViewModel @Inject constructor(
+class   CreateUserViewModel @Inject constructor(
     private val insertUserAccountUseCase: InsertUserAccountUseCase,
 
     private val usuarioRepository: UsuarioRepository,

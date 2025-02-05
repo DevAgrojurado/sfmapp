@@ -231,6 +231,40 @@ class UsuarioRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateUsuario(usuario: Usuario): Int {
+        if (!isNetworkAvailable()) {
+            throw Exception("No hay conexión a Internet")
+        }
+
+        try {
+            val usuarioRequest = UsuarioMapper.toRequest(usuario)
+            val response = usuarioApiService.updateUsuario(usuario.id!!, usuarioRequest)
+
+            return when {
+                response.isSuccessful -> {
+                    val usuarioResponse = response.body()
+                    if (usuarioResponse != null) {
+                        val usuarioEntity = UsuarioMapper.toDatabase(UsuarioMapper.fromResponse(usuarioResponse))
+                        usuarioDao.update(usuarioEntity)
+                        Log.d(TAG, "Usuario actualizado exitosamente con ID: ${usuario.id}")
+                        1
+                    } else {
+                        Log.e(TAG, "Respuesta vacía al actualizar usuario")
+                        0
+                    }
+                }
+                else -> {
+                    logError(response, "Error al actualizar usuario")
+                    throw Exception("Error del servidor al actualizar usuario")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error en actualización de usuario", e)
+            throw Exception("Error al actualizar usuario: ${e.message}")
+        }
+    }
+
+
     override suspend fun getLoggedInUserEmail(): String? {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_EMAIL, null)

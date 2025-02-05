@@ -108,6 +108,9 @@ class EvaluacionViewModel @Inject constructor(
     private val _isSaving = MutableLiveData<Boolean>()
     val isSaving: LiveData<Boolean> = _isSaving
 
+    private val _validationErrors = MutableLiveData<List<String>>()
+    val validationErrors: LiveData<List<String>> = _validationErrors
+
     private val _syncStatus = MutableLiveData<SyncStatus>()
 
     sealed class SyncStatus {
@@ -286,6 +289,7 @@ class EvaluacionViewModel @Inject constructor(
 
     fun countUniquePalms(evaluaciones: List<EvaluacionPolinizacion>): Int {
         return evaluaciones
+            .filter { it.palma != null } // Solo contar palmas que no sean null
             .map { Pair(it.idlote, it.palma) }
             .distinct()
             .count()
@@ -441,13 +445,20 @@ class EvaluacionViewModel @Inject constructor(
         evaluacion: Map<String, Any?>
     ) {
         viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-            _saveResult.value = false
-
             try {
-                // Comprehensive validation of required fields
-                validateRequiredFields(informacionGeneral, evaluacion)
+                _isSaving.value = true
+                _errorMessage.value = null
+                _saveResult.value = false
+
+                // Validar campos y obtener lista de errores
+                val errorFields = validateRequiredFields(informacionGeneral, evaluacion)
+
+                if (errorFields.isNotEmpty()) {
+                    _validationErrors.value = errorFields
+                    // Importante: Resetear el estado de guardado cuando hay errores de validación
+                    _isSaving.value = false
+                    return@launch
+                }
 
                 val fecha = informacionGeneral["etFecha"] as String
                 val hora = informacionGeneral["etHora"] as String
@@ -456,18 +467,20 @@ class EvaluacionViewModel @Inject constructor(
                 val lote = (informacionGeneral["spinnerLote"] as? Int)
                     ?: throw IllegalArgumentException("Lote inválido")
                 val palma = (informacionGeneral["etPalma"] as? Int)
-                    ?: throw IllegalArgumentException("Palma inválida")
                 val idPolinizador = (informacionGeneral["spinnerPolinizador"] as? Int)
                     ?: throw IllegalArgumentException("ID del polinizador inválido")
                 val seccion = (informacionGeneral["etSeccion"] as? Int)
                     ?: throw IllegalArgumentException("Sección inválida")
 
-                // Check if palm already exists
-                val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador, seccion)
-                if (exists) {
-                    _palmExists.value = true
-                    _errorMessage.value = "Palma existente en la misma sección"
-                    return@launch
+                if (palma != null) {
+                    val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador, seccion)
+                    if (exists) {
+                        _palmExists.value = true
+                        _errorMessage.value = "Palma existente en la misma sección"
+                        // Importante: Resetear el estado de guardado cuando la palma existe
+                        _isSaving.value = false
+                        return@launch
+                    }
                 }
 
                 val evaluacionPolinizacion = createEvaluacionPolinizacion(
@@ -478,58 +491,72 @@ class EvaluacionViewModel @Inject constructor(
                     evaluacion
                 )
 
-                // Save evaluation
                 evaluacionRepository.insertEvaluacion(evaluacionPolinizacion)
-
-                // Post-save operations
                 updateAfterSuccessfulSave(idPolinizador, lote)
-
                 _saveResult.value = true
                 _palmExists.value = false
+                _validationErrors.value = emptyList()
 
             } catch (e: Exception) {
                 handleSaveError(e)
             } finally {
-                _isLoading.value = false
+                // El estado de guardado se resetea en finally solo si no hubo éxito
+                if (_saveResult.value != true) {
+                    _isSaving.value = false
+                }
             }
         }
+    }
+
+    private fun handleSaveError(e: Exception) {
+        _saveResult.value = false
+        _errorMessage.value = when (e) {
+            is IllegalArgumentException -> e.message
+            else -> "Error al guardar la evaluación: ${e.message}"
+        }
+        // Asegurarse de resetear el estado de guardado en caso de error
+        _isSaving.value = false
+        Log.e("EvaluacionViewModel", "Error al guardar la evaluación", e)
     }
 
     private fun validateRequiredFields(
         informacionGeneral: Map<String, Any?>,
         evaluacion: Map<String, Any?>
-    ) {
+    ): List<String> {
         val requiredGeneralFields = listOf(
             "etFecha" to "Fecha",
             "etHora" to "Hora",
             "etSemana" to "Semana",
             "spinnerPolinizador" to "Polinizador",
             "spinnerLote" to "Lote",
-            "etSeccion" to "Sección",
-            "etPalma" to "Palma"
+            "etSeccion" to "Sección"
+            // Removido "etPalma" de los campos requeridos
         )
 
-        val missingFields = requiredGeneralFields
-            .filter { informacionGeneral[it.first] == null }
-            .map { it.second }
+        val errorFields = mutableListOf<String>()
 
-        if (missingFields.isNotEmpty()) {
-            throw IllegalArgumentException("Campos obligatorios sin completar: ${missingFields.joinToString(", ")}")
+        requiredGeneralFields.forEach { (key, fieldName) ->
+            if (informacionGeneral[key] == null) {
+                errorFields.add(key)
+            }
         }
 
         if (_ubicacion.value.isNullOrEmpty()) {
-            throw IllegalArgumentException("La ubicación es obligatoria")
+            errorFields.add("ubicacion")
         }
 
         if (evaluacion["observaciones"] == null ||
             (evaluacion["observaciones"] as? String)?.isEmpty() == true) {
-            throw IllegalArgumentException("Las observaciones son obligatorias")
+            errorFields.add("observaciones")
         }
+
+        return errorFields
     }
+
 
     private fun createEvaluacionPolinizacion(
         fecha: String, hora: String, semana: Int, lote: Int,
-        palma: Int, idPolinizador: Int, seccion: Int,
+        palma: Int?, idPolinizador: Int, seccion: Int, // Cambiado palma a Int?
         informacionGeneral: Map<String, Any?>,
         detallesPolinizacion: Map<String, Any?>,
         evaluacion: Map<String, Any?>
@@ -567,15 +594,6 @@ class EvaluacionViewModel @Inject constructor(
         loadEvaluacionesPorSemana()
         _lastUsedLoteId.value = lote
         _lastUsedOperarioId.value = idPolinizador
-    }
-
-    private fun handleSaveError(e: Exception) {
-        _saveResult.value = false
-        _errorMessage.value = when (e) {
-            is IllegalArgumentException -> e.message
-            else -> "Error al guardar la evaluación: ${e.message}"
-        }
-        Log.e("EvaluacionViewModel", "Error al guardar la evaluación", e)
     }
 
     fun deleteEvaluacion(evaluacion: EvaluacionPolinizacion) {

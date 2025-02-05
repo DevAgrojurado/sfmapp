@@ -10,6 +10,8 @@ interface UsuarioRepository {
 
     suspend fun delete(usuario: Usuario): Int
 
+    suspend fun updateUsuario(usuario: Usuario): Int
+
     suspend fun updateKey(id: Int, clave: String): Int
 
     suspend fun getUser(email: String, clave: String): Usuario?

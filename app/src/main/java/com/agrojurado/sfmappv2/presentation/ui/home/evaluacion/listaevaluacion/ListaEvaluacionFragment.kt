@@ -3,11 +3,15 @@ package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.listaevaluacion
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -165,10 +169,11 @@ class ListaEvaluacionFragment : Fragment() {
 
             if (semanas.isEmpty()) {
                 binding.rvEvaluacion.visibility = View.GONE
-                // Optionally show empty state
+                showNoRecordsMessage()
                 return
             }
 
+            hideNoRecordsMessage()
             semanaAdapter.updateItems(semanas)
             binding.rvEvaluacion.visibility = View.VISIBLE
             hideLoadingIndicators()
@@ -177,6 +182,32 @@ class ListaEvaluacionFragment : Fragment() {
             Toast.makeText(requireContext(), "Error al actualizar la lista", Toast.LENGTH_SHORT).show()
         }
     }
+
+    private fun showNoRecordsMessage() {
+        val noRecordsTextView = TextView(requireContext()).apply {
+            text = "No existen registros"
+            textSize = 18f
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+            gravity = Gravity.CENTER
+            alpha = 0.5f // Hacer el texto un poco opaco
+            tag = "no_records_message"
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        }
+
+        (binding.root as ViewGroup).addView(noRecordsTextView)
+    }
+
+    private fun hideNoRecordsMessage() {
+        binding.root.findViewWithTag<View>("no_records_message")?.let {
+            (binding.root as ViewGroup).removeView(it)
+        }
+    }
+
 
     private fun hideLoadingIndicators() {
         binding.loadingIndicator?.visibility = View.GONE

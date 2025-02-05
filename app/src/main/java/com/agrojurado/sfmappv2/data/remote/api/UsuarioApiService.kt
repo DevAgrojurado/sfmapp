@@ -2,6 +2,8 @@ package com.agrojurado.sfmappv2.data.remote.api
 
 import com.agrojurado.sfmappv2.data.remote.dto.login.LoginRequest
 import com.agrojurado.sfmappv2.data.remote.dto.login.LoginResponse
+import com.agrojurado.sfmappv2.data.remote.dto.operario.OperarioRequest
+import com.agrojurado.sfmappv2.data.remote.dto.operario.OperarioResponse
 import com.agrojurado.sfmappv2.data.remote.dto.usuario.UsuarioRequest
 import com.agrojurado.sfmappv2.data.remote.dto.usuario.UsuarioResponse
 import retrofit2.Response
@@ -16,7 +18,7 @@ interface UsuarioApiService {
     suspend fun createUsuario(@Body usuario: UsuarioRequest): Response<UsuarioResponse>
 
     @PUT("api/usuario/update.php")
-    suspend fun updateUsuario(@Body usuario: UsuarioRequest): Response<UsuarioResponse>
+    suspend fun updateUsuario(@Query("id") id: Int, @Body usuario: UsuarioRequest): Response<UsuarioResponse>
 
     @DELETE("api/usuario/delete.php")
     suspend fun deleteUsuario(@Query("id") id: Int): Response<UsuarioResponse>

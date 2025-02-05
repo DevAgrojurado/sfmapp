@@ -2,20 +2,16 @@ package com.agrojurado.sfmappv2.presentation.ui.login
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import com.agrojurado.sfmappv2.data.sync.DataSyncManager
 import com.agrojurado.sfmappv2.databinding.ActivityLoginBinding
 import com.agrojurado.sfmappv2.presentation.common.UiState
-import com.agrojurado.sfmappv2.presentation.ui.crearcuenta.CrearCuentaActivity
+import com.agrojurado.sfmappv2.presentation.ui.crearcuenta.CreateUserActivity
 import com.agrojurado.sfmappv2.presentation.ui.main.MainActivity
 import dagger.hilt.android.AndroidEntryPoint
 import pe.pcs.libpcs.UtilsCommon
 import pe.pcs.libpcs.UtilsMessage
-import pe.pcs.libpcs.UtilsSecurity
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class LoginActivity : AppCompatActivity() {
@@ -76,7 +72,7 @@ class LoginActivity : AppCompatActivity() {
                         return@observe
                     }
 
-                    startActivity(Intent(this, CrearCuentaActivity::class.java))
+                    startActivity(Intent(this, CreateUserActivity::class.java))
                 }
                 null -> Unit
             }

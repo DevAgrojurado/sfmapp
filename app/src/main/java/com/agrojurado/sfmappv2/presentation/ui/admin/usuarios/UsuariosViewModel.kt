@@ -109,6 +109,33 @@ class UsuariosViewModel @Inject constructor(
         }
     }
 
+    fun updateUsuario(usuario: Usuario) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+
+            try {
+                if (!_isOnline.value) {
+                    _error.value = "No hay conexión a Internet. No se puede actualizar el usuario."
+                    return@launch
+                }
+
+                val result = usuarioRepository.updateUsuario(usuario)
+                if (result > 0) {
+                    if (_isOnline.value) {
+                        syncUsuarios()
+                    }
+                } else {
+                    _error.value = "Error al actualizar usuario: no se completó la operación"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al actualizar usuario: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     private suspend fun syncUsuarios() {
         try {
             usuarioRepository.syncUsuarios()  // Sincroniza los datos con el servidor

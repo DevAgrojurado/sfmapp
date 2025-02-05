@@ -57,7 +57,7 @@
             android:name=".presentation.ui.admin.lotes.LotesActivity"
             android:exported="false" />
         <activity
-            android:name=".presentation.ui.crearcuenta.CrearCuentaActivity"
+            android:name=".presentation.ui.crearcuenta.CreateUserActivity"
             android:exported="false"
             android:theme="@style/Theme.SfmAppV2" />
         <activity

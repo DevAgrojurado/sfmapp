@@ -21,12 +21,12 @@ import pe.pcs.libpcs.UtilsMessage
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class CrearCuentaActivity : AppCompatActivity() {
+class CreateUserActivity : AppCompatActivity() {
 
     @Inject
     lateinit var dataSyncManager: DataSyncManager
     private lateinit var binding: ActivityCrearCuentaBinding
-    private val viewModel: CrearCuentaViewModel by viewModels()
+    private val viewModel: CreateUserViewModel by viewModels()
 
     private lateinit var cargoAdapter: ArrayAdapter<String>
     private lateinit var areaAdapter: ArrayAdapter<String>

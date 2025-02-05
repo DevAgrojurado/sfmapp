@@ -72,6 +72,33 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
 
         viewModel.loadOperarios()
         viewModel.loadLotes()
+
+        // Agregar observador para errores de validación
+        viewModel.validationErrors.observe(viewLifecycleOwner) { errorFields ->
+            clearAllErrors()
+            errorFields.forEach { fieldName ->
+                when (fieldName) {
+                    "etFecha" -> etFecha.error = "Campo requerido"
+                    "etHora" -> etHora.error = "Campo requerido"
+                    "etSemana" -> etSemana.error = "Campo requerido"
+                    "spinnerPolinizador" -> (spinnerPolinizador.selectedView as? TextView)?.error = "Campo requerido"
+                    "spinnerLote" -> (spinnerLote.selectedView as? TextView)?.error = "Campo requerido"
+                    "etSeccion" -> etSeccion.error = "Campo requerido"
+                    "ubicacion" -> etUbicacion.error = "Campo requerido"
+                }
+            }
+        }
+    }
+
+    private fun clearAllErrors() {
+        etFecha.error = null
+        etHora.error = null
+        etSemana.error = null
+        (spinnerPolinizador.selectedView as? TextView)?.error = null
+        (spinnerLote.selectedView as? TextView)?.error = null
+        etSeccion.error = null
+        etPalma.error = null
+        etUbicacion.error = null
     }
 
     private fun initializeViews(view: View) {
@@ -95,6 +122,7 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         )
         tvTotalPalmas.visibility = View.VISIBLE
     }
+
 
     private fun setupInitialValues() {
         val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())

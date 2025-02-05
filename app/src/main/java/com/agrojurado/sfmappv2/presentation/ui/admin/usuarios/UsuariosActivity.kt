@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.databinding.ActivityUsuariosBinding
 import com.agrojurado.sfmappv2.domain.model.Usuario
-import com.agrojurado.sfmappv2.presentation.ui.crearcuenta.CrearCuentaActivity
+import com.agrojurado.sfmappv2.presentation.ui.crearcuenta.CreateUserActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -49,6 +49,7 @@ class UsuariosActivity : AppCompatActivity() {
         adapter = UsuariosAdapter(this, listOf()) { usuario, action ->
             when (action) {
                 "delete" -> deleteUsuario(usuario)
+                "edit" -> editUsuario(usuario)
             }
         }
         binding.uRecycler.adapter = adapter
@@ -56,7 +57,7 @@ class UsuariosActivity : AppCompatActivity() {
 
     private fun setupListeners() {
         binding.fabSave.setOnClickListener {
-            startActivity(Intent(this, CrearCuentaActivity::class.java))
+            startActivity(Intent(this, CreateUserActivity::class.java))
         }
 
         // Listener para el botón de sincronización
@@ -100,6 +101,23 @@ class UsuariosActivity : AppCompatActivity() {
     private fun deleteUsuario(usuario: Usuario) {
         lifecycleScope.launch {
             viewModel.deleteUsuario(usuario)
+
+            // Observamos el error y mostramos el AlertDialog si es necesario
+            viewModel.error.collect { error ->
+                error?.let {
+                    if (it.contains("No hay conexión a Internet")) {
+                        showNoConnectionAlert()
+                    } else {
+                        showErrorAlert(it)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun editUsuario(usuario: Usuario) {
+        lifecycleScope.launch {
+            viewModel.updateUsuario(usuario)
 
             // Observamos el error y mostramos el AlertDialog si es necesario
             viewModel.error.collect { error ->
