@@ -148,7 +148,7 @@ class EvaluacionActivity : BaseActivity() {
         viewModel.errorMessage.observe(this) { errorMessage ->
             errorMessage?.let {
                 Toast.makeText(this, it, Toast.LENGTH_LONG).show()
-                // No es necesario llamar a resetSaveState() aquí ya que el ViewModel maneja el estado
+                resetSaveState()
             }
         }
 
@@ -157,12 +157,15 @@ class EvaluacionActivity : BaseActivity() {
             btnForward.isEnabled = !saving
             btnBack.isEnabled = !saving
             viewPager.isUserInputEnabled = !saving
-
-            // Si no está guardando, asegurarse de que los botones reflejen el estado actual
-            if (!saving) {
-                updateNavigationButtons(viewPager.currentItem)
-            }
         }
+    }
+
+    private fun resetSaveState() {
+        isSaving = false
+        btnForward.isEnabled = true
+        btnBack.isEnabled = true
+        viewPager.isUserInputEnabled = true
+        updateNavigationButtons(viewPager.currentItem)
     }
 
     override fun getToolbarColor(): Int = R.color.green

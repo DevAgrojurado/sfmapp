@@ -1,0 +1,93 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Resumen de Evaluación"
+        android:textSize="18sp"
+        android:textStyle="bold"/>
+
+    <!-- Total Palmas -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Total de Palmas"
+        android:textStyle="bold"/>
+
+    <TextView
+        android:id="@+id/tvTotalPalmas"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"/>
+
+    <!-- Polinizador -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Polinizador"
+        android:textStyle="bold"/>
+
+    <Spinner
+        android:id="@+id/spinnerPolinizador"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- Lote -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Lote"
+        android:textStyle="bold"/>
+
+    <Spinner
+        android:id="@+id/spinnerLote"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <!-- Sección -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sección"
+        android:textStyle="bold"/>
+
+    <EditText
+        android:id="@+id/etSeccion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"/>
+
+    <!-- RecyclerView para eventos -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Eventos de Polinización"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerEventos"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <!-- Botón para agregar eventos -->
+    <Button
+        android:id="@+id/btnAgregarEvento"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Agregar Evento"/>
+
+    <!-- Botón para guardar evaluación -->
+    <Button
+        android:id="@+id/btnGuardarEvaluacion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Guardar Evaluación"/>
+</LinearLayout>

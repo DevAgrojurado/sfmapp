@@ -31,7 +31,7 @@ import com.agrojurado.sfmappv2.data.local.entity.OperarioEntity
 
 
     ],
-    version = 4,
+    version = 1,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

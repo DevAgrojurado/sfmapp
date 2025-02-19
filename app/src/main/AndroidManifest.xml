@@ -35,7 +35,7 @@
             android:exported="false" />
         <activity
             android:name=".presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionActivity"
-            android:exported="false" />
+            android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity
             android:name=".presentation.ui.admin.areas.AreasActivity"
             android:exported="false"
@@ -64,7 +64,8 @@
             android:name=".presentation.ui.main.MainActivity"
             android:exported="false"
             android:label="@string/title_activity_main"
-            android:theme="@style/Theme.SfmAppV2.NoActionBar" />
+            android:theme="@style/Theme.SfmAppV2.NoActionBar"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity
             android:name=".presentation.ui.login.LoginActivity"
             android:exported="true">

@@ -37,7 +37,6 @@ class EvaluacionPdfGenerator(private val context: Context) {
 
             val subtitleFont = FontFactory.getFont(FontFactory.HELVETICA, 12f, BaseColor.GRAY)
 
-
             // Agregar logo de la empresa
             val logo = BitmapFactory.decodeResource(context.resources, R.drawable.agro_jurado)
             val stream = ByteArrayOutputStream()
@@ -66,33 +65,35 @@ class EvaluacionPdfGenerator(private val context: Context) {
             document.add(dateGenerated)
 
             // Tabla
-            val table = PdfPTable(13)
+            val table = PdfPTable(18) // Aumentado a 18 columnas para incluir los nuevos campos
             table.widthPercentage = 100f
 
-            // Anchos de columnas
+            // Anchos de columnas actualizados
             val columnWidths = floatArrayOf(
-                0.8f, 0.6f, 0.6f, 1.0f, 1.0f, 0.8f, 0.5f, 0.5f, 0.6f, 0.6f, 0.6f, 0.8f, 1.2f
+                0.8f, 0.6f, 0.6f, 1.0f, 1.0f, 0.8f, 0.5f, 0.5f, 0.6f, 0.6f, 0.6f,
+                0.6f, 0.6f, 0.6f, 0.6f, 0.6f, 0.8f, 1.2f
             )
             table.setWidths(columnWidths)
 
-            // Encabezados
+            // Encabezados actualizados
             val headers = listOf(
                 "Fecha", "Hora", "Semana", "Evaluador", "Polinizador", "Lote",
                 "Sección", "Palma", "Inflorescencia", "Antesis", "Post Antesis",
+                "Espate", "Aplicación", "Marcación", "Repaso 1", "Repaso 2",
                 "Ubicación", "Observaciones"
             )
 
             val headerFont = Font(Font.FontFamily.HELVETICA, 10f, Font.BOLD, BaseColor.WHITE)
             headers.forEach { header ->
                 val cell = PdfPCell(Phrase(header, headerFont))
-                cell.backgroundColor = BaseColor(34, 153, 84) // Un verde
+                cell.backgroundColor = BaseColor(34, 153, 84)
                 cell.horizontalAlignment = Element.ALIGN_CENTER
                 cell.verticalAlignment = Element.ALIGN_MIDDLE
-                cell.setPadding(5f) // Método correcto para establecer el padding
+                cell.setPadding(5f)
                 table.addCell(cell)
             }
 
-            // Datos
+            // Datos actualizados
             val contentFont = Font(Font.FontFamily.HELVETICA, 9f)
             var rowIndex = 0
 
@@ -113,6 +114,11 @@ class EvaluacionPdfGenerator(private val context: Context) {
                     evaluacion.inflorescencia?.toString() ?: "-",
                     evaluacion.antesis?.toString() ?: "-",
                     evaluacion.postAntesis?.toString() ?: "-",
+                    evaluacion.espate?.toString() ?: "-",
+                    evaluacion.aplicacion?.toString() ?: "-",
+                    evaluacion.marcacion?.toString() ?: "-",
+                    evaluacion.repaso1?.toString() ?: "-",
+                    evaluacion.repaso2?.toString() ?: "-",
                     evaluacion.ubicacion ?: "",
                     evaluacion.observaciones ?: ""
                 )
@@ -122,7 +128,7 @@ class EvaluacionPdfGenerator(private val context: Context) {
                     cell.backgroundColor = rowColor
                     cell.horizontalAlignment = Element.ALIGN_CENTER
                     cell.verticalAlignment = Element.ALIGN_MIDDLE
-                    cell.setPadding(5f) // Método correcto para establecer el padding
+                    cell.setPadding(5f)
                     table.addCell(cell)
                 }
             }
