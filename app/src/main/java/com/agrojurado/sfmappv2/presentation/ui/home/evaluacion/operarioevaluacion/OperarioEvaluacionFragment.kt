@@ -16,6 +16,7 @@ import com.agrojurado.sfmappv2.databinding.FragmentListaEvaluacionBinding
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionActivity
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionViewModel
+import com.agrojurado.sfmappv2.utils.ExcelUtils.exportToExcel
 import com.agrojurado.sfmappv2.utils.PdfUtils.exportPdf
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -83,6 +84,27 @@ class OperarioEvaluacionFragment : Fragment() {
                     Toast.makeText(
                         requireContext(),
                         "Exportando evaluaciones de $nombreOperario",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(
+                        requireContext(),
+                        "No hay evaluaciones para exportar",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            onExportExcelClick = { evaluaciones, nombreOperario ->
+                if (evaluaciones.isNotEmpty()) {
+                    exportToExcel(
+                        evaluaciones = evaluaciones,
+                        evaluadorMap = viewModel.evaluador.value ?: emptyMap(),
+                        operarioMap = viewModel.operarioMap.value ?: emptyMap(),
+                        loteMap = viewModel.loteMap.value ?: emptyMap()
+                    )
+                    Toast.makeText(
+                        requireContext(),
+                        "Exportando a Excel evaluaciones de $nombreOperario",
                         Toast.LENGTH_SHORT
                     ).show()
                 } else {

@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.agrojurado.sfmappv2"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -89,6 +89,10 @@ dependencies {
     implementation(libs.okhttp)
 
     implementation(libs.androidx.work.runtime.ktx)
+
+    implementation (libs.poi)
+    implementation (libs.apache.poi.ooxml)
+    implementation (libs.aalto.xml)
 
     // Grafico para reporte
     //implementation(libs.mpandroidchart)

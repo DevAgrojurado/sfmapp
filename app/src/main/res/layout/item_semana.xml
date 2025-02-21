@@ -37,12 +37,13 @@
 
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnExportPdf"
+            android:id="@+id/btnExportExcel"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="47dp"
             android:layout_height="38dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            app:icon="@drawable/ic_pdf"
+            app:icon="@drawable/logo_excel"
+            app:iconTint="@null"
             app:iconGravity="textStart"
             app:iconSize="24dp"
             app:layout_constraintEnd_toStartOf="@+id/icRight"

@@ -21,6 +21,7 @@ class OperarioEvaluacionAdapter(
     private var evaluacionesPorPolinizador: Map<Pair<Int, String>, List<EvaluacionPolinizacion>> = emptyMap(),
     private val onItemClick: (Int, String) -> Unit,
     private val onExportPdfClick: (List<EvaluacionPolinizacion>, String) -> Unit,
+    private val onExportExcelClick: (List<EvaluacionPolinizacion>, String) -> Unit,
     private val countUniquePalms: (List<EvaluacionPolinizacion>) -> Int,
     private val getEvaluadorMap: () -> Map<Int, String>,
     private val getLoteMap: () -> Map<Int, String>
@@ -63,9 +64,10 @@ class OperarioEvaluacionAdapter(
         }
 
         // Click para exportar PDF
-        holder.btnExportarPdf.setOnClickListener {
-            onExportPdfClick(evaluaciones, polinizador.second)
-        }
+        //holder.btnExportarPdf.setOnClickListener { onExportPdfClick(evaluaciones, polinizador.second) }
+
+        holder.btnExportExcel.setOnClickListener {
+            onExportExcelClick(evaluaciones, polinizador.second) }
     }
 
     private fun showDetailDialog(context: Context, evaluaciones: List<EvaluacionPolinizacion>) {
@@ -162,7 +164,8 @@ class OperarioEvaluacionAdapter(
         private val tvNombrePolinizador: TextView = view.findViewById(R.id.tvPolinizadorNombre)
         private val tvTotalPalmas: TextView = view.findViewById(R.id.tvPalmas)
         private val tvTotalEventos: TextView = view.findViewById(R.id.tvEventos)
-        val btnExportarPdf: MaterialButton = view.findViewById(R.id.btnExportarPdf)
+        //val btnExportarPdf: MaterialButton = view.findViewById(R.id.btnExportarPdf)
+        val btnExportExcel: MaterialButton = itemView.findViewById(R.id.btnExportToExcel)
 
         @SuppressLint("SetTextI18n")
         fun bind(nombrePolinizador: String, totalPalmas: Int, totalEventos: Int) {
