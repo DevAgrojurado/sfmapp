@@ -1,6 +1,8 @@
 [versions]
 aaltoXml = "1.3.2"
 agp = "8.5.0"
+cameraCoreVersion = "1.3.2"
+coilVersion = "2.4.0"
 itextpdfItextg = "5.5.10"
 kotlin = "1.9.22"
 coreKtx = "1.13.1"
@@ -26,6 +28,7 @@ retrofit = "2.9.0"
 roomKtx = "2.6.1"
 hiltAndroid = "2.51"
 mpandroidchart = "3.1.0"
+signaturePadVersion = "1.3.1"
 workRuntimeKtx = "2.10.0"
 zxingAndroidEmbedded = "4.3.0"
 core = "3.5.3"
@@ -36,14 +39,22 @@ benchmarkCommon = "1.3.0"
 gridlayout = "1.0.0"
 playServicesMaps = "19.0.0"
 hiltCommon = "1.2.0"
+hiltWork = "1.2.0"
 
 [libraries]
 aalto-xml = { module = "com.fasterxml:aalto-xml", version.ref = "aaltoXml" }
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraCoreVersion" }
+androidx-camera-extensions = { module = "androidx.camera:camera-extensions", version.ref = "cameraCoreVersion" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraCoreVersion" }
+androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraCoreVersion" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
 apache-poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
+camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraCoreVersion" }
+coil-kt-coil = { module = "io.coil-kt:coil", version.ref = "coilVersion" }
 com-itextpdf-itextg = { module = "com.itextpdf:itextg", version.ref = "itextpdfItextg" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
+gcacace-signature-pad = { module = "com.github.gcacace:signature-pad", version.ref = "signaturePadVersion" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -87,6 +98,7 @@ androidx-benchmark-common = { group = "androidx.benchmark", name = "benchmark-co
 androidx-gridlayout = { group = "androidx.gridlayout", name = "gridlayout", version.ref = "gridlayout" }
 play-services-maps = { group = "com.google.android.gms", name = "play-services-maps", version.ref = "playServicesMaps" }
 androidx-hilt-common = { group = "androidx.hilt", name = "hilt-common", version.ref = "hiltCommon" }
+androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "hiltWork" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -1,7 +1,7 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.operarioevaluacion
 
-import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,24 +12,20 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.databinding.FragmentListaEvaluacionBinding
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionActivity
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionViewModel
-import com.agrojurado.sfmappv2.utils.ExcelUtils.exportToExcel
-import com.agrojurado.sfmappv2.utils.PdfUtils.exportPdf
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciongeneral.EvaluacionGeneralViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class OperarioEvaluacionFragment : Fragment() {
     private var _binding: FragmentListaEvaluacionBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: EvaluacionViewModel by viewModels()
+    private val viewModel: EvaluacionGeneralViewModel by viewModels()
     private val args: OperarioEvaluacionFragmentArgs by navArgs()
     private lateinit var adapter: OperarioEvaluacionAdapter
-    private var isInitialLoad = true
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -42,171 +38,114 @@ class OperarioEvaluacionFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupInitialViewState()
+        Log.d("OperarioEvaluacionFragment", "Semana recibida: ${args.semana}")
         setupRecyclerView()
         setupObservers()
         setupListeners()
-
-        if (isInitialLoad) {
-            loadData()
-            isInitialLoad = false
-        }
-    }
-
-    private fun setupInitialViewState() {
-        binding.apply {
-            rvEvaluacion.visibility = View.GONE
-            loadingIndicator?.visibility = View.VISIBLE
-            btnExportAllPdf.visibility = View.GONE
-        }
+        loadData()
     }
 
     private fun setupRecyclerView() {
         adapter = OperarioEvaluacionAdapter(
-            onItemClick = { idPolinizador, nombrePolinizador ->
-                findNavController().navigate(
-                    OperarioEvaluacionFragmentDirections
-                        .actionOperarioEvaluacionToEvaluacionDetalle(
+            semana = args.semana,
+            onItemClick = { idPolinizador, nombrePolinizador, idEvaluacionGeneral ->
+                val currentDestination = findNavController().currentDestination?.id
+                if (currentDestination != R.id.evaluacionDetalleFragment) {
+                    findNavController().navigate(
+                        OperarioEvaluacionFragmentDirections.actionOperarioEvaluacionToEvaluacionDetalle(
                             semana = args.semana,
                             idPolinizador = idPolinizador,
-                            nombrePolinizador = nombrePolinizador
+                            nombrePolinizador = nombrePolinizador,
+                            idEvaluacionGeneral = idEvaluacionGeneral ?: -1
                         )
-                )
-            },
-            onExportPdfClick = { evaluaciones, nombreOperario ->
-                if (evaluaciones.isNotEmpty()) {
-                    exportPdf(
-                        evaluaciones = evaluaciones,
-                        evaluadorMap = viewModel.evaluador.value ?: emptyMap(),
-                        operarioMap = viewModel.operarioMap.value ?: emptyMap(),
-                        loteMap = viewModel.loteMap.value ?: emptyMap()
                     )
-                    Toast.makeText(
-                        requireContext(),
-                        "Exportando evaluaciones de $nombreOperario",
-                        Toast.LENGTH_SHORT
-                    ).show()
                 } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "No hay evaluaciones para exportar",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Log.d("OperarioEvaluacionFragment", "Ya estás en EvaluacionDetalleFragment")
                 }
             },
-            onExportExcelClick = { evaluaciones, nombreOperario ->
-                if (evaluaciones.isNotEmpty()) {
-                    exportToExcel(
-                        evaluaciones = evaluaciones,
-                        evaluadorMap = viewModel.evaluador.value ?: emptyMap(),
-                        operarioMap = viewModel.operarioMap.value ?: emptyMap(),
-                        loteMap = viewModel.loteMap.value ?: emptyMap()
-                    )
-                    Toast.makeText(
-                        requireContext(),
-                        "Exportando a Excel evaluaciones de $nombreOperario",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "No hay evaluaciones para exportar",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+            countUniquePalms = { evaluaciones, evaluacionGeneralId ->
+                // Incluimos evaluacionGeneralId en el filtro
+                evaluaciones
+                    .filter { it.palma != null && it.evaluacionGeneralId == evaluacionGeneralId }
+                    .map { Pair(it.idlote, it.palma) }
+                    .distinct()
+                    .count()
             },
-            countUniquePalms = { evaluaciones ->
-                viewModel.countUniquePalms(evaluaciones)
-            },
-            getEvaluadorMap = { viewModel.evaluador.value ?: emptyMap() },
-            getLoteMap = { viewModel.loteMap.value ?: emptyMap() }
+            getEvaluadorMap = { viewModel.evaluadorMap.value ?: emptyMap() },
+            getLoteMap = { viewModel.loteMap.value ?: emptyMap() },
+            getPhotoUrl = { semana, polinizadorId, evaluacionGeneralId ->
+                viewModel.getPhotoUrlForPolinizador(semana, polinizadorId, evaluacionGeneralId)
+            }
         )
         binding.rvEvaluacion.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@OperarioEvaluacionFragment.adapter
             visibility = View.GONE
         }
+        binding.loadingIndicator?.visibility = View.VISIBLE
     }
 
     private fun setupListeners() {
         binding.evAddingBtn.setOnClickListener {
-            val intent = Intent(requireContext(), EvaluacionActivity::class.java)
-            startActivity(intent)
+            findNavController().navigate(R.id.action_operarioEvaluacionFragment_to_evaluacionGeneralFragment)
         }
-
         binding.swipeRefresh?.setOnRefreshListener {
+            viewModel.clearCache()
             loadData()
+            binding.swipeRefresh?.isRefreshing = false
         }
     }
 
     private fun setupObservers() {
-        // Observar estado de carga
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.isLoading.collectLatest { isLoading ->
-                updateLoadingState(isLoading)
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            Log.d("OperarioEvaluacionFragment", "isLoading: $isLoading")
+            binding.loadingIndicator?.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.rvEvaluacion.visibility = if (!isLoading && adapter.itemCount > 0) View.VISIBLE else View.GONE
+        }
+
+        viewModel.evaluacionesGeneralesPorSemana.observe(viewLifecycleOwner) { evaluaciones ->
+            Log.d("OperarioEvaluacionFragment", "Evaluaciones recibidas: ${evaluaciones?.size ?: 0}")
+            if (evaluaciones != null) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val evaluacionesPorPolinizador = viewModel.getEvaluacionesPorPolinizador(args.semana)
+                    Log.d("OperarioEvaluacionFragment", "Evaluaciones por polinizador: ${evaluacionesPorPolinizador.size}")
+                    adapter.updateItems(evaluacionesPorPolinizador)
+                    updateUI(evaluacionesPorPolinizador.isNotEmpty())
+                }
+            } else {
+                Log.d("OperarioEvaluacionFragment", "Evaluaciones es null")
+                updateUI(false)
             }
         }
 
-        // Observar mapa de operarios
-        viewModel.operarioMap.observe(viewLifecycleOwner) { operarioMap ->
-            updateEvaluacionesDisplay(operarioMap)
-        }
-
-        // Observar evaluaciones por semana
-        viewModel.evaluacionesPorSemana.observe(viewLifecycleOwner) { evaluacionesPorSemana ->
-            viewModel.operarioMap.value?.let { operarioMap ->
-                updateEvaluacionesDisplay(operarioMap, evaluacionesPorSemana)
-            }
-        }
-
-        // Observar mensajes de error
         viewModel.errorMessage.observe(viewLifecycleOwner) { errorMsg ->
             errorMsg?.let {
                 Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
                 viewModel.clearErrorMessage()
-                updateLoadingState(false)
             }
         }
     }
 
-    private fun updateLoadingState(isLoading: Boolean) {
-        binding.apply {
-            loadingIndicator?.visibility = if (isLoading) View.VISIBLE else View.GONE
-
-            if (!isLoading) {
-                rvEvaluacion.visibility = if (adapter.itemCount > 0) View.VISIBLE else View.GONE
-                swipeRefresh?.isRefreshing = false
-            } else {
-                rvEvaluacion.visibility = View.GONE
+    private fun updateUI(hasData: Boolean) {
+        _binding?.let { binding ->
+            binding.loadingIndicator?.visibility = View.GONE
+            binding.rvEvaluacion.visibility = if (hasData) View.VISIBLE else View.GONE
+            if (!hasData) {
+                Toast.makeText(requireContext(), "No hay datos para la semana ${args.semana}", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
-    private fun updateEvaluacionesDisplay(
-        operarioMap: Map<Int, String>,
-        evaluacionesPorSemana: Map<Int, List<EvaluacionPolinizacion>> = viewModel.evaluacionesPorSemana.value ?: emptyMap()
-    ) {
-        val evaluacionesDeSemana = evaluacionesPorSemana[args.semana] ?: emptyList()
-
-        val evaluacionesPorPolinizador = evaluacionesDeSemana
-            .groupBy { Pair(it.idPolinizador, operarioMap[it.idPolinizador] ?: "Desconocido") }
-            .toSortedMap(compareBy { it.second })
-
-        adapter.updateItems(evaluacionesPorPolinizador)
-
-        // Actualizar visibilidad después de cargar datos
-        binding.rvEvaluacion.visibility = if (evaluacionesPorPolinizador.isNotEmpty()) View.VISIBLE else View.GONE
-        updateLoadingState(false)
     }
 
     private fun loadData() {
-        updateLoadingState(true)
-        viewModel.loadEvaluacionesPorSemana()
+        binding.loadingIndicator?.visibility = View.VISIBLE
+        viewModel.loadEvaluacionesGeneralesPorSemana()
     }
 
     override fun onResume() {
         super.onResume()
-        loadData()
+        if (viewModel.evaluacionesGeneralesPorSemana.value?.isEmpty() != false) {
+            loadData()
+        }
     }
 
     override fun onDestroyView() {

@@ -1,6 +1,7 @@
 package com.agrojurado.sfmappv2.data.local.dao
 
 import androidx.room.*
+import com.agrojurado.sfmappv2.data.local.entity.EvaluacionGeneralEntity
 import com.agrojurado.sfmappv2.data.local.entity.EvaluacionPolinizacionEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -21,14 +22,26 @@ interface EvaluacionPolinizacionDao {
     @Query("SELECT * FROM evaluacionpolinizacion WHERE id = :id LIMIT 1")
     suspend fun getEvaluacionById(id: Int): EvaluacionPolinizacionEntity?
 
+    @Query("SELECT * FROM evaluacionpolinizacion WHERE serverId = :serverId LIMIT 1")
+    suspend fun getEvaluacionByServerId(serverId: Int): EvaluacionPolinizacionEntity?
+
     @Query("SELECT * FROM evaluacionpolinizacion ORDER BY id DESC LIMIT 1")
     suspend fun getLastEvaluacion(): EvaluacionPolinizacionEntity?
 
-    @Query("SELECT COUNT(*) FROM evaluacionpolinizacion WHERE semana = :semana AND idlote = :idlote AND palma = :palma AND idPolinizador = :idPolinizador AND seccion = :seccion")
-    suspend fun checkPalmExists(semana: Int, idlote: Int, palma: Int, idPolinizador: Int, seccion: Int): Int
+    @Query("SELECT COUNT(*) FROM evaluacionpolinizacion WHERE semana = :semana AND idlote = :idlote AND palma = :palma AND idPolinizador = :idPolinizador AND seccion = :seccion AND evaluacionGeneralId = :evaluacionGeneralId")
+    suspend fun checkPalmExists(semana: Int, idlote: Int, palma: Int, idPolinizador: Int, seccion: Int, evaluacionGeneralId: Int): Int
 
     @Query("DELETE FROM evaluacionpolinizacion WHERE id = :id")
     suspend fun deleteEvaluacionById(id: Int)
+
+    @Query("DELETE FROM evaluacionpolinizacion WHERE evaluacionGeneralId = :evaluacionGeneralId")
+    suspend fun deleteByEvaluacionGeneralId(evaluacionGeneralId: Int)
+
+    @Query("UPDATE evaluacionpolinizacion SET evaluacionGeneralId = :evaluacionGeneralId WHERE id = :evaluacionId")
+    suspend fun updateEvaluacionGeneralId(evaluacionId: Int, evaluacionGeneralId: Int)
+
+    @Query("SELECT * FROM evaluacionpolinizacion WHERE evaluacionGeneralId = :evaluacionGeneralId")
+    fun getEvaluacionesByEvaluacionGeneralId(evaluacionGeneralId: Int): Flow<List<EvaluacionPolinizacionEntity>>
 
     @Transaction
     suspend fun transaction(block: suspend () -> Unit) = block()

@@ -1,14 +1,19 @@
 package com.agrojurado.sfmappv2.presentation.ui.login
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.view.isVisible
 import com.agrojurado.sfmappv2.databinding.ActivityLoginBinding
 import com.agrojurado.sfmappv2.presentation.common.UiState
 import com.agrojurado.sfmappv2.presentation.ui.crearcuenta.CreateUserActivity
 import com.agrojurado.sfmappv2.presentation.ui.main.MainActivity
+import com.agrojurado.sfmappv2.utils.LocationPermissionHandler
 import dagger.hilt.android.AndroidEntryPoint
 import pe.pcs.libpcs.UtilsCommon
 import pe.pcs.libpcs.UtilsMessage
@@ -18,13 +23,32 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
     private val viewModel: LoginViewModel by viewModels()
+    private var locationString: String? = null
+    private lateinit var locationHandler: LocationPermissionHandler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Initialize LocationPermissionHandler
+        locationHandler = LocationPermissionHandler(
+            context = this,
+            activity = this,
+            onLocationReceived = { location ->
+                locationString = location
+            },
+            onPermissionDenied = {
+                UtilsMessage.showAlertOk("ADVERTENCIA", "Permiso de ubicación denegado", this)
+            },
+            onGPSDisabled = {
+                UtilsMessage.showAlertOk("ADVERTENCIA", "GPS es necesario para obtener la ubicación", this)
+            }
+        )
+
         // Verificar si la sesión ya está iniciada
         if (viewModel.isSessionStarted()) {
-            startActivity(Intent(this, MainActivity::class.java))
+            val intent = Intent(this, MainActivity::class.java)
+            intent.putExtra("LOCATION", locationString)
+            startActivity(intent)
             finish()
             return
         }
@@ -34,10 +58,12 @@ class LoginActivity : AppCompatActivity() {
 
         initListener()
         initObserver()
+
+        // Request location
+        locationHandler.requestLocation()
     }
 
     private fun initListener() {
-
         binding.btAcceder.setOnClickListener {
             UtilsCommon.hideKeyboard(this, it)
 
@@ -98,11 +124,27 @@ class LoginActivity : AppCompatActivity() {
                         return@observe
                     }
 
-                    startActivity(Intent(this, MainActivity::class.java))
+                    val intent = Intent(this, MainActivity::class.java)
+                    intent.putExtra("LOCATION", locationString)
+                    startActivity(intent)
                     finish()
                 }
                 null -> Unit
             }
         }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        locationHandler.handleRequestPermissionsResult(requestCode, grantResults)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        locationHandler.handleActivityResult(requestCode)
     }
 }

@@ -1,6 +1,8 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform
 
 import android.os.Bundle
+import android.os.Parcel
+import android.util.Log
 import android.widget.Button
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -9,6 +11,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.viewpager2.widget.ViewPager2
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.presentation.ui.base.BaseActivity
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.shared.SharedSelectionViewModel
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
@@ -27,31 +30,67 @@ class EvaluacionActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        savedInstanceState?.let {
+            Log.d("EvaluacionActivity", "Restored state keys: ${it.keySet()}")
+            it.keySet().forEach { key ->
+                Log.d("EvaluacionActivity", "Key: $key, Value: ${it.get(key)}")
+            }
+        }
 
         initViews()
         setupViewPager()
         setupWindowInsets()
         setupObservers()
         setupNavigation()
+
+        val evaluacionGeneralId = intent.getIntExtra("evaluacionGeneralId", -1)
+        val operarioId = intent.getIntExtra("operarioId", -1).let { if (it == -1) null else it }
+        val loteId = intent.getIntExtra("loteId", -1).let { if (it == -1) null else it }
+        val seccion = intent.getIntExtra("seccion", -1).let { if (it == -1) null else it }
+
+        if (evaluacionGeneralId == -1) {
+            Log.e("EvaluacionActivity", "⚠ Evaluacion General ID is invalid")
+            Toast.makeText(this, "Error: Invalid general evaluation data", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+
+        viewModel.setEvaluacionGeneralId(evaluacionGeneralId)
+        Log.d("EvaluacionActivity", "✅ Evaluacion General ID received: $evaluacionGeneralId")
+
+        val sharedViewModel: SharedSelectionViewModel by viewModels()
+        sharedViewModel.ensureDataLoaded()
+        sharedViewModel.applySelections(operarioId, loteId, seccion)
+
+        savedInstanceState?.let {
+            val currentPage = it.getInt("currentPage", 0)
+            viewPager.setCurrentItem(currentPage, false)
+        }
     }
 
     private fun initViews() {
-        viewPager = findViewById(R.id.viewPager)
-        tabLayout = findViewById(R.id.tabLayout)
-        btnBack = findViewById(R.id.btnBack)
-        btnForward = findViewById(R.id.btnForward)
+        viewPager = findViewById(R.id.viewPager) ?: throw IllegalStateException("ViewPager not found")
+        tabLayout = findViewById(R.id.tabLayout) ?: throw IllegalStateException("TabLayout not found")
+        btnBack = findViewById(R.id.btnBack) ?: throw IllegalStateException("btnBack not found")
+        btnForward = findViewById(R.id.btnForward) ?: throw IllegalStateException("btnForward not found")
     }
 
     private fun setupViewPager() {
-        val adapter = EvaluacionPagerAdapter(this)
+        val evaluacionGeneralId = intent.getIntExtra("evaluacionGeneralId", -1)
+        val operarioId = intent.getIntExtra("operarioId", -1).let { if (it == -1) null else it }
+        val loteId = intent.getIntExtra("loteId", -1).let { if (it == -1) null else it }
+        val seccion = intent.getIntExtra("seccion", -1).let { if (it == -1) null else it }
+
+        val adapter = EvaluacionPagerAdapter(this, evaluacionGeneralId, operarioId, loteId, seccion)
         viewPager.adapter = adapter
-        viewPager.isUserInputEnabled = true // Permitir deslizar entre páginas
+        viewPager.isUserInputEnabled = true
+        viewPager.isSaveEnabled = false
 
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = when (position) {
                 0 -> "Información General"
-                1 -> "Detalles Polinizacion"
-                2 -> "Evaluacion"
+                1 -> "Detalles Polinización"
+                2 -> "Evaluación"
                 else -> ""
             }
         }.attach()
@@ -75,7 +114,7 @@ class EvaluacionActivity : BaseActivity() {
         btnBack.setOnClickListener {
             if (!isSaving) {
                 when (viewPager.currentItem) {
-                    0 -> finish() // Go back to previous activity
+                    0 -> finish()
                     else -> viewPager.currentItem = viewPager.currentItem - 1
                 }
             }
@@ -99,7 +138,7 @@ class EvaluacionActivity : BaseActivity() {
             isSaving = true
             btnForward.isEnabled = false
             btnBack.isEnabled = false
-            viewPager.isUserInputEnabled = false // Deshabilitar deslizamiento durante el guardado
+            viewPager.isUserInputEnabled = false
             saveAllData()
         }
     }
@@ -125,10 +164,17 @@ class EvaluacionActivity : BaseActivity() {
     }
 
     private fun saveAllData() {
-        val adapter = viewPager.adapter as EvaluacionPagerAdapter
-        val informacionGeneralFragment = adapter.getFragment(0) as InformacionGeneralFragment
-        val detallesPolinizacionFragment = adapter.getFragment(1) as DetallesPolinizacionFragment
-        val evaluacionFragment = adapter.getFragment(2) as EvaluacionFragment
+        val fragmentManager = supportFragmentManager
+        val informacionGeneralFragment = fragmentManager.findFragmentByTag("f0") as? InformacionGeneralFragment
+        val detallesPolinizacionFragment = fragmentManager.findFragmentByTag("f1") as? DetallesPolinizacionFragment
+        val evaluacionFragment = fragmentManager.findFragmentByTag("f2") as? EvaluacionFragment
+
+        if (informacionGeneralFragment == null || detallesPolinizacionFragment == null || evaluacionFragment == null) {
+            Log.e("EvaluacionActivity", "One or more fragments not found")
+            Toast.makeText(this, "Error: No se encontraron todos los fragmentos", Toast.LENGTH_SHORT).show()
+            resetSaveState()
+            return
+        }
 
         val informacionGeneral = informacionGeneralFragment.getValues()
         val detallesPolinizacion = detallesPolinizacionFragment.getValues()
@@ -169,4 +215,27 @@ class EvaluacionActivity : BaseActivity() {
     }
 
     override fun getToolbarColor(): Int = R.color.green
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("currentPage", viewPager.currentItem)
+        Log.d("EvaluacionActivity", "Saving only currentPage: ${viewPager.currentItem}, skipping full state")
+        val bundleSize = getBundleSize(outState)
+        Log.d("EvaluacionActivity", "Bundle size: $bundleSize bytes")
+        if (bundleSize > 500 * 1024) { // Límite de 500 KB
+            Log.w("EvaluacionActivity", "Bundle size exceeded ($bundleSize bytes), clearing excess data")
+            outState.clear()
+            outState.putInt("currentPage", viewPager.currentItem)
+        }
+    }
+
+    private fun getBundleSize(bundle: Bundle): Long {
+        val parcel = Parcel.obtain()
+        try {
+            parcel.writeBundle(bundle)
+            return parcel.dataSize().toLong()
+        } finally {
+            parcel.recycle()
+        }
+    }
 }

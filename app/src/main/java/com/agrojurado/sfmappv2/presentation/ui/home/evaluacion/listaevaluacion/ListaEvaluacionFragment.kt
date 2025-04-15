@@ -1,11 +1,9 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.listaevaluacion
 
-import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -14,32 +12,21 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.databinding.FragmentListaEvaluacionBinding
-import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionActivity
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionViewModel
-import com.agrojurado.sfmappv2.utils.ExcelUtils.exportToExcel
-import com.agrojurado.sfmappv2.utils.PdfUtils.exportPdf
+import com.agrojurado.sfmappv2.domain.model.EvaluacionGeneral
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciongeneral.EvaluacionGeneralViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class ListaEvaluacionFragment : Fragment() {
     private var _binding: FragmentListaEvaluacionBinding? = null
     private val binding get() = _binding!!
-    private val viewModel: EvaluacionViewModel by viewModels()
+    private val viewModel: EvaluacionGeneralViewModel by viewModels()
     private lateinit var semanaAdapter: ListaEvaluacionAdapter
     private var isInitialLoad = true
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setHasOptionsMenu(true)
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,23 +42,18 @@ class ListaEvaluacionFragment : Fragment() {
         setupRecyclerView()
         setupListeners()
         observeViewModel()
-        observeLoadingState()
+        setupInitialViewState()
 
-        // Iniciar carga solo si es la primera vez
         if (isInitialLoad) {
-            viewModel.loadEvaluacionesPorSemana()
+            viewModel.loadEvaluacionesGeneralesPorSemana()
             isInitialLoad = false
         }
     }
 
-    private fun observeLoadingState() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.isLoading.collectLatest { isLoading ->
-                binding.loadingIndicator?.visibility = if (isLoading) View.VISIBLE else View.GONE
-                if (!isLoading && semanaAdapter.itemCount > 0) {
-                    binding.rvEvaluacion.visibility = View.VISIBLE
-                }
-            }
+    private fun setupInitialViewState() {
+        binding.apply {
+            rvEvaluacion.visibility = View.GONE
+            loadingIndicator?.visibility = View.VISIBLE
         }
     }
 
@@ -80,77 +62,28 @@ class ListaEvaluacionFragment : Fragment() {
             emptyList(),
             onItemClick = { semana ->
                 findNavController().navigate(
-                    ListaEvaluacionFragmentDirections
-                        .actionListaEvaluacionToOperarioEvaluacionFragment(semana)
+                    ListaEvaluacionFragmentDirections.actionListaEvaluacionToOperarioEvaluacionFragment(semana)
                 )
-            },
-            onExportPdfClick = { semana ->
-                val evaluaciones = viewModel.evaluacionesPorSemana.value?.get(semana) ?: emptyList()
-                if (evaluaciones.isNotEmpty()) {
-                    exportPdf(
-                        evaluaciones = evaluaciones,
-                        evaluadorMap = viewModel.evaluador.value ?: emptyMap(),
-                        operarioMap = viewModel.operarioMap.value ?: emptyMap(),
-                        loteMap = viewModel.loteMap.value ?: emptyMap()
-                    )
-                    Toast.makeText(requireContext(), "Exportando PDF de Semana $semana", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(requireContext(), "No hay evaluaciones para exportar", Toast.LENGTH_SHORT).show()
-                }
-            },
-            onExportExcelClick = { semana ->
-                val evaluaciones = viewModel.evaluacionesPorSemana.value?.get(semana) ?: emptyList()
-                if (evaluaciones.isNotEmpty()) {
-                    exportToExcel(
-                        evaluaciones = evaluaciones,
-                        evaluadorMap = viewModel.evaluador.value ?: emptyMap(),
-                        operarioMap = viewModel.operarioMap.value ?: emptyMap(),
-                        loteMap = viewModel.loteMap.value ?: emptyMap()
-                    )
-                    Toast.makeText(requireContext(), "Exportando Excel de Semana $semana", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(requireContext(), "No hay evaluaciones para exportar", Toast.LENGTH_SHORT).show()
-                }
             }
         )
         binding.rvEvaluacion.layoutManager = LinearLayoutManager(requireContext())
         binding.rvEvaluacion.adapter = semanaAdapter
     }
 
-
     private fun setupListeners() {
         binding.evAddingBtn.setOnClickListener {
-            val intent = Intent(requireContext(), EvaluacionActivity::class.java)
-            startActivity(intent)
+            findNavController().navigate(R.id.action_listaEvaluacion_to_evaluacionGeneralFragment)
         }
 
         binding.swipeRefresh?.setOnRefreshListener {
-            viewModel.loadEvaluacionesPorSemana()
+            viewModel.clearCache() // Limpiar caché antes de recargar
+            viewModel.loadEvaluacionesGeneralesPorSemana()
             binding.swipeRefresh?.isRefreshing = false
-        }
-
-        binding.btnExportAllPdf.setOnClickListener {
-            val evaluaciones =
-                viewModel.evaluacionesPorSemana.value?.values?.flatten() ?: emptyList()
-            if (evaluaciones.isNotEmpty()) {
-                exportPdf(
-                    evaluaciones = evaluaciones,
-                    evaluadorMap = viewModel.evaluador.value ?: emptyMap(),
-                    operarioMap = viewModel.operarioMap.value ?: emptyMap(),
-                    loteMap = viewModel.loteMap.value ?: emptyMap()
-                )
-            } else {
-                Toast.makeText(
-                    requireContext(),
-                    "No hay evaluaciones para exportar",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
         }
     }
 
     private fun observeViewModel() {
-        viewModel.evaluacionesPorSemana.observe(viewLifecycleOwner) { evaluacionesPorSemana ->
+        viewModel.evaluacionesGeneralesPorSemana.observe(viewLifecycleOwner) { evaluacionesPorSemana ->
             updateEvaluacionesDisplay(evaluacionesPorSemana)
             hideLoadingIndicators()
         }
@@ -163,25 +96,19 @@ class ListaEvaluacionFragment : Fragment() {
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.isLoading.collectLatest { isLoading ->
-                if (!isLoading) {
-                    hideLoadingIndicators()
-                }
-            }
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            if (!isLoading) hideLoadingIndicators()
         }
     }
 
-    private fun updateEvaluacionesDisplay(evaluacionesPorSemana: Map<Int, List<EvaluacionPolinizacion>>) {
+    private fun updateEvaluacionesDisplay(evaluacionesPorSemana: Map<Int, List<EvaluacionGeneral>>) {
         try {
             val semanas = evaluacionesPorSemana.keys.toList().sorted()
-
             if (semanas.isEmpty()) {
                 binding.rvEvaluacion.visibility = View.GONE
                 showNoRecordsMessage()
                 return
             }
-
             hideNoRecordsMessage()
             semanaAdapter.updateItems(semanas)
             binding.rvEvaluacion.visibility = View.VISIBLE
@@ -198,7 +125,7 @@ class ListaEvaluacionFragment : Fragment() {
             textSize = 18f
             setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
             gravity = Gravity.CENTER
-            alpha = 0.5f // Hacer el texto un poco opaco
+            alpha = 0.5f
             tag = "no_records_message"
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -207,7 +134,6 @@ class ListaEvaluacionFragment : Fragment() {
                 gravity = Gravity.CENTER
             }
         }
-
         (binding.root as ViewGroup).addView(noRecordsTextView)
     }
 
@@ -217,21 +143,10 @@ class ListaEvaluacionFragment : Fragment() {
         }
     }
 
-
     private fun hideLoadingIndicators() {
         binding.loadingIndicator?.visibility = View.GONE
         binding.rvEvaluacion.visibility = if (semanaAdapter.itemCount > 0) View.VISIBLE else View.GONE
         binding.swipeRefresh?.isRefreshing = false
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_sync -> {
-                viewModel.performFullSync()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
     }
 
     override fun onDestroyView() {

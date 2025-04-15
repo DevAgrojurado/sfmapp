@@ -1,6 +1,7 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,13 +19,30 @@ class DetallesPolinizacionFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        Log.d("DetallesPolinizacionFragment", "onCreateView")
         _binding = FragmentDetallesPolinizacionBinding.inflate(inflater, container, false)
         return binding.root
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("antesis", binding.etAntesis.text.toString())
+        outState.putString("postAntesis", binding.etPostAntesis.text.toString())
+        outState.putString("antesisDejadas", binding.etAntesisDejadas.text.toString())
+        outState.putString("postAntesisDejadas", binding.etPostAntesisDejadas.text.toString())
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupListeners()
+        savedInstanceState?.let {
+            if (_binding != null) {
+                binding.etAntesis.setText(it.getString("antesis", "0"))
+                binding.etPostAntesis.setText(it.getString("postAntesis", "0"))
+                binding.etAntesisDejadas.setText(it.getString("antesisDejadas", "0"))
+                binding.etPostAntesisDejadas.setText(it.getString("postAntesisDejadas", "0"))
+            }
+        }
     }
 
     private fun setupListeners() {
@@ -41,9 +59,13 @@ class DetallesPolinizacionFragment : Fragment() {
     }
 
     private fun updateCount(editText: TextInputEditText, isIncrement: Boolean) {
-        var count = editText.text.toString().toIntOrNull() ?: 0
-        if (isIncrement) count++ else if (count > 0) count--
-        editText.setText(count.toString())
+        try {
+            var count = editText.text.toString().toIntOrNull() ?: 0
+            if (isIncrement) count++ else if (count > 0) count--
+            editText.setText(count.toString())
+        } catch (e: Exception) {
+            Log.e("DetallesPolinizacionFragment", "Error in updateCount: ${e.message}", e)
+        }
     }
 
     fun getValues(): Map<String, Any?> {
@@ -59,6 +81,7 @@ class DetallesPolinizacionFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        Log.d("DetallesPolinizacionFragment", "onDestroyView")
         _binding = null
     }
 }

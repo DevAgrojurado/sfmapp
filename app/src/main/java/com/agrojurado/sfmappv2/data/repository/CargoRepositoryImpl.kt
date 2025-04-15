@@ -166,8 +166,7 @@ class CargoRepositoryImpl @Inject constructor(
     override suspend fun syncCargos() {
         if (!isNetworkAvailable()) {
             Log.d(TAG, "No hay conexión disponible para la sincronización")
-            showSyncAlert("Sin conexión, usando datos locales")
-            return
+            throw Exception("Sin conexión, usando datos locales") // Lanzar excepción en lugar de mostrar alerta
         }
 
         try {
@@ -175,9 +174,10 @@ class CargoRepositoryImpl @Inject constructor(
             if (!response.isSuccessful) {
                 if (response.code() == 404) {
                     Log.w(TAG, "No se encontraron cargos en el servidor.")
-                    return
+                    return // Si no hay cargos en el servidor, no es un error crítico
                 }
-                throw Exception("Error al obtener cargos del servidor")
+                logServerError(response, "Error al obtener cargos del servidor")
+                throw Exception("Error al obtener cargos del servidor: ${response.code()}")
             }
 
             val serverCargos = response.body()?.filterNotNull() ?: emptyList()
@@ -185,7 +185,7 @@ class CargoRepositoryImpl @Inject constructor(
             val serverCargosMap = serverCargos.associateBy { it.id }
             val localCargosMap = localCargos.associateBy { it.id }
 
-            // Paso 1: Actualizar o insertar cargos del servidor que ya existen localmente.
+            // Paso 1: Actualizar o insertar cargos del servidor que ya existen localmente
             serverCargos.forEach { serverCargo ->
                 val localCargo = localCargosMap[serverCargo.id]
                 val domainCargo = CargoMapper.fromResponse(serverCargo)
@@ -197,7 +197,7 @@ class CargoRepositoryImpl @Inject constructor(
                 }
             }
 
-            // Paso 2: Sincronizar cargos locales que no existan en el servidor.
+            // Paso 2: Sincronizar cargos locales que no existan en el servidor
             localCargos.filter { it.id == null || !serverCargosMap.containsKey(it.id) }
                 .forEach { localCargo ->
                     try {
@@ -211,15 +211,16 @@ class CargoRepositoryImpl @Inject constructor(
                                 cargoDao.updateCargo(CargoMapper.toDatabase(newServerCargo)) // Actualiza el cargo local con el nuevo ID
                             } else {
                                 logServerError(createResponse, "Error sincronizando cargo local")
-                                throw Exception("Error al sincronizar cargo local con el servidor")
+                                throw Exception("Error al sincronizar cargo local con el servidor: ${createResponse.errorBody()?.string()}")
                             }
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error sincronizando cargo local: ${e.message}")
+                        throw e // Re-lanzar para manejo superior
                     }
                 }
 
-            showSyncAlert("Sincronización completada")
+            Log.d(TAG, "Sincronización de cargos completada exitosamente")
         } catch (e: Exception) {
             Log.e(TAG, "Error de sincronización: ${e.message}")
             throw Exception("Error en la sincronización: ${e.message}")

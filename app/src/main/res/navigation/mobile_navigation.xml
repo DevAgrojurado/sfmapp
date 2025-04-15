@@ -16,6 +16,26 @@
     </fragment>
 
     <fragment
+        android:id="@+id/cameraFragment"
+        android:name="com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciongeneral.CameraDialogFragment"
+        tools:layout="@layout/fragment_dialog_camera">
+        <action
+            android:id="@+id/action_cameraFragment_to_evaluacionGeneralFragment"
+            app:destination="@id/evaluacionGeneralFragment"
+            app:popUpTo="@id/evaluacionGeneralFragment"
+            app:popUpToInclusive="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/evaluacionGeneralFragment"
+        android:name="com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciongeneral.EvaluacionGeneralFragment"
+        tools:layout="@layout/fragment_evaluacion_general">
+        <action
+            android:id="@+id/action_evaluacionGeneralFragment_to_cameraFragment"
+            app:destination="@id/cameraFragment" />
+    </fragment>
+
+    <fragment
         android:id="@+id/nav_admin"
         android:name="com.agrojurado.sfmappv2.presentation.ui.admin.AdminFragment"
         android:label="@string/menu_admin"
@@ -26,6 +46,9 @@
         android:name="com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.listaevaluacion.ListaEvaluacionFragment"
         android:label="Lista de Evaluaciones"
         tools:layout="@layout/fragment_lista_evaluacion">
+        <action
+            android:id="@+id/action_listaEvaluacion_to_evaluacionGeneralFragment"
+            app:destination="@id/evaluacionGeneralFragment" />
         <action
             android:id="@+id/action_listaEvaluacion_to_evaluacionFragment"
             app:destination="@id/evaluacionFragment" />
@@ -51,6 +74,9 @@
         <action
             android:id="@+id/action_operarioEvaluacion_to_evaluacionDetalle"
             app:destination="@id/evaluacionDetalleFragment" />
+        <action
+            android:id="@+id/action_operarioEvaluacionFragment_to_evaluacionGeneralFragment"
+            app:destination="@id/evaluacionGeneralFragment" />
     </fragment>
 
     <fragment
@@ -67,5 +93,9 @@
         <argument
             android:name="nombrePolinizador"
             app:argType="string" />
+        <argument
+            android:name="idEvaluacionGeneral"
+            app:argType="integer"
+            android:defaultValue="-1" /> <!-- Corrección aquí -->
     </fragment>
 </navigation>

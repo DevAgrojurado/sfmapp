@@ -185,8 +185,7 @@ class OperarioRepositoryImpl @Inject constructor(
     override suspend fun syncOperarios() {
         if (!isNetworkAvailable()) {
             Log.d(TAG, "No hay conexión disponible para la sincronización")
-            showSyncAlert("Sin conexión, usando datos locales")
-            return
+            throw Exception("Sin conexión, usando datos locales") // Lanzar excepción en lugar de mostrar alerta
         }
 
         // Obtener el usuario actual
@@ -201,7 +200,8 @@ class OperarioRepositoryImpl @Inject constructor(
             } ?: operarioApiService.getOperarios()
 
             if (!serverResponse.isSuccessful) {
-                throw Exception("Error al obtener operarios del servidor")
+                logServerError(serverResponse, "Error al obtener operarios del servidor")
+                throw Exception("Error al obtener operarios del servidor: ${serverResponse.code()}")
             }
 
             val serverOperarios = serverResponse.body()?.filterNotNull() ?: emptyList()
@@ -226,7 +226,6 @@ class OperarioRepositoryImpl @Inject constructor(
                     try {
                         // Verificar si este operario ya existe en el servidor
                         if (localOperario.id != null && filteredServerOperarios.any { it.id == localOperario.id }) {
-                            // Si ya existe, solo actualizamos el estado de sincronización
                             operarioDao.updateOperario(localOperario.copy(isSynced = true))
                             Log.d(TAG, "Operario ${localOperario.id} ya existe en el servidor, marcado como sincronizado")
                             return@forEach
@@ -236,7 +235,7 @@ class OperarioRepositoryImpl @Inject constructor(
 
                         if (operarioRequest.id == null || operarioRequest.nombre.isNullOrBlank()) {
                             Log.e(TAG, "Campos obligatorios faltantes para el operario: ${localOperario.id}")
-                            return@forEach
+                            throw Exception("Campos obligatorios faltantes para el operario: ${localOperario.id}")
                         }
 
                         val response = operarioApiService.createOperario(operarioRequest)
@@ -246,10 +245,12 @@ class OperarioRepositoryImpl @Inject constructor(
                             operarioDao.updateOperario(updatedOperario)
                             Log.d(TAG, "Operario sincronizado correctamente con el ID: ${updatedOperario.id}")
                         } else {
-                            Log.e(TAG, "Error al sincronizar operario ${localOperario.id}: ${response.errorBody()?.string()}")
+                            logServerError(response, "Error al sincronizar operario ${localOperario.id}")
+                            throw Exception("Error al sincronizar operario ${localOperario.id}: ${response.errorBody()?.string()}")
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error al sincronizar operario ${localOperario.id}: ${e.message}")
+                        throw e // Re-lanzar para manejo superior
                     }
                 }
             }
@@ -271,10 +272,9 @@ class OperarioRepositoryImpl @Inject constructor(
             }
 
             Log.d(TAG, "Sincronización de operarios completada exitosamente")
-            showSyncAlert("Sincronización de operarios completada exitosamente")
         } catch (e: Exception) {
             Log.e(TAG, "Error durante la sincronización de operarios: ${e.message}")
-            showSyncAlert("Error durante la sincronización de operarios: ${e.message}")
+            throw e // Lanzar la excepción para que DataSyncManager la maneje
         }
     }
 

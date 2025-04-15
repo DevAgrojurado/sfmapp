@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 data class EvaluacionResponse(
     @SerializedName("id") val id: Int,
+    @SerializedName("evaluaciongeneralid") var evaluaciongeneralid: Int?,
     @SerializedName("fecha") val fecha: String,
     @SerializedName("hora") val hora: String,
     @SerializedName("semana") val semana: Int,

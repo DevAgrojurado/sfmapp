@@ -1,30 +1,34 @@
 package com.agrojurado.sfmappv2.data.workers
 
-import android.content.ContentValues.TAG
 import android.content.Context
 import android.util.Log
-import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-
-import com.agrojurado.sfmappv2.domain.repository.EvaluacionPolinizacionRepository
+import com.agrojurado.sfmappv2.data.repository.EvaluacionGeneralRepositoryImpl
+import com.agrojurado.sfmappv2.data.repository.EvaluacionPolinizacionRepositoryImpl
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
-@HiltWorker
 class SyncEvaluacionesWorker @Inject constructor(
     @ApplicationContext context: Context,
-    workerParameters: WorkerParameters,
-    private val evaluacionRepository: EvaluacionPolinizacionRepository
-) : CoroutineWorker(context, workerParameters) {
+    params: WorkerParameters,
+    private val evaluacionPolinizacionRepository: EvaluacionPolinizacionRepositoryImpl,
+    private val evaluacionGeneralRepository: EvaluacionGeneralRepositoryImpl
+) : CoroutineWorker(context, params) {
+
+    companion object {
+        private const val TAG = "SyncEvaluacionesWorker"
+    }
 
     override suspend fun doWork(): Result {
         return try {
-            evaluacionRepository.syncEvaluaciones()
+            Log.d(TAG, "Starting sync of EvaluacionGeneral and associated EvaluacionPolinizacion")
+            evaluacionGeneralRepository.syncEvaluacionesGenerales()
+            Log.d(TAG, "Sync completed successfully")
             Result.success()
         } catch (e: Exception) {
-            Log.e(TAG, "Error durante la sincronización: ${e.message}")
-            Result.retry()  // Mecanismo de reintento para errores transitorios
+            Log.e(TAG, "Sync failed: ${e.message}", e)
+            Result.retry() // Reintentar en caso de fallo
         }
     }
 }

@@ -23,7 +23,8 @@ class DataSyncManager @Inject constructor(
     private val cargoRepository: CargoRepository,
     private val operarioRepository: OperarioRepository,
     private val usuarioRepository: UsuarioRepository,
-    private val evaluacionRepository: EvaluacionPolinizacionRepository,
+    private val evaluacionPolinizacionRepository: EvaluacionPolinizacionRepository,
+    private val evaluacionGeneralRepository: EvaluacionGeneralRepository,
     @ApplicationContext private val context: Context
 ) {
     companion object {
@@ -46,17 +47,23 @@ class DataSyncManager @Inject constructor(
 
         coroutineScope.launch {
             try {
-                // Definir las operaciones de sincronización sin incluir evaluaciones
+                // Definir las operaciones de sincronización respetando las dependencias de claves foráneas
                 val syncOperations = listOf<suspend () -> Unit>(
+                    // Entidades base (sin dependencias)
                     { syncData("fincas", progressBar) { fincaRepository.syncFincas() } },
                     { syncData("áreas", progressBar) { areaRepository.syncAreas() } },
-                    { syncData("lotes", progressBar) { loteRepository.syncLotes() } },
                     { syncData("cargos", progressBar) { cargoRepository.syncCargos() } },
+
+                    // Entidades con dependencias de Finca, Área y Cargo
+                    { syncData("lotes", progressBar) { loteRepository.syncLotes() } },
                     { syncData("operarios", progressBar) { operarioRepository.syncOperarios() } },
-                    { syncData("usuarios", progressBar) { usuarioRepository.syncUsuarios() } }
+                    { syncData("usuarios", progressBar) { usuarioRepository.syncUsuarios() } },
+
+                    // Entidades de evaluaciones (incluye EvaluacionPolinizacion)
+                    { syncData("evaluaciones generales", progressBar) { evaluacionGeneralRepository.syncEvaluacionesGenerales() } }
                 )
 
-                val totalOperations = syncOperations.size + 1 // +1 para evaluaciones
+                val totalOperations = syncOperations.size
                 for ((index, syncOperation) in syncOperations.withIndex()) {
                     syncOperation()
                     withContext(Dispatchers.Main) {
@@ -65,15 +72,12 @@ class DataSyncManager @Inject constructor(
                     }
                 }
 
-                // Sincronizar evaluaciones como último paso
-                syncData("evaluaciones", progressBar) { evaluacionRepository.syncEvaluaciones() }
-                withContext(Dispatchers.Main) {
-                    progressBar.progress = 100
-                }
-
                 Log.d(TAG, "Sincronización completa de todos los datos")
             } catch (e: Exception) {
-                Log.e(TAG, "Error durante la sincronización: ${e.message}")
+                Log.e(TAG, "Error durante la sincronización: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Error en sincronización: ${e.message}", Toast.LENGTH_LONG).show()
+                }
             } finally {
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = ProgressBar.GONE
@@ -88,7 +92,8 @@ class DataSyncManager @Inject constructor(
             syncOperation()
             Log.d(TAG, "Sincronización de $dataType completada")
         } catch (e: Exception) {
-            Log.e(TAG, "Error sincronizando $dataType: ${e.message}")
+            Log.e(TAG, "Error sincronizando $dataType: ${e.message}", e)
+            throw e // Relanzar la excepción para manejarla en el bloque superior
         }
     }
 
@@ -97,7 +102,7 @@ class DataSyncManager @Inject constructor(
             while (true) {
                 delay(5000) // Verificar cada 5 segundos
                 if (isNetworkAvailable()) {
-                    syncAllData(ProgressBar(context)) {} // Pasa una ProgressBar dummy si es necesario
+                    syncAllData(ProgressBar(context)) {} // Usar ProgressBar dummy si no hay UI
                     break // Salir del bucle una vez sincronizado
                 }
             }

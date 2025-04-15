@@ -1,34 +1,43 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.operarioevaluacion
 
 import android.annotation.SuppressLint
-import android.app.Dialog
-import android.content.Context
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.Window
-import android.widget.ImageButton
-import android.widget.TableLayout
-import android.widget.TableRow
+import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
-import com.google.android.material.button.MaterialButton
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionTableDialog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class OperarioEvaluacionAdapter(
-    private var evaluacionesPorPolinizador: Map<Pair<Int, String>, List<EvaluacionPolinizacion>> = emptyMap(),
-    private val onItemClick: (Int, String) -> Unit,
-    private val onExportPdfClick: (List<EvaluacionPolinizacion>, String) -> Unit,
-    private val onExportExcelClick: (List<EvaluacionPolinizacion>, String) -> Unit,
-    private val countUniquePalms: (List<EvaluacionPolinizacion>) -> Int,
+    private val semana: Int,
+    private val onItemClick: (Int, String, Int?) -> Unit,
+    private val countUniquePalms: (List<EvaluacionPolinizacion>, Int?) -> Int, // Modificado para incluir evaluacionGeneralId
     private val getEvaluadorMap: () -> Map<Int, String>,
-    private val getLoteMap: () -> Map<Int, String>
+    private val getLoteMap: () -> Map<Int, String>,
+    private val getPhotoUrl: suspend (Int, Int, Int) -> String?
 ) : RecyclerView.Adapter<OperarioEvaluacionAdapter.ViewHolder>() {
 
-    fun updateItems(newItems: Map<Pair<Int, String>, List<EvaluacionPolinizacion>>) {
-        evaluacionesPorPolinizador = newItems
+    private var evaluacionesPorPolinizadorYEvaluacion: Map<Triple<Int, String, Int>, List<EvaluacionPolinizacion>> = emptyMap()
+
+    fun updateItems(newEvaluaciones: Map<Pair<Int, String>, List<EvaluacionPolinizacion>>) {
+        val newItems = mutableMapOf<Triple<Int, String, Int>, List<EvaluacionPolinizacion>>()
+        newEvaluaciones.forEach { (polinizador, evaluaciones) ->
+            evaluaciones.groupBy { it.evaluacionGeneralId }.forEach { (evalGeneralId, evaluacionesDeEvalGeneral) ->
+                if (evalGeneralId != null) {
+                    val key = Triple(polinizador.first, polinizador.second, evalGeneralId)
+                    newItems[key] = evaluacionesDeEvalGeneral
+                }
+            }
+        }
+        evaluacionesPorPolinizadorYEvaluacion = newItems
         notifyDataSetChanged()
     }
 
@@ -39,139 +48,70 @@ class OperarioEvaluacionAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val polinizador = evaluacionesPorPolinizador.keys.toList()[position]
-        val evaluaciones = evaluacionesPorPolinizador[polinizador] ?: emptyList()
+        val key = evaluacionesPorPolinizadorYEvaluacion.keys.toList()[position]
+        val evaluaciones = evaluacionesPorPolinizadorYEvaluacion[key] ?: emptyList()
+        val evaluacionGeneralId = key.third
 
-        // Calcular estadísticas
-        val totalPalmas = countUniquePalms(evaluaciones)
-        val totalEventos = evaluaciones.sumOf { it.inflorescencia ?: 0 }
+        val totalPalmas = countUniquePalms(evaluaciones, evaluacionGeneralId) // Pasamos evaluacionGeneralId
+        val totalEventos = evaluaciones
+            .filter { it.evaluacionGeneralId == evaluacionGeneralId }
+            .sumOf { it.inflorescencia ?: 0 }
 
-        holder.bind(
-            nombrePolinizador = polinizador.second,
-            totalPalmas = totalPalmas,
-            totalEventos = totalEventos
-        )
+        val nombrePolinizador = key.second
+        val tituloConEvaluacionId = "$nombrePolinizador"
+        holder.bind(tituloConEvaluacionId, totalPalmas, totalEventos)
 
-        // Click normal
-        holder.itemView.setOnClickListener {
-            onItemClick(polinizador.first, polinizador.second)
+        // Carga la foto específica usando semana, polinizadorId y evaluacionGeneralId
+        CoroutineScope(Dispatchers.Main).launch {
+            val photoPath = getPhotoUrl(semana, key.first, evaluacionGeneralId)
+            holder.bindPhoto(photoPath)
         }
 
-        // Click largo para mostrar detalles
+        holder.itemView.setOnClickListener {
+            val nombre = nombrePolinizador.split(" - ").getOrNull(1) ?: nombrePolinizador
+            onItemClick(key.first, nombre, evaluacionGeneralId)
+        }
+
         holder.itemView.setOnLongClickListener {
-            showDetailDialog(holder.itemView.context, evaluaciones)
+            if (evaluaciones.isNotEmpty()) {
+                EvaluacionTableDialog.showEvaluationTableDialog(
+                    context = holder.itemView.context,
+                    evaluaciones = evaluaciones,
+                    evaluadorMap = getEvaluadorMap(),
+                    loteMap = getLoteMap()
+                )
+            } else {
+                Toast.makeText(
+                    holder.itemView.context,
+                    "No hay eventos asociados a esta evaluación",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
             true
         }
-
-        // Click para exportar PDF
-        //holder.btnExportarPdf.setOnClickListener { onExportPdfClick(evaluaciones, polinizador.second) }
-
-        holder.btnExportExcel.setOnClickListener {
-            onExportExcelClick(evaluaciones, polinizador.second) }
     }
 
-    private fun showDetailDialog(context: Context, evaluaciones: List<EvaluacionPolinizacion>) {
-        val dialog = Dialog(context)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.dialog_evaluation_details)
+    override fun getItemCount(): Int = evaluacionesPorPolinizadorYEvaluacion.size
 
-        val tableLayout = dialog.findViewById<TableLayout>(R.id.tableLayout)
-
-
-        // Configurar el botón de cierre
-        dialog.findViewById<ImageButton>(R.id.btnClose).setOnClickListener {
-            dialog.dismiss()
-        }
-
-        val evaluadorMap = getEvaluadorMap()
-        val loteMap = getLoteMap()
-
-        // Agregar filas de datos
-        evaluaciones.forEachIndexed { index, evaluacion ->
-            val row = TableRow(context)
-            row.layoutParams = TableRow.LayoutParams(
-                TableRow.LayoutParams.WRAP_CONTENT,
-                TableRow.LayoutParams.WRAP_CONTENT
-            )
-
-            // Alternar colores de fondo para mejor legibilidad
-            row.setBackgroundColor(if (index % 2 == 0) Color.WHITE else Color.parseColor("#F5F5F5"))
-
-            // Agregar todas las columnas
-            evaluacion.fecha?.let { addCell(row, it) }
-            evaluacion.hora?.let { addCell(row, it) }
-            addCell(row, evaluacion.semana.toString())
-            evaluacion.ubicacion?.let { addCell(row, it) }
-            addCell(row, evaluadorMap[evaluacion.idEvaluador] ?: "")
-            addCell(row, loteMap[evaluacion.idlote] ?: "")
-            addCell(row, evaluacion.seccion.toString())
-            addCell(row, evaluacion.palma.toString())
-            addCell(row, evaluacion.inflorescencia?.toString() ?: "")
-            addCell(row, evaluacion.antesis?.toString() ?: "")
-            addCell(row, evaluacion.postAntesis?.toString() ?: "")
-            addCell(row, evaluacion.antesisDejadas?.toString() ?: "")
-            addCell(row, evaluacion.postAntesisDejadas?.toString() ?: "")
-            addCell(row, evaluacion.espate?.toString() ?: "")
-            addCell(row, evaluacion.aplicacion?.toString() ?: "")
-            addCell(row, evaluacion.marcacion?.toString() ?: "")
-            addCell(row, evaluacion.repaso1?.toString() ?: "")
-            addCell(row, evaluacion.repaso2?.toString() ?: "")
-            evaluacion.observaciones?.let { addCell(row, it) }
-
-            tableLayout.addView(row)
-        }
-        dialog.window?.apply {
-            val horizontalMargin =
-                context.resources.getDimensionPixelSize(R.dimen.activity_horizontal_margin)
-            val verticalMargin =
-                context.resources.getDimensionPixelSize(R.dimen.activity_vertical_margin)
-
-            // Calcular el alto del diálogo considerando los márgenes
-            val dialogHeight = context.resources.getDimensionPixelSize(R.dimen.dialog_height)
-            val displayMetrics = context.resources.displayMetrics
-            val screenHeight = displayMetrics.heightPixels
-            val screenWidth = displayMetrics.widthPixels
-
-            // Asegurar que el diálogo no exceda el tamaño de la pantalla menos los márgenes
-            val finalHeight = minOf(dialogHeight, screenHeight - (verticalMargin * 2))
-            val finalWidth = screenWidth - (horizontalMargin * 2)
-
-            setLayout(
-                finalWidth,
-                finalHeight
-            )
-
-            // Centrar el diálogo
-            setGravity(android.view.Gravity.CENTER)
-
-            // Establecer las animaciones y el fondo semitransparente
-
-        }
-        dialog.show()
-    }
-
-    private fun addCell(row: TableRow, text: String) {
-        val textView = TextView(row.context).apply {
-            this.text = text
-            setPadding(8, 8, 8, 8)
-        }
-        row.addView(textView)
-    }
-
-    override fun getItemCount() = evaluacionesPorPolinizador.size
-
-    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val tvNombrePolinizador: TextView = view.findViewById(R.id.tvPolinizadorNombre)
-        private val tvTotalPalmas: TextView = view.findViewById(R.id.tvPalmas)
-        private val tvTotalEventos: TextView = view.findViewById(R.id.tvEventos)
-        //val btnExportarPdf: MaterialButton = view.findViewById(R.id.btnExportarPdf)
-        val btnExportExcel: MaterialButton = itemView.findViewById(R.id.btnExportToExcel)
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val tvNombrePolinizador: TextView = itemView.findViewById(R.id.tvPolinizadorNombre)
+        private val tvTotalPalmas: TextView = itemView.findViewById(R.id.tvPalmas)
+        private val tvTotalEventos: TextView = itemView.findViewById(R.id.tvEventos)
+        private val ivEvaluacionFoto: ImageView = itemView.findViewById(R.id.ivEvaluacionFoto)
 
         @SuppressLint("SetTextI18n")
-        fun bind(nombrePolinizador: String, totalPalmas: Int, totalEventos: Int) {
-            tvNombrePolinizador.text = nombrePolinizador
+        fun bind(nombreCompleto: String, totalPalmas: Int, totalEventos: Int) {
+            tvNombrePolinizador.text = nombreCompleto
             tvTotalPalmas.text = "Palmas: $totalPalmas"
             tvTotalEventos.text = "Eventos: $totalEventos"
+        }
+
+        fun bindPhoto(photoPath: String?) {
+            ivEvaluacionFoto.load(photoPath ?: R.drawable.baseline_error_24) {
+                placeholder(R.drawable.ic_more)
+                error(R.drawable.baseline_error_24)
+                crossfade(true)
+            }
         }
     }
 }

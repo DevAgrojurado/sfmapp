@@ -7,7 +7,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val BASE_URL = "https://report.agrojurado.com/apisfm/" // Url del api
+    private const val BASE_URL = "https://sfm.agrojurado.com/apisfmtest/" // Url del api
 
     private val gson = GsonBuilder()
         .serializeNulls()
@@ -45,5 +45,9 @@ object RetrofitClient {
 
     val usuarioApiService: UsuarioApiService by lazy {
         retrofit.create(UsuarioApiService::class.java)
+    }
+
+    val evaluacionGeneralApiService: EvaluacionGeneralApiService by lazy {
+        retrofit.create(EvaluacionGeneralApiService::class.java)
     }
 }

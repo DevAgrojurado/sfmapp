@@ -5,48 +5,47 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import java.util.UUID
 
 @Entity(
     tableName = "evaluacionpolinizacion",
     indices = [
-        Index(value = ["idevaluador"]),
-        Index(value = ["idpolinizador"]),
+        Index(value = ["idEvaluador"]),
+        Index(value = ["idPolinizador"]),
         Index(value = ["idlote"]),
         Index(value = ["serverId"]),
-
+        Index(value = ["evaluacionGeneralId"])
     ],
     foreignKeys = [
-        ForeignKey(
-            entity = UsuarioEntity::class,
+        ForeignKey(entity = UsuarioEntity::class,
             parentColumns = ["id"],
-            childColumns = ["idevaluador"],
-            onDelete = ForeignKey.NO_ACTION
-        ),
-        ForeignKey(
-            entity = OperarioEntity::class,
+            childColumns = ["idEvaluador"],
+            onDelete = ForeignKey.NO_ACTION),
+
+        ForeignKey(entity = OperarioEntity::class,
             parentColumns = ["id"],
-            childColumns = ["idpolinizador"],
-            onDelete = ForeignKey.NO_ACTION
-        ),
-        ForeignKey(
-            entity = LoteEntity::class,
-            parentColumns = ["id"],
+            childColumns = ["idPolinizador"],
+            onDelete = ForeignKey.NO_ACTION),
+
+        ForeignKey(entity = LoteEntity::class, parentColumns = ["id"],
             childColumns = ["idlote"],
-            onDelete = ForeignKey.NO_ACTION
-        )
+            onDelete = ForeignKey.NO_ACTION),
+
+        ForeignKey(entity = EvaluacionGeneralEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["evaluacionGeneralId"],
+            onDelete = ForeignKey.CASCADE)
     ]
 )
 data class EvaluacionPolinizacionEntity(
-    @PrimaryKey(autoGenerate = true)
-    @ColumnInfo(name = "id") var id: Int = 0,
+    @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "id") var id: Int = 0,
+    @ColumnInfo(name = "evaluacionGeneralId") val evaluacionGeneralId: Int?,
     @ColumnInfo(name = "serverId") var serverId: Int?,
     @ColumnInfo(name = "fecha") val fecha: String?,
     @ColumnInfo(name = "hora") val hora: String?,
     @ColumnInfo(name = "semana") val semana: Int,
     @ColumnInfo(name = "ubicacion") val ubicacion: String?,
-    @ColumnInfo(name = "idevaluador") val idevaluador: Int,
-    @ColumnInfo(name = "idpolinizador") val idpolinizador: Int,
+    @ColumnInfo(name = "idEvaluador") val idEvaluador: Int,
+    @ColumnInfo(name = "idPolinizador") val idPolinizador: Int,
     @ColumnInfo(name = "idlote") val idlote: Int,
     @ColumnInfo(name = "seccion") val seccion: Int,
     @ColumnInfo(name = "palma") val palma: Int?,

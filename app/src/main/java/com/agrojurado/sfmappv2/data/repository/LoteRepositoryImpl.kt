@@ -184,8 +184,7 @@ class LoteRepositoryImpl @Inject constructor(
     override suspend fun syncLotes() {
         if (!isNetworkAvailable()) {
             Log.d(TAG, "No hay conexión disponible para la sincronización")
-            showSyncAlert("Sin conexión, usando datos locales")
-            return
+            throw Exception("Sin conexión, usando datos locales") // Lanzar excepción en lugar de mostrar alerta
         }
 
         // Obtener el usuario actual
@@ -200,7 +199,8 @@ class LoteRepositoryImpl @Inject constructor(
             } ?: loteApiService.getLotes()
 
             if (!serverResponse.isSuccessful) {
-                throw Exception("Error al obtener lotes del servidor")
+                logServerError(serverResponse, "Error al obtener lotes del servidor")
+                throw Exception("Error al obtener lotes del servidor: ${serverResponse.code()}")
             }
 
             val serverLotes = serverResponse.body()?.filterNotNull() ?: emptyList()
@@ -225,7 +225,6 @@ class LoteRepositoryImpl @Inject constructor(
                     try {
                         // Verificar si este lote ya existe en el servidor
                         if (localLote.id != null && filteredServerLotes.any { it.id == localLote.id }) {
-                            // Si ya existe, solo actualizamos el estado de sincronización
                             loteDao.updateLote(localLote.copy(isSynced = true))
                             Log.d(TAG, "Lote ${localLote.id} ya existe en el servidor, marcado como sincronizado")
                             return@forEach
@@ -235,7 +234,7 @@ class LoteRepositoryImpl @Inject constructor(
 
                         if (loteRequest.id == null) {
                             Log.e(TAG, "Campos obligatorios faltantes para el lote: ${localLote.id}")
-                            return@forEach
+                            throw Exception("Campos obligatorios faltantes para el lote: ${localLote.id}")
                         }
 
                         val response = loteApiService.createLote(loteRequest)
@@ -245,10 +244,12 @@ class LoteRepositoryImpl @Inject constructor(
                             loteDao.updateLote(updatedLote)
                             Log.d(TAG, "Lote sincronizado correctamente con el ID: ${updatedLote.id}")
                         } else {
-                            Log.e(TAG, "Error al sincronizar lote ${localLote.id}: ${response.errorBody()?.string()}")
+                            logServerError(response, "Error al sincronizar lote ${localLote.id}")
+                            throw Exception("Error al sincronizar lote ${localLote.id}: ${response.errorBody()?.string()}")
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error al sincronizar lote ${localLote.id}: ${e.message}")
+                        throw e // Re-lanzar para que se maneje arriba
                     }
                 }
             }
@@ -270,13 +271,11 @@ class LoteRepositoryImpl @Inject constructor(
             }
 
             Log.d(TAG, "Sincronización de lotes completada exitosamente")
-            showSyncAlert("Sincronización de lotes completada exitosamente")
         } catch (e: Exception) {
             Log.e(TAG, "Error durante la sincronización de lotes: ${e.message}")
-            showSyncAlert("Error durante la sincronización de lotes: ${e.message}")
+            throw e // Lanzar la excepción para que DataSyncManager la capture
         }
     }
-
     override suspend fun fullSync(): Boolean {
         if (!isNetworkAvailable()) {
             showSyncAlert("Sin conexión a Internet")
@@ -323,7 +322,6 @@ class LoteRepositoryImpl @Inject constructor(
             }
 
             Log.d(TAG, "Sincronización completa exitosa.")
-            showSyncAlert("Sincronización completa")
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Error en la sincronización completa: ${e.message}", e)

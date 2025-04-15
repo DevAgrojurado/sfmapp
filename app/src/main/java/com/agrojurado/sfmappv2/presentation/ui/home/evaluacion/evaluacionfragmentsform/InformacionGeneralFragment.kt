@@ -1,16 +1,10 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform
 
-import android.Manifest
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,72 +12,204 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.databinding.FragmentInformacionGeneralBinding
 import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.model.Operario
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.shared.SharedSelectionViewModel
+import com.agrojurado.sfmappv2.utils.LocationPermissionHandler
 import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.*
 
 @AndroidEntryPoint
-class InformacionGeneralFragment : Fragment(), LocationListener {
+class InformacionGeneralFragment : Fragment() {
 
     private var _binding: FragmentInformacionGeneralBinding? = null
     private val binding get() = _binding!!
 
     private val viewModel: EvaluacionViewModel by activityViewModels()
+    private val sharedViewModel: SharedSelectionViewModel by activityViewModels()
     private var operarios: List<Pair<String, Operario>> = emptyList()
     private var lotes: List<Pair<String, Lote>> = emptyList()
-    private lateinit var locationManager: LocationManager
     private val handler = Handler(Looper.getMainLooper())
     private var checkPalmRunnable: Runnable? = null
+    private lateinit var locationHandler: LocationPermissionHandler
 
-    companion object {
-        private const val LOCATION_PERMISSION_REQUEST_CODE = 1
-        private const val GPS_REQUEST_CODE = 2
-    }
+    private var isUpdatingFromSharedViewModel = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        Log.d("InformacionGeneralFragment", "onCreateView")
         _binding = FragmentInformacionGeneralBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         setupInitialValues()
+        locationHandler = LocationPermissionHandler(
+            context = requireContext(),
+            activity = requireActivity(),
+            onLocationReceived = { location ->
+                if (isAdded) { // Verificar si el fragmento está adjunto
+                    viewModel.setUbicacion(location)
+                }
+            },
+            onPermissionDenied = {
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onGPSDisabled = {
+                if (isAdded) {
+                    Toast.makeText(requireContext(), "GPS es necesario para obtener la ubicación", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+        sharedViewModel.ensureDataLoaded()
         setupObservers()
-        setupListeners()
+        savedInstanceState?.let {
+            if (_binding != null) {
+                binding.etPalma.setText(it.getString("palma", ""))
+                binding.etUbicacion.setText(it.getString("ubicacion", ""))
+                val inflorescencia = it.getInt("inflorescencia", 0)
+                if (inflorescencia > 0) setInflorescencia(inflorescencia)
+            }
+        }
+        if (isAdded) {
+            locationHandler.requestLocation()
+        }
+    }
 
-        locationManager = requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        checkLocationPermission()
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("palma", binding.etPalma.text.toString())
+        outState.putString("ubicacion", binding.etUbicacion.text.toString())
+        val inflorescencia = binding.run {
+            val toggleButtons = listOf(toggle1, toggle2, toggle3, toggle4, toggle5)
+            toggleButtons.indexOfFirst { it.isChecked }.let { if (it == -1) 0 else it + 1 }
+        }
+        outState.putInt("inflorescencia", inflorescencia)
+    }
 
-        viewModel.loadOperarios()
-        viewModel.loadLotes()
+    private fun setupInitialValues() {
+        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+        val currentWeek = Calendar.getInstance().get(Calendar.WEEK_OF_YEAR)
 
-        // Observar errores de validación
+        with(binding) {
+            etFecha.setText(currentDate)
+            etHora.setText(currentTime)
+            etSemana.setText(currentWeek.toString())
+            tvTotalPalmas.visibility = View.VISIBLE
+        }
+    }
+
+    private fun setupObservers() {
+        viewModel.loggedInUser.observe(viewLifecycleOwner) { user ->
+            if (_binding != null) {
+                binding.tvEvaluador.text = user?.let { "${it.codigo} - ${it.nombre}" } ?: "Usuario no disponible"
+            }
+        }
+
+        sharedViewModel.operarios.observe(viewLifecycleOwner) { operariosList ->
+            if (operariosList.isNotEmpty()) {
+                operarios = operariosList
+                setupOperariosSpinner(operariosList)
+                setupListeners()
+                applySavedSelections()
+            }
+        }
+
+        viewModel.lastUsedOperarioId.observe(viewLifecycleOwner) { lastUsedOperarioId ->
+            lastUsedOperarioId?.let { id ->
+                val position = operarios.indexOfFirst { it.second.id == id }
+                if (position != -1 && _binding != null) {
+                    binding.spinnerPolinizador.setSelection(position)
+                }
+            }
+        }
+
+        viewModel.totalPalmas.observe(viewLifecycleOwner) { total ->
+            if (_binding != null) {
+                binding.tvTotalPalmas.text = "$total"
+            }
+        }
+
+        viewModel.ubicacion.observe(viewLifecycleOwner) { ubicacion ->
+            if (_binding != null) {
+                binding.etUbicacion.setText(ubicacion)
+            }
+        }
+
+        sharedViewModel.lotes.observe(viewLifecycleOwner) { lotesList ->
+            if (lotesList.isNotEmpty()) {
+                lotes = lotesList
+                setupLotesSpinner(lotesList)
+                applySavedSelections()
+            }
+        }
+
+        viewModel.lastUsedLoteId.observe(viewLifecycleOwner) { lastUsedLoteId ->
+            lastUsedLoteId?.let { id ->
+                val position = lotes.indexOfFirst { it.second.id == id }
+                if (position != -1 && _binding != null) {
+                    binding.spinnerLote.setSelection(position)
+                }
+            }
+        }
+
+        viewModel.palmExists.observe(viewLifecycleOwner) { exists ->
+            if (_binding != null) {
+                binding.etPalma.error = if (exists) "Esta palma ya existe en esta sección" else null
+            }
+        }
+
+        sharedViewModel.selectedOperarioId.observe(viewLifecycleOwner) { operarioId ->
+            operarioId?.let { id ->
+                val position = operarios.indexOfFirst { it.second.id == id }
+                if (position != -1 && binding.spinnerPolinizador.selectedItemPosition != position && _binding != null) {
+                    binding.spinnerPolinizador.setSelection(position)
+                }
+            }
+        }
+
+        sharedViewModel.selectedLoteId.observe(viewLifecycleOwner) { loteId ->
+            loteId?.let { id ->
+                val position = lotes.indexOfFirst { it.second.id == id }
+                if (position != -1 && binding.spinnerLote.selectedItemPosition != position && _binding != null) {
+                    binding.spinnerLote.setSelection(position)
+                }
+            }
+        }
+
+        sharedViewModel.selectedSeccion.observe(viewLifecycleOwner) { seccion ->
+            seccion?.let {
+                if (_binding != null && binding.etSeccion.text.toString().toIntOrNull() != it) {
+                    binding.etSeccion.setText(it.toString())
+                }
+            }
+        }
+
         viewModel.validationErrors.observe(viewLifecycleOwner) { errorFields ->
-            clearAllErrors()
-            errorFields.forEach { fieldName ->
-                when (fieldName) {
-                    "etFecha" -> binding.etFecha.error = "Campo requerido"
-                    "etHora" -> binding.etHora.error = "Campo requerido"
-                    "etSemana" -> binding.etSemana.error = "Campo requerido"
-                    "spinnerPolinizador" -> (binding.spinnerPolinizador.selectedView as? TextView)?.error = "Campo requerido"
-                    "spinnerLote" -> (binding.spinnerLote.selectedView as? TextView)?.error = "Campo requerido"
-                    "etSeccion" -> binding.etSeccion.error = "Campo requerido"
-                    "ubicacion" -> binding.etUbicacion.error = "Campo requerido"
+            if (_binding != null) {
+                clearAllErrors()
+                errorFields.forEach { fieldName ->
+                    when (fieldName) {
+                        "etFecha" -> binding.etFecha.error = "Campo requerido"
+                        "etHora" -> binding.etHora.error = "Campo requerido"
+                        "etSemana" -> binding.etSemana.error = "Campo requerido"
+                        "spinnerPolinizador" -> (binding.spinnerPolinizador.selectedView as? TextView)?.error = "Campo requerido"
+                        "spinnerLote" -> (binding.spinnerLote.selectedView as? TextView)?.error = "Campo requerido"
+                        "etSeccion" -> binding.etSeccion.error = "Campo requerido"
+                        "ubicacion" -> binding.etUbicacion.error = "Campo requerido"
+                    }
                 }
             }
         }
@@ -102,65 +228,6 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         }
     }
 
-    private fun setupInitialValues() {
-        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-        val currentWeek = Calendar.getInstance().get(Calendar.WEEK_OF_YEAR)
-
-        with(binding) {
-            etFecha.setText(currentDate)
-            etHora.setText(currentTime)
-            etSemana.setText(currentWeek.toString())
-            tvTotalPalmas.visibility = View.VISIBLE
-        }
-    }
-
-    private fun setupObservers() {
-        viewModel.loggedInUser.observe(viewLifecycleOwner) { user ->
-            binding.tvEvaluador.text = user?.let { "${it.codigo} - ${it.nombre}" } ?: "Usuario no disponible"
-        }
-
-        viewModel.operarios.observe(viewLifecycleOwner) { operariosList ->
-            operarios = operariosList
-            setupOperariosSpinner(operariosList)
-        }
-
-        viewModel.lastUsedOperarioId.observe(viewLifecycleOwner) { lastUsedOperarioId ->
-            lastUsedOperarioId?.let { id ->
-                val position = operarios.indexOfFirst { it.second.id == id }
-                if (position != -1) {
-                    binding.spinnerPolinizador.setSelection(position)
-                }
-            }
-        }
-
-        viewModel.totalPalmas.observe(viewLifecycleOwner) { total ->
-            binding.tvTotalPalmas.text = "$total"
-        }
-
-        viewModel.ubicacion.observe(viewLifecycleOwner) { ubicacion ->
-            binding.etUbicacion.setText(ubicacion)
-        }
-
-        viewModel.lotes.observe(viewLifecycleOwner) { lotesList ->
-            lotes = lotesList
-            setupLotesSpinner(lotesList)
-        }
-
-        viewModel.lastUsedLoteId.observe(viewLifecycleOwner) { lastUsedLoteId ->
-            lastUsedLoteId?.let { id ->
-                val position = lotes.indexOfFirst { it.second.id == id }
-                if (position != -1) {
-                    binding.spinnerLote.setSelection(position)
-                }
-            }
-        }
-
-        viewModel.palmExists.observe(viewLifecycleOwner) { exists ->
-            binding.etPalma.error = if (exists) "Esta palma ya existe en esta sección" else null
-        }
-    }
-
     private fun setupOperariosSpinner(operariosList: List<Pair<String, Operario>>) {
         val adapter = ArrayAdapter(
             requireContext(),
@@ -169,19 +236,7 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         ).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
-
-        binding.spinnerPolinizador.apply {
-            this.adapter = adapter
-            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    val selectedOperario = operariosList[position].second
-                    viewModel.updateTotalPalmas(selectedOperario.id)
-                    checkPalmExists()
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
-            }
-        }
+        binding.spinnerPolinizador.adapter = adapter
     }
 
     private fun setupLotesSpinner(lotesList: List<Pair<String, Lote>>) {
@@ -192,40 +247,70 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         ).apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
-
-        binding.spinnerLote.apply {
-            this.adapter = adapter
-            onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    checkPalmExists()
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
-            }
-        }
+        binding.spinnerLote.adapter = adapter
     }
 
     private fun setupListeners() {
         with(binding) {
             val toggleButtons = listOf(toggle1, toggle2, toggle3, toggle4, toggle5)
-
             toggleButtons.forEachIndexed { index, toggleButton ->
                 toggleButton.setOnCheckedChangeListener { buttonView, isChecked ->
-                    if (isChecked) {
-                        toggleButtons.forEach { btn ->
-                            if (btn != buttonView) btn.isChecked = false
-                        }
-                        viewModel.setInflorescencia(index + 1)
-                    } else {
-                        if (!toggleButtons.any { it.isChecked }) {
+                    try {
+                        if (isChecked) {
+                            toggleButtons.forEach { btn -> if (btn != buttonView) btn.isChecked = false }
+                            viewModel.setInflorescencia(index + 1)
+                        } else if (!toggleButtons.any { it.isChecked }) {
                             viewModel.setInflorescencia(0)
                         }
+                    } catch (e: Exception) {
+                        Log.e("InformacionGeneralFragment", "Error in toggleButton listener: ${e.message}", e)
                     }
                 }
             }
 
-            etSemana.doAfterTextChanged { checkPalmExists() }
-            etSeccion.doAfterTextChanged { checkPalmExists() }
+            spinnerPolinizador.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    try {
+                        if (!isUpdatingFromSharedViewModel && operarios.isNotEmpty()) {
+                            val selectedOperario = operarios[position].second
+                            viewModel.updateTotalPalmas(selectedOperario.id, viewModel.getEvaluacionGeneralId())
+                            sharedViewModel.setSelectedOperarioId(selectedOperario.id)
+                            checkPalmExists()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("InformacionGeneralFragment", "Error in spinnerPolinizador listener: ${e.message}", e)
+                    }
+                }
+                override fun onNothingSelected(parent: AdapterView<*>?) {}
+            }
+
+            spinnerLote.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    try {
+                        if (!isUpdatingFromSharedViewModel && lotes.isNotEmpty()) {
+                            val selectedLote = lotes[position].second
+                            sharedViewModel.setSelectedLoteId(selectedLote.id)
+                            checkPalmExists()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("InformacionGeneralFragment", "Error in spinnerLote listener: ${e.message}", e)
+                    }
+                }
+                override fun onNothingSelected(parent: AdapterView<*>?) {}
+            }
+
+            etSeccion.doAfterTextChanged { text ->
+                try {
+                    if (!isUpdatingFromSharedViewModel) {
+                        val seccion = text.toString().toIntOrNull()
+                        seccion?.let { sharedViewModel.setSelectedSeccion(it) }
+                        checkPalmExists()
+                    }
+                } catch (e: Exception) {
+                    Log.e("InformacionGeneralFragment", "Error in etSeccion listener: ${e.message}", e)
+                }
+            }
+
             etPalma.doAfterTextChanged { text ->
                 checkPalmRunnable?.let { handler.removeCallbacks(it) }
                 checkPalmRunnable = Runnable { checkPalmExists() }
@@ -235,83 +320,22 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
     }
 
     private fun checkPalmExists() {
+        if (!isAdded) {
+            Log.w("InformacionGeneralFragment", "Fragment not attached, skipping checkPalmExists")
+            return
+        }
         with(binding) {
             val semana = etSemana.text.toString().toIntOrNull()
             val idLote = lotes.getOrNull(spinnerLote.selectedItemPosition)?.second?.id
             val palma = etPalma.text.toString().toIntOrNull()
             val idPolinizador = operarios.getOrNull(spinnerPolinizador.selectedItemPosition)?.second?.id
             val seccion = etSeccion.text.toString().toIntOrNull()
+            val evaluacionGeneralId = viewModel.getEvaluacionGeneralId()
 
-            if (semana != null && idLote != null && palma != null && idPolinizador != null && seccion != null) {
-                viewModel.checkPalmExists(semana, idLote, palma, idPolinizador, seccion)
+            if (semana != null && idLote != null && palma != null && idPolinizador != null && seccion != null && evaluacionGeneralId != null) {
+                viewModel.checkPalmExists(semana, idLote, palma, idPolinizador, seccion, evaluacionGeneralId)
             }
         }
-    }
-
-    private fun checkLocationPermission() {
-        if (ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                requireActivity(),
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                LOCATION_PERMISSION_REQUEST_CODE
-            )
-        } else {
-            checkGPSEnabled()
-        }
-    }
-
-    private fun checkGPSEnabled() {
-        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            showGPSDisabledAlert()
-        } else {
-            startLocationUpdates()
-        }
-    }
-
-    private fun showGPSDisabledAlert() {
-        AlertDialog.Builder(requireContext())
-            .setMessage("GPS está desactivado. ¿Desea activarlo?")
-            .setCancelable(false)
-            .setPositiveButton("Sí") { _, _ ->
-                startActivityForResult(
-                    Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS),
-                    GPS_REQUEST_CODE
-                )
-            }
-            .setNegativeButton("No") { dialog, _ ->
-                dialog.cancel()
-                Toast.makeText(
-                    requireContext(),
-                    "GPS es necesario para obtener la ubicación",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            .show()
-    }
-
-    private fun startLocationUpdates() {
-        if (ActivityCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                5000L,
-                10f,
-                this
-            )
-        }
-    }
-
-    override fun onLocationChanged(location: Location) {
-        val ubicacion = "${location.latitude},${location.longitude}"
-        viewModel.setUbicacion(ubicacion)
-        locationManager.removeUpdates(this)
     }
 
     override fun onRequestPermissionsResult(
@@ -319,49 +343,29 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
-        when (requestCode) {
-            LOCATION_PERMISSION_REQUEST_CODE -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    checkGPSEnabled()
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        "Permiso de ubicación denegado",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
+        locationHandler.handleRequestPermissionsResult(requestCode, grantResults)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == GPS_REQUEST_CODE) {
-            checkGPSEnabled()
-        }
+        locationHandler.handleActivityResult(requestCode)
     }
 
     fun setInflorescencia(value: Int) {
-        with(binding) {
-            val toggleButtons = listOf(toggle1, toggle2, toggle3, toggle4, toggle5)
-            toggleButtons.forEachIndexed { index, toggleButton ->
-                toggleButton.isChecked = (index + 1) == value
+        if (_binding != null) {
+            with(binding) {
+                val toggleButtons = listOf(toggle1, toggle2, toggle3, toggle4, toggle5)
+                toggleButtons.forEachIndexed { index, toggleButton ->
+                    toggleButton.isChecked = (index + 1) == value
+                }
             }
         }
     }
 
     fun getValues(): Map<String, Any?> {
         return _binding?.let { binding ->
-            val toggleButtons = listOf(
-                binding.toggle1,
-                binding.toggle2,
-                binding.toggle3,
-                binding.toggle4,
-                binding.toggle5
-            )
-            val inflorescencia = toggleButtons.indexOfFirst { it.isChecked }.let {
-                if (it == -1) 0 else it + 1
-            }
+            val toggleButtons = listOf(binding.toggle1, binding.toggle2, binding.toggle3, binding.toggle4, binding.toggle5)
+            val inflorescencia = toggleButtons.indexOfFirst { it.isChecked }.let { if (it == -1) 0 else it + 1 }
 
             mapOf(
                 "etFecha" to binding.etFecha.text.toString(),
@@ -375,11 +379,45 @@ class InformacionGeneralFragment : Fragment(), LocationListener {
                 "etUbicacion" to binding.etUbicacion.text.toString(),
                 "inflorescencia" to inflorescencia
             )
-        } ?: mapOf() // Retornar un mapa vacío si el binding es null
+        } ?: mapOf()
+    }
+
+    private fun applySavedSelections() {
+        if (_binding == null) return
+        sharedViewModel.selectedOperarioId.value?.let { id ->
+            val position = operarios.indexOfFirst { it.second.id == id }
+            if (position != -1 && position < binding.spinnerPolinizador.adapter.count) {
+                isUpdatingFromSharedViewModel = true
+                binding.spinnerPolinizador.setSelection(position)
+                isUpdatingFromSharedViewModel = false
+            }
+        }
+
+        sharedViewModel.selectedLoteId.value?.let { id ->
+            val position = lotes.indexOfFirst { it.second.id == id }
+            if (position != -1 && position < binding.spinnerLote.adapter.count) {
+                isUpdatingFromSharedViewModel = true
+                binding.spinnerLote.setSelection(position)
+                isUpdatingFromSharedViewModel = false
+            }
+        }
+
+        sharedViewModel.selectedSeccion.value?.let {
+            isUpdatingFromSharedViewModel = true
+            binding.etSeccion.setText(it.toString())
+            isUpdatingFromSharedViewModel = false
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applySavedSelections()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        Log.d("InformacionGeneralFragment", "onDestroyView")
+        checkPalmRunnable?.let { handler.removeCallbacks(it) } // Cancelar el Runnable
         _binding = null
     }
 }

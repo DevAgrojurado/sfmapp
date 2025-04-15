@@ -5,6 +5,7 @@ import android.content.Context
 import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
 import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
 import com.agrojurado.sfmappv2.data.remote.api.EvaluacionApiService
+import com.agrojurado.sfmappv2.data.remote.api.EvaluacionGeneralApiService
 import com.agrojurado.sfmappv2.data.remote.api.FincaApiService
 import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
 import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
@@ -55,6 +56,12 @@ object NetworkModule {
     @Provides
     fun provideEvaluacionApiService(): EvaluacionApiService {
         return RetrofitClient.evaluacionApiService
+    }
+
+    @Provides
+    @Singleton
+    fun provideEvaluacionGeneralApiService(): EvaluacionGeneralApiService {
+        return RetrofitClient.evaluacionGeneralApiService
     }
 
     @Singleton

@@ -7,6 +7,7 @@ import com.agrojurado.sfmappv2.data.local.database.AppDatabase
 import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
 import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
 import com.agrojurado.sfmappv2.data.remote.api.EvaluacionApiService
+import com.agrojurado.sfmappv2.data.remote.api.EvaluacionGeneralApiService
 import com.agrojurado.sfmappv2.data.remote.api.FincaApiService
 import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
 import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
@@ -14,6 +15,7 @@ import com.agrojurado.sfmappv2.data.remote.api.UsuarioApiService
 import com.agrojurado.sfmappv2.data.repository.*
 import com.agrojurado.sfmappv2.domain.repository.*
 import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
+import com.agrojurado.sfmappv2.utils.NetworkMonitor
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -63,6 +65,10 @@ object RoomModule {
     @Singleton
     @Provides
     fun provideEvaluacionDao(db: AppDatabase): EvaluacionPolinizacionDao = db.evaluacionDao()
+
+    @Singleton
+    @Provides
+    fun provideEvaluacionGeneralDao(db: AppDatabase): EvaluacionGeneralDao = db.evaluacionGeneralDao()
 
     @Singleton
     @Provides
@@ -130,11 +136,24 @@ object RoomModule {
     fun provideEvaluacionPolinizacionRepository(
         dao: EvaluacionPolinizacionDao,
         evaluacionApiService: EvaluacionApiService,
+        evaluacionGeneralDao: EvaluacionGeneralDao,
+        @ApplicationContext context: Context): EvaluacionPolinizacionRepository {
+        return EvaluacionPolinizacionRepositoryImpl(dao, evaluacionApiService, evaluacionGeneralDao, context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideEvaluacionGeneralRepository(
+        dao: EvaluacionGeneralDao,
+        apiService: EvaluacionGeneralApiService,
+        evaluacionPolinizacionRepository: EvaluacionPolinizacionRepository,
         usuarioRepository: UsuarioRepository,
         operarioRepository: OperarioRepository,
-        @ApplicationContext context: Context): EvaluacionPolinizacionRepository {
-        return EvaluacionPolinizacionRepositoryImpl(dao, evaluacionApiService, usuarioRepository, operarioRepository, context)
+        @ApplicationContext context: Context
+    ): EvaluacionGeneralRepository {
+        return EvaluacionGeneralRepositoryImpl(dao, apiService, evaluacionPolinizacionRepository, usuarioRepository, operarioRepository, context)
     }
+
 
     @Singleton
     @Provides
@@ -152,5 +171,11 @@ object RoomModule {
             roleAccessControl = roleAccessControl,
             context = context
         )
+    }
+
+    @Singleton
+    @Provides
+    fun provideNetworkMonitor(@ApplicationContext context: Context): NetworkMonitor {
+        return NetworkMonitor(context)
     }
 }

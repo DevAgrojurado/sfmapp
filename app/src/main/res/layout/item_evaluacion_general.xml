@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/tvFecha"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Fecha"
+        android:textColor="@color/black"
+        android:textSize="16sp"/>
+
+    <TextView
+        android:id="@+id/tvPolinizador"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Polinizador: Nombre"
+        android:textColor="@color/black"/>
+
+    <TextView
+        android:id="@+id/tvLote"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Lote: Descripción"
+        android:textColor="@color/black"/>
+</LinearLayout>

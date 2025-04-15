@@ -32,6 +32,9 @@ import com.agrojurado.sfmappv2.presentation.ui.login.LoginActivity
 import com.agrojurado.sfmappv2.presentation.ui.login.LoginViewModel
 import com.google.android.material.navigation.NavigationView
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -65,10 +68,7 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
-        // Comprobamos el rol del usuario antes de permitir el acceso a la sección Admin
         val rolUsuario = viewModel.obtenerRolUsuarioConSesion()
-
-        // Ocultar el ítem del menú de administrador si el usuario no es administrador
         if (rolUsuario != UserRoles.ADMINISTRADOR) {
             navView.menu.findItem(R.id.nav_admin).isVisible = false
         }
@@ -76,30 +76,25 @@ class MainActivity : AppCompatActivity() {
         navView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.nav_logout -> {
-                    // Mostrar un cuadro de diálogo para confirmar el cierre de sesión
                     showAlertLogout()
                     true
                 }
                 R.id.nav_admin -> {
-                    // Comprobamos si el usuario tiene rol de ADMINISTRADOR antes de acceder a la sección Admin
                     if (rolUsuario == UserRoles.ADMINISTRADOR) {
-                        // Si es administrador, navegamos al AdminFragment
                         val handled = menuItem.onNavDestinationSelected(navController)
                         if (handled) {
-                            drawerLayout.closeDrawer(GravityCompat.START)  // Cerramos el DrawerLayout
+                            drawerLayout.closeDrawer(GravityCompat.START)
                         }
                     } else {
-                        // Si no es administrador, mostramos un mensaje de acceso denegado
                         Toast.makeText(this, "Acceso denegado. No eres administrador.", Toast.LENGTH_SHORT).show()
-                        drawerLayout.closeDrawer(GravityCompat.START)  // Cerramos el DrawerLayout sin navegar
+                        drawerLayout.closeDrawer(GravityCompat.START)
                     }
                     true
                 }
                 else -> {
-                    // Para otros elementos del menú, manejamos la navegación normalmente
                     val handled = menuItem.onNavDestinationSelected(navController)
                     if (handled) {
-                        drawerLayout.closeDrawer(GravityCompat.START)  // Cerramos el DrawerLayout
+                        drawerLayout.closeDrawer(GravityCompat.START)
                     }
                     handled
                 }
@@ -109,8 +104,6 @@ class MainActivity : AppCompatActivity() {
         // Inicializar la sincronización con barra de progreso
         initializeSync(progressBar)
         dataSyncManager.autoSyncOnReconnect()
-
-        // Programar el worker
         scheduleSyncWorker()
     }
 
@@ -124,10 +117,12 @@ class MainActivity : AppCompatActivity() {
             R.id.action_sync -> {
                 val progressBar: ProgressBar = binding.appBarMain.progressBar
                 progressBar.visibility = View.VISIBLE
-                dataSyncManager.syncAllData(progressBar) {
-                    runOnUiThread {
-                        progressBar.visibility = View.GONE
-                        Toast.makeText(this, "Sincronización completada", Toast.LENGTH_SHORT).show()
+                CoroutineScope(Dispatchers.Main).launch {
+                    dataSyncManager.syncAllData(progressBar) {
+                        runOnUiThread {
+                            progressBar.visibility = View.GONE
+                            Toast.makeText(this@MainActivity, "Sincronización completada", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
                 true
@@ -153,9 +148,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializeSync(progressBar: ProgressBar) {
-        dataSyncManager.syncAllData(progressBar) {
-            runOnUiThread {
-                Toast.makeText(this, "Sincronización completada", Toast.LENGTH_SHORT).show()
+        CoroutineScope(Dispatchers.Main).launch {
+            dataSyncManager.syncAllData(progressBar) {
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Sincronización completada", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

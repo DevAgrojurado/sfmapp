@@ -4,73 +4,85 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardCornerRadius="8dp"
-    app:cardElevation="4dp">
+    app:cardCornerRadius="12dp"
+    app:cardElevation="6dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- Contenedor superior para nombre y estadísticas -->
+        <!-- Nombre del Polinizador (Centered, full width) -->
         <TextView
             android:id="@+id/tvPolinizadorNombre"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="18sp"
+            android:textSize="20sp"
             android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
+            android:gravity="center"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/tvPalmas"
-            android:layout_marginEnd="16dp"/>
+            android:layout_marginBottom="10dp"
+            android:paddingBottom="10dp"/>
 
-        <!-- Contenedor para los otros textos (tvPalmas y tvEventos) -->
+        <!-- Imagen de la Evaluación General -->
+        <ImageView
+            android:id="@+id/ivEvaluacionFoto"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:scaleType="centerCrop"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tvPolinizadorNombre"
+            android:contentDescription="Foto de Evaluación General"/>
+
+        <!-- Contenedor para estadísticas (aligned professionally) -->
         <TextView
             android:id="@+id/tvPalmas"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textSize="14sp"
-            android:layout_marginBottom="4dp"
-            app:layout_constraintTop_toTopOf="@+id/tvPolinizadorNombre"
-            app:layout_constraintStart_toEndOf="@+id/tvPolinizadorNombre"
-            app:layout_constraintEnd_toStartOf="@+id/btnExportToExcel"/>
+            android:gravity="start"
+            app:layout_constraintStart_toEndOf="@+id/ivEvaluacionFoto"
+            app:layout_constraintTop_toBottomOf="@+id/tvPolinizadorNombre"
+            app:layout_constraintEnd_toStartOf="@+id/btnExportToExcel"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"/>
 
         <TextView
             android:id="@+id/tvEventos"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textSize="14sp"
+            android:gravity="start"
             app:layout_constraintTop_toBottomOf="@+id/tvPalmas"
             app:layout_constraintStart_toStartOf="@+id/tvPalmas"
-            app:layout_constraintEnd_toEndOf="@+id/tvPalmas"/>
+            app:layout_constraintEnd_toEndOf="@+id/tvPalmas"
+            android:layout_marginTop="4dp"/>
 
-        <!-- Botón de exportar PDF solo con icono -->
+        <!-- Botón de Exportar a Excel -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExportToExcel"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="47dp"
-            android:layout_height="38dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_marginEnd="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
             app:icon="@drawable/logo_excel"
             app:iconTint="@null"
-            app:iconGravity="textStart"
             app:iconSize="24dp"
-            app:layout_constraintBottom_toBottomOf="@+id/tvPolinizadorNombre"
+            app:strokeWidth="1dp"
+            app:cornerRadius="8dp"
+            app:layout_constraintTop_toBottomOf="@+id/tvPolinizadorNombre"
             app:layout_constraintEnd_toStartOf="@+id/icRight"
-            app:layout_constraintTop_toTopOf="@+id/tvPolinizadorNombre" />
+            app:layout_constraintBottom_toBottomOf="@+id/ivEvaluacionFoto"/>
 
-        <!-- Icono de flecha derecha -->
+        <!-- Icono Derecho -->
         <ImageView
             android:id="@+id/icRight"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_right"
-            android:paddingStart="0dp"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/tvPolinizadorNombre"
-            app:layout_constraintBottom_toBottomOf="@+id/tvPolinizadorNombre" />
+            app:layout_constraintTop_toBottomOf="@+id/tvPolinizadorNombre"
+            app:layout_constraintBottom_toBottomOf="@+id/ivEvaluacionFoto"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>

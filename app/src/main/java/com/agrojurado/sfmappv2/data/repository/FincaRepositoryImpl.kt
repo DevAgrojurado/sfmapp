@@ -284,7 +284,6 @@ class FincaRepositoryImpl @Inject constructor(
             }
 
             Log.d(TAG, "Sincronización completa exitosa.")
-            showSyncAlert("Sincronización completa")
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Error en la sincronización completa: ${e.message}", e)

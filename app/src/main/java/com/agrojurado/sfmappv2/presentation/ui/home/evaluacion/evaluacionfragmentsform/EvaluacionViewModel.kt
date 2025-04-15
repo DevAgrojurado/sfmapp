@@ -16,9 +16,11 @@ import com.agrojurado.sfmappv2.domain.model.Operario
 import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.domain.model.Lote
+import com.agrojurado.sfmappv2.domain.repository.EvaluacionGeneralRepository
 import com.agrojurado.sfmappv2.domain.repository.LoteRepository
 import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
 import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
+import com.agrojurado.sfmappv2.data.sync.SyncStatus
 import com.agrojurado.sfmappv2.utils.EvaluacionPdfGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -41,10 +43,12 @@ class EvaluacionViewModel @Inject constructor(
     private val loteRepository: LoteRepository,
     private val evaluacionRepository: EvaluacionPolinizacionRepository,
     private val roleAccessControl: RoleAccessControl,
+    private val evaluacionGeneralRepository: EvaluacionGeneralRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    // Estado de sincronización y conectividad
+    private var evaluacionGeneralId: Int? = null
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -54,7 +58,6 @@ class EvaluacionViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    // Estados existentes
     private val _evaluacionesPorSemana = MutableLiveData<Map<Int, List<EvaluacionPolinizacion>>>()
     val evaluacionesPorSemana: LiveData<Map<Int, List<EvaluacionPolinizacion>>> = _evaluacionesPorSemana
 
@@ -111,15 +114,9 @@ class EvaluacionViewModel @Inject constructor(
     private val _validationErrors = MutableLiveData<List<String>>()
     val validationErrors: LiveData<List<String>> = _validationErrors
 
-    private val _syncStatus = MutableLiveData<SyncStatus>()
+    private val _currentPage = MutableLiveData<Int>(0)
+    val currentPage: LiveData<Int> = _currentPage
 
-    sealed class SyncStatus {
-        object Loading : SyncStatus()
-        data class Success(val message: String) : SyncStatus()
-        data class Error(val message: String) : SyncStatus()
-    }
-
-    private var syncInProgress = false
     private var cachedEvaluaciones: Map<Int, List<EvaluacionPolinizacion>>? = null
     private var cachedOperariosIds: Set<Int>? = null
 
@@ -136,42 +133,29 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
-    // Verifica si hay sincronización en curso
-    private fun isSyncInProgress(): Boolean {
-        return syncInProgress
+    fun setCurrentPage(page: Int) {
+        _currentPage.value = page
     }
+
+    fun setEvaluacionGeneralId(id: Int?) {
+        evaluacionGeneralId = id
+        Log.d("EvaluacionViewModel", "Evaluacion General ID asignada: $evaluacionGeneralId")
+    }
+
+    fun getEvaluacionGeneralId(): Int? = evaluacionGeneralId
 
     private fun observeNetworkState() {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 _isOnline.value = true
-                viewModelScope.launch {
-                    // Verificar si ya hay una sincronización en curso
-                    if (!isSyncInProgress()) {
-                        try {
-                            syncInProgress = true // Marcar sincronización en curso
-                            _isLoading.value = true
-                            syncEvaluaciones() // Llamar a la sincronización
-                        } catch (e: Exception) {
-                            _error.value = "Error al sincronizar: ${e.message}"
-                        } finally {
-                            _isLoading.value = false
-                            syncInProgress = false // Marcar sincronización como terminada
-                        }
-                    }
-                }
             }
-
             override fun onLost(network: Network) {
                 _isOnline.value = false
             }
         }
-
         connectivityManager.registerDefaultNetworkCallback(networkCallback)
     }
-
-
 
     private fun loadLoggedInUser() {
         viewModelScope.launch {
@@ -191,42 +175,6 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
-    fun loadOperarios() {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                operarioRepository.getAllOperarios().collectLatest { operariosList ->
-                    _operarios.value = operariosList.map { operario ->
-                        "${operario.codigo} - ${operario.nombre}" to operario
-                    }
-                    selectLastUsedOperario()
-                }
-            } catch (e: Exception) {
-                _error.value = "Error al cargar operarios: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun loadLotes() {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                loteRepository.getAllLotes().collectLatest { lotesList ->
-                    _lotes.value = lotesList.map { lote ->
-                        "Lote ${lote.descripcion}" to lote
-                    }
-                    selectLastUsedLote()
-                }
-            } catch (e: Exception) {
-                _error.value = "Error al cargar lotes: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
     private fun loadLoteMap() {
         viewModelScope.launch {
             loteRepository.getAllLotes().collectLatest { lotesList ->
@@ -235,93 +183,16 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
-
-    private suspend fun syncEvaluaciones() {
-        try {
-            evaluacionRepository.syncEvaluaciones()
-            loadEvaluacionesPorSemana()
-        } catch (e: Exception) {
-            _error.value = "Error en la sincronización: ${e.message}"
-        }
-    }
-
-    fun performFullSync() {
-        viewModelScope.launch {
-            _syncStatus.value = SyncStatus.Loading
-            try {
-                // Tus operaciones de sincronización
-                withContext(Dispatchers.IO) {
-                    syncEvaluaciones()
-                }
-                _syncStatus.value = SyncStatus.Success("Sincronización completada")
-            } catch (e: Exception) {
-                _syncStatus.value = SyncStatus.Error("Error en sincronización: ${e.message}")
-            }
-        }
-    }
-
-    private fun selectLastUsedOperario() {
-        val lastUsedId = _lastUsedOperarioId.value
-        val operariosList = _operarios.value
-        if (lastUsedId != null && operariosList != null) {
-            val position = operariosList.indexOfFirst { it.second.id == lastUsedId }
-            if (position != -1) {
-                _lastUsedOperarioId.value = lastUsedId
-            }
-        }
-    }
-
-    private fun selectLastUsedLote() {
-        val lastUsedId = _lastUsedLoteId.value
-        val lotesList = _lotes.value
-        if (lastUsedId != null && lotesList != null) {
-            val position = lotesList.indexOfFirst { it.second.id == lastUsedId }
-            if (position != -1) {
-                _lastUsedLoteId.value = lastUsedId
-            }
-        }
-    }
-
-    private fun setCurrentWeek() {
-        val calendar = Calendar.getInstance()
-        _currentWeek.value = calendar.get(Calendar.WEEK_OF_YEAR)
-    }
-
-    fun countUniquePalms(evaluaciones: List<EvaluacionPolinizacion>): Int {
-        return evaluaciones
-            .filter { it.palma != null } // Solo contar palmas que no sean null
-            .map { Pair(it.idlote, it.palma) }
-            .distinct()
-            .count()
-    }
-
-    // Actualizar la función existente para usar el nuevo método
-    fun updateTotalPalmas(idPolinizador: Int) {
-        viewModelScope.launch {
-            val week = _currentWeek.value ?: return@launch
-            evaluacionRepository.getEvaluaciones().collectLatest { evaluaciones ->
-                val polinizadorEvaluaciones = evaluaciones.filter {
-                    it.idPolinizador == idPolinizador && it.semana == week
-                }
-                val uniquePalmsCount = countUniquePalms(polinizadorEvaluaciones)
-                _totalPalmas.value = uniquePalmsCount
-                Log.d("EvaluacionViewModel", "Total palmas únicas para polinizador $idPolinizador en semana $week: $uniquePalmsCount")
-            }
-        }
-    }
-
     fun loadEvaluacionesPorSemana() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                // Usar caché si está disponible
                 cachedEvaluaciones?.let {
                     _evaluacionesPorSemana.value = it
                     _isLoading.value = false
                     return@launch
                 }
 
-                // Si no hay caché, cargar de la base de datos
                 evaluacionRepository.getEvaluaciones()
                     .map { evaluacionesList ->
                         filterEvaluacionesByRole(_loggedInUser.value, evaluacionesList)
@@ -340,11 +211,9 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
-    // Limpiar caché cuando sea necesario
     fun clearCache() {
         cachedEvaluaciones = null
     }
-
 
     private suspend fun filterEvaluacionesByRole(user: Usuario?, evaluacionesList: List<EvaluacionPolinizacion>): List<EvaluacionPolinizacion> {
         return when {
@@ -353,7 +222,6 @@ class EvaluacionViewModel @Inject constructor(
                 evaluacionesList
             }
             user?.rol?.equals(UserRoleConstants.ROLE_EVALUATOR, ignoreCase = true) == true -> {
-                // Usar caché de operarios si está disponible
                 val operariosIds = cachedOperariosIds ?: run {
                     operarioRepository.getAllOperarios()
                         .first()
@@ -362,7 +230,6 @@ class EvaluacionViewModel @Inject constructor(
                         .toSet()
                         .also { cachedOperariosIds = it }
                 }
-
                 evaluacionesList.filter { evaluacion ->
                     operariosIds.contains(evaluacion.idPolinizador)
                 }
@@ -375,7 +242,7 @@ class EvaluacionViewModel @Inject constructor(
         viewModelScope.launch {
             operarioRepository.getAllOperarios().collectLatest { operariosList ->
                 _operarioMap.value = operariosList.associate { it.id to it.nombre }
-                clearOperariosCache() // Limpiar caché cuando se actualicen los operarios
+                clearOperariosCache()
             }
         }
     }
@@ -412,17 +279,31 @@ class EvaluacionViewModel @Inject constructor(
         }
     }
 
-    fun checkPalmExists(semana: Int?, lote: Int?, palma: Int?, idPolinizador: Int?, seccion: Int?) {
+    fun checkPalmExists(
+        semana: Int?,
+        lote: Int?,
+        palma: Int?,
+        idPolinizador: Int?,
+        seccion: Int?,
+        evaluacionGeneralId: Int?
+    ) {
         viewModelScope.launch {
             try {
-                if (semana == null || lote == null || palma == null || idPolinizador == null || seccion == null) {
+                if (semana == null || lote == null || palma == null || idPolinizador == null || seccion == null || evaluacionGeneralId == null) {
                     _palmExists.value = false
                     return@launch
                 }
 
-                val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador, seccion)
+                val exists = evaluacionRepository.checkPalmExists(
+                    semana = semana,
+                    lote = lote,
+                    palma = palma,
+                    idPolinizador = idPolinizador,
+                    seccion = seccion,
+                    evaluacionGeneralId = evaluacionGeneralId
+                )
                 _palmExists.value = exists
-                Log.d("EvaluacionViewModel", "Palma existente: $exists (Semana: $semana, Lote: $lote, Palma: $palma, Seccion: $seccion, IdPolinizador: $idPolinizador)")
+                Log.d("EvaluacionViewModel", "Palma existente: $exists (Semana: $semana, Lote: $lote, Palma: $palma, Seccion: $seccion, IdPolinizador: $idPolinizador, EvaluacionGeneralId: $evaluacionGeneralId)")
             } catch (e: Exception) {
                 Log.e("EvaluacionViewModel", "Error al verificar la palma: ${e.message}")
                 _errorMessage.value = "Error al verificar la palma: ${e.message}"
@@ -450,12 +331,9 @@ class EvaluacionViewModel @Inject constructor(
                 _errorMessage.value = null
                 _saveResult.value = false
 
-                // Validar campos y obtener lista de errores
                 val errorFields = validateRequiredFields(informacionGeneral, evaluacion)
-
                 if (errorFields.isNotEmpty()) {
                     _validationErrors.value = errorFields
-                    // Importante: Resetear el estado de guardado cuando hay errores de validación
                     _isSaving.value = false
                     return@launch
                 }
@@ -466,57 +344,38 @@ class EvaluacionViewModel @Inject constructor(
                     ?: throw IllegalArgumentException("Semana inválida")
                 val lote = (informacionGeneral["spinnerLote"] as? Int)
                     ?: throw IllegalArgumentException("Lote inválido")
-                val palma = (informacionGeneral["etPalma"] as? Int)
+                val palma = informacionGeneral["etPalma"] as? Int
                 val idPolinizador = (informacionGeneral["spinnerPolinizador"] as? Int)
                     ?: throw IllegalArgumentException("ID del polinizador inválido")
                 val seccion = (informacionGeneral["etSeccion"] as? Int)
                     ?: throw IllegalArgumentException("Sección inválida")
 
-                if (palma != null) {
-                    val exists = evaluacionRepository.checkPalmExists(semana, lote, palma, idPolinizador, seccion)
-                    if (exists) {
-                        _palmExists.value = true
-                        _errorMessage.value = "Palma existente en la misma sección"
-                        // Importante: Resetear el estado de guardado cuando la palma existe
-                        _isSaving.value = false
-                        return@launch
-                    }
+                val evalGeneralId = evaluacionGeneralId
+                if (evalGeneralId == null) {
+                    _errorMessage.value = "No hay una evaluación general activa"
+                    Log.e("EvaluacionViewModel", "Error: evaluacionGeneralId es null")
+                    _isSaving.value = false
+                    return@launch
                 }
 
                 val evaluacionPolinizacion = createEvaluacionPolinizacion(
-                    fecha, hora, semana, lote, palma,
-                    idPolinizador, seccion,
-                    informacionGeneral,
-                    detallesPolinizacion,
-                    evaluacion
-                )
+                    fecha, hora, semana, lote, palma, idPolinizador, seccion,
+                    informacionGeneral, detallesPolinizacion, evaluacion
+                ).copy(evaluacionGeneralId = evalGeneralId)
 
-                evaluacionRepository.insertEvaluacion(evaluacionPolinizacion)
-                updateAfterSuccessfulSave(idPolinizador, lote)
+                val insertedId = evaluacionRepository.insertEvaluacion(evaluacionPolinizacion)
+                Log.d("EvaluacionViewModel", "✅ Saved EvaluacionPolinizacion with ID: $insertedId, evaluacionGeneralId: $evalGeneralId")
+                updateAfterSuccessfulSave(idPolinizador, lote, evalGeneralId)
                 _saveResult.value = true
-                _palmExists.value = false
-                _validationErrors.value = emptyList()
 
             } catch (e: Exception) {
+                _errorMessage.value = "Error al guardar evaluación individual: ${e.message}"
+                Log.e("EvaluacionViewModel", "Error: ${e.message}", e)
                 handleSaveError(e)
             } finally {
-                // El estado de guardado se resetea en finally solo si no hubo éxito
-                if (_saveResult.value != true) {
-                    _isSaving.value = false
-                }
+                _isSaving.value = false
             }
         }
-    }
-
-    private fun handleSaveError(e: Exception) {
-        _saveResult.value = false
-        _errorMessage.value = when (e) {
-            is IllegalArgumentException -> e.message
-            else -> "Error al guardar la evaluación: ${e.message}"
-        }
-        // Asegurarse de resetear el estado de guardado en caso de error
-        _isSaving.value = false
-        Log.e("EvaluacionViewModel", "Error al guardar la evaluación", e)
     }
 
     private fun validateRequiredFields(
@@ -530,7 +389,6 @@ class EvaluacionViewModel @Inject constructor(
             "spinnerPolinizador" to "Polinizador",
             "spinnerLote" to "Lote",
             "etSeccion" to "Sección"
-            // Removido "etPalma" de los campos requeridos
         )
 
         val errorFields = mutableListOf<String>()
@@ -553,10 +411,9 @@ class EvaluacionViewModel @Inject constructor(
         return errorFields
     }
 
-
     private fun createEvaluacionPolinizacion(
         fecha: String, hora: String, semana: Int, lote: Int,
-        palma: Int?, idPolinizador: Int, seccion: Int, // Cambiado palma a Int?
+        palma: Int?, idPolinizador: Int, seccion: Int,
         informacionGeneral: Map<String, Any?>,
         detallesPolinizacion: Map<String, Any?>,
         evaluacion: Map<String, Any?>
@@ -585,11 +442,12 @@ class EvaluacionViewModel @Inject constructor(
         repaso2 = evaluacion["repaso2"] as? Int,
         observaciones = evaluacion["observaciones"] as String,
         isSynced = false,
+        evaluacionGeneralId = null, // Este valor se establece con .copy() en saveAllData
         timestamp = System.currentTimeMillis()
     )
 
-    private fun updateAfterSuccessfulSave(idPolinizador: Int, lote: Int) {
-        updateTotalPalmas(idPolinizador)
+    private fun updateAfterSuccessfulSave(idPolinizador: Int, lote: Int, evaluacionGeneralId: Int) {
+        updateTotalPalmas(idPolinizador, evaluacionGeneralId)
         clearCache()
         loadEvaluacionesPorSemana()
         _lastUsedLoteId.value = lote
@@ -602,27 +460,22 @@ class EvaluacionViewModel @Inject constructor(
                 ?: throw SecurityException("No authenticated user")
 
             try {
-                // Verifica los permisos del usuario
                 if (!roleAccessControl.canDeleteEvaluations(currentUser)) {
                     throw SecurityException("User lacks permission to delete evaluations")
                 }
 
-                // Si el usuario tiene permisos, proceder con la eliminación
                 _isLoading.value = true
                 _error.value = null
                 evaluacionRepository.deleteEvaluacion(evaluacion)
 
-                // Recargar evaluaciones por semana
                 loadEvaluacionesPorSemana()
                 _saveResult.value = true
             } catch (e: SecurityException) {
-                // Capturar la SecurityException y mostrar un mensaje de error
                 _error.value = e.message
                 _saveResult.value = false
                 Log.e("EvaluacionViewModel", "Error: ${e.message}")
                 showToast("No tienes permisos para eliminar esta evaluación.")
             } catch (e: Exception) {
-                // Capturar otras excepciones
                 _errorMessage.value = "Error al eliminar la evaluación: ${e.message}"
                 _saveResult.value = false
                 Log.e("EvaluacionViewModel", "Error: ${e.message}")
@@ -638,13 +491,11 @@ class EvaluacionViewModel @Inject constructor(
             try {
                 _isLoading.value = true
 
-                // Obtener todos los datos necesarios
                 val evaluacionesList = evaluacionRepository.getEvaluaciones().first()
                 val evaluadorMap = _evaluador.value ?: emptyMap()
                 val operarioMap = _operarioMap.value ?: emptyMap()
                 val loteMap = _loteMap.value ?: emptyMap()
 
-                // Generar PDF
                 val pdfGenerator = EvaluacionPdfGenerator(context)
                 val pdfFile = pdfGenerator.generatePdf(
                     evaluaciones = evaluacionesList,
@@ -653,10 +504,8 @@ class EvaluacionViewModel @Inject constructor(
                     loteMap = loteMap
                 )
 
-                // Notificar éxito
                 _saveResult.value = true
                 showToast("PDF generado exitosamente: ${pdfFile.name}")
-
             } catch (e: Exception) {
                 _errorMessage.value = "Error al generar PDF: ${e.message}"
                 _saveResult.value = false
@@ -667,7 +516,6 @@ class EvaluacionViewModel @Inject constructor(
     }
 
     private fun showToast(message: String) {
-        // Mostrar un mensaje en un Toast
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
 
@@ -677,20 +525,48 @@ class EvaluacionViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Aquí podrías limpiar cualquier recurso si es necesario
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         try {
-            connectivityManager.unregisterNetworkCallback(
-                object : ConnectivityManager.NetworkCallback() {}
-            )
+            connectivityManager.unregisterNetworkCallback(object : ConnectivityManager.NetworkCallback() {})
         } catch (e: Exception) {
             Log.e("EvaluacionViewModel", "Error al desregistrar network callback: ${e.message}")
         }
         clearOperariosCache()
     }
 
-    // Limpiar mensaje de error
     fun clearErrorMessage() {
         _errorMessage.value = null
+    }
+
+    private fun handleSaveError(e: Exception) {
+        _errorMessage.value = "Error al guardar la evaluación"
+        _saveResult.value = false
+    }
+
+    fun updateTotalPalmas(idPolinizador: Int, evaluacionGeneralId: Int?) {
+        viewModelScope.launch {
+            val week = _currentWeek.value ?: return@launch
+            evaluacionRepository.getEvaluaciones().collectLatest { evaluaciones ->
+                val polinizadorEvaluaciones = evaluaciones.filter {
+                    it.idPolinizador == idPolinizador && it.semana == week && it.evaluacionGeneralId == evaluacionGeneralId
+                }
+                val uniquePalmsCount = countUniquePalms(polinizadorEvaluaciones, evaluacionGeneralId)
+                _totalPalmas.value = uniquePalmsCount
+                Log.d("EvaluacionViewModel", "Total palmas únicas para polinizador $idPolinizador en semana $week y evaluacionGeneralId $evaluacionGeneralId: $uniquePalmsCount")
+            }
+        }
+    }
+
+    private fun setCurrentWeek() {
+        val calendar = Calendar.getInstance()
+        _currentWeek.value = calendar.get(Calendar.WEEK_OF_YEAR)
+    }
+
+    fun countUniquePalms(evaluaciones: List<EvaluacionPolinizacion>, evaluacionGeneralId: Int?): Int {
+        return evaluaciones
+            .filter { it.palma != null && it.evaluacionGeneralId == evaluacionGeneralId }
+            .map { Pair(it.idlote, it.palma) }
+            .distinct()
+            .count()
     }
 }

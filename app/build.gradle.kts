@@ -69,6 +69,7 @@ dependencies {
     implementation(libs.androidx.gridlayout)
     implementation(libs.play.services.maps)
     implementation(libs.androidx.hilt.common)
+    implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.room.compiler)
 
     // Dagger - Hilt
@@ -93,6 +94,17 @@ dependencies {
     implementation (libs.poi)
     implementation (libs.apache.poi.ooxml)
     implementation (libs.aalto.xml)
+    implementation (libs.gcacace.signature.pad)
+
+    // CameraX core
+    implementation (libs.camera.core)
+    implementation (libs.androidx.camera.camera2)
+    implementation (libs.androidx.camera.lifecycle)
+    implementation (libs.androidx.camera.view)
+    // Opcional: para vista previa en pantalla
+    implementation (libs.androidx.camera.extensions)
+
+    implementation (libs.coil.kt.coil)
 
     // Grafico para reporte
     //implementation(libs.mpandroidchart)

@@ -2,6 +2,7 @@ package com.agrojurado.sfmappv2.domain.model
 
 data class EvaluacionPolinizacion(
     var id: Int? = 0,
+    val evaluacionGeneralId: Int? = null,
     var serverId: Int? = null,
     val fecha: String?,
     val hora: String?,
