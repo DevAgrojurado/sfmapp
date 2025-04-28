@@ -1,6 +1,7 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.shared
 
 import android.os.Bundle
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -209,5 +210,20 @@ class SharedSelectionViewModel @Inject constructor(
     // ---- Error handling ----
     fun clearError() {
         _error.value = null
+    }
+
+    /**
+     * Clears the current selections for Operario, Lote, and Seccion.
+     * Call this after an operation (like saving) to reset the state for the next entry.
+     */
+    fun clearSelections() {
+        _selectedOperarioId.value = null
+        _selectedLoteId.value = null
+        _selectedSeccion.value = null
+        // Also clear the object references if needed
+        _selectedOperario.value = null
+        _selectedLote.value = null
+        // Log that selections are cleared
+        Log.d("SharedSelectionVM", "Selections cleared.")
     }
 }

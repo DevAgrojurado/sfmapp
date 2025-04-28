@@ -16,6 +16,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.agrojurado.sfmappv2.R
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 
 class SignatureBottomSheetFragment : BottomSheetDialogFragment() {
 
@@ -37,9 +38,7 @@ class SignatureBottomSheetFragment : BottomSheetDialogFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Guardar la orientación actual antes de cambiarla
         originalOrientation = requireActivity().requestedOrientation
-        // Forzar la orientación a horizontal (landscape)
         requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
     }
 
@@ -58,10 +57,12 @@ class SignatureBottomSheetFragment : BottomSheetDialogFragment() {
         btnSaveFirma = view.findViewById(R.id.btnSaveFirma)
         btnCloseSignature = view.findViewById(R.id.btnCloseSignature)
 
+        // Deshabilitar el guardado del estado del SignaturePad
+        signaturePad.isSaveEnabled = false
+
         setupSignaturePad()
         setupListeners()
 
-        // Configurar el BottomSheet para que sea de pantalla completa
         dialog?.let { dialog ->
             val bottomSheetDialog = dialog as BottomSheetDialog
             val bottomSheet = bottomSheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
@@ -70,7 +71,6 @@ class SignatureBottomSheetFragment : BottomSheetDialogFragment() {
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
                 behavior.peekHeight = 0
                 behavior.isDraggable = false
-                // Establecer altura y ancho al máximo
                 it.layoutParams = it.layoutParams.apply {
                     height = ViewGroup.LayoutParams.MATCH_PARENT
                     width = ViewGroup.LayoutParams.MATCH_PARENT
@@ -94,7 +94,9 @@ class SignatureBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun setupListeners() {
-        btnClearFirma.setOnClickListener { signaturePad.clear() }
+        btnClearFirma.setOnClickListener {
+            signaturePad.clear()
+        }
         btnSaveFirma.setOnClickListener {
             if (signaturePad.isEmpty) {
                 Toast.makeText(requireContext(), "Por favor, dibuje una firma", Toast.LENGTH_SHORT).show()
@@ -110,22 +112,35 @@ class SignatureBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun saveSignatureToFile(): String? {
-        val bitmap = signaturePad.signatureBitmap ?: return null
-        val file = File(requireContext().filesDir, "signature_temp_${System.currentTimeMillis()}.png")
+        val originalBitmap = signaturePad.signatureBitmap ?: return null
+        // Usar el Bitmap original sin escalar para máxima calidad
+        // Alternativamente, puedes escalar a 1024x1024 si el original es demasiado grande
+        val file = File(requireContext().cacheDir, "signature_temp_${System.currentTimeMillis()}.png")
+
         return try {
+            // Sobrescribir el archivo con calidad máxima
             FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                originalBitmap.compress(Bitmap.CompressFormat.PNG, 100, out) // Calidad restaurada a 100
+                out.flush()
             }
             file.absolutePath
-        } catch (e: Exception) {
-            Log.e("SignatureBottomSheet", "Error saving signature: ${e.message}", e)
+        } catch (e: IOException) {
+            Log.e("SignatureBottomSheet", "Error al guardar la firma: ${e.message}", e)
             null
+        } finally {
+            // Reciclar el Bitmap para liberar memoria
+            if (!originalBitmap.isRecycled) originalBitmap.recycle()
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Limpiar el SignaturePad como respaldo para evitar guardar el Bitmap
+        signaturePad.clear()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Restaurar la orientación original al cerrar el BottomSheet
         requireActivity().requestedOrientation = originalOrientation
     }
 }

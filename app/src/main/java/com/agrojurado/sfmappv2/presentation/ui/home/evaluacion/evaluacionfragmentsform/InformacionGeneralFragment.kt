@@ -39,6 +39,12 @@ class InformacionGeneralFragment : Fragment() {
     private lateinit var locationHandler: LocationPermissionHandler
 
     private var isUpdatingFromSharedViewModel = false
+    private var operariosSpinnerReady = false
+    private var lotesSpinnerReady = false
+    // Variables para IDs iniciales pasados por argumentos
+    private var initialOperarioId: Int? = null
+    private var initialLoteId: Int? = null
+    private var initialSeccion: Int? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -47,6 +53,14 @@ class InformacionGeneralFragment : Fragment() {
     ): View {
         Log.d("InformacionGeneralFragment", "onCreateView")
         _binding = FragmentInformacionGeneralBinding.inflate(inflater, container, false)
+        
+        // Leer argumentos aquí
+        arguments?.let {
+            initialOperarioId = it.getInt("operarioId", -1).let { id -> if (id == -1) null else id }
+            initialLoteId = it.getInt("loteId", -1).let { id -> if (id == -1) null else id }
+            initialSeccion = it.getInt("seccion", -1).let { id -> if (id == -1) null else id }
+            Log.d("InformacionGeneralFragment", "Argumentos recibidos: Operario=$initialOperarioId, Lote=$initialLoteId, Seccion=$initialSeccion")
+        }
         return binding.root
     }
 
@@ -122,8 +136,12 @@ class InformacionGeneralFragment : Fragment() {
             if (operariosList.isNotEmpty()) {
                 operarios = operariosList
                 setupOperariosSpinner(operariosList)
+                // Setup listeners solo después de configurar el spinner y tener los datos
                 setupListeners()
-                applySavedSelections()
+                operariosSpinnerReady = true
+                Log.d("InformacionGeneralFragment", "Operarios Spinner listo")
+                // Intentar aplicar selecciones INICIALES ahora que el spinner está listo
+                applyInitialArguments()
             }
         }
 
@@ -152,7 +170,10 @@ class InformacionGeneralFragment : Fragment() {
             if (lotesList.isNotEmpty()) {
                 lotes = lotesList
                 setupLotesSpinner(lotesList)
-                applySavedSelections()
+                lotesSpinnerReady = true
+                Log.d("InformacionGeneralFragment", "Lotes Spinner listo")
+                // Intentar aplicar selecciones INICIALES ahora que el spinner está listo
+                applyInitialArguments()
             }
         }
 
@@ -168,32 +189,6 @@ class InformacionGeneralFragment : Fragment() {
         viewModel.palmExists.observe(viewLifecycleOwner) { exists ->
             if (_binding != null) {
                 binding.etPalma.error = if (exists) "Esta palma ya existe en esta sección" else null
-            }
-        }
-
-        sharedViewModel.selectedOperarioId.observe(viewLifecycleOwner) { operarioId ->
-            operarioId?.let { id ->
-                val position = operarios.indexOfFirst { it.second.id == id }
-                if (position != -1 && binding.spinnerPolinizador.selectedItemPosition != position && _binding != null) {
-                    binding.spinnerPolinizador.setSelection(position)
-                }
-            }
-        }
-
-        sharedViewModel.selectedLoteId.observe(viewLifecycleOwner) { loteId ->
-            loteId?.let { id ->
-                val position = lotes.indexOfFirst { it.second.id == id }
-                if (position != -1 && binding.spinnerLote.selectedItemPosition != position && _binding != null) {
-                    binding.spinnerLote.setSelection(position)
-                }
-            }
-        }
-
-        sharedViewModel.selectedSeccion.observe(viewLifecycleOwner) { seccion ->
-            seccion?.let {
-                if (_binding != null && binding.etSeccion.text.toString().toIntOrNull() != it) {
-                    binding.etSeccion.setText(it.toString())
-                }
             }
         }
 
@@ -274,7 +269,6 @@ class InformacionGeneralFragment : Fragment() {
                         if (!isUpdatingFromSharedViewModel && operarios.isNotEmpty()) {
                             val selectedOperario = operarios[position].second
                             viewModel.updateTotalPalmas(selectedOperario.id, viewModel.getEvaluacionGeneralId())
-                            sharedViewModel.setSelectedOperarioId(selectedOperario.id)
                             checkPalmExists()
                         }
                     } catch (e: Exception) {
@@ -289,7 +283,6 @@ class InformacionGeneralFragment : Fragment() {
                     try {
                         if (!isUpdatingFromSharedViewModel && lotes.isNotEmpty()) {
                             val selectedLote = lotes[position].second
-                            sharedViewModel.setSelectedLoteId(selectedLote.id)
                             checkPalmExists()
                         }
                     } catch (e: Exception) {
@@ -303,8 +296,7 @@ class InformacionGeneralFragment : Fragment() {
                 try {
                     if (!isUpdatingFromSharedViewModel) {
                         val seccion = text.toString().toIntOrNull()
-                        seccion?.let { sharedViewModel.setSelectedSeccion(it) }
-                        checkPalmExists()
+                        seccion?.let { checkPalmExists() }
                     }
                 } catch (e: Exception) {
                     Log.e("InformacionGeneralFragment", "Error in etSeccion listener: ${e.message}", e)
@@ -382,42 +374,78 @@ class InformacionGeneralFragment : Fragment() {
         } ?: mapOf()
     }
 
-    private fun applySavedSelections() {
-        if (_binding == null) return
-        sharedViewModel.selectedOperarioId.value?.let { id ->
+    private fun applyInitialArguments() {
+        // Solo aplicar si ambos spinners están listos y los argumentos fueron leídos
+        if (!operariosSpinnerReady || !lotesSpinnerReady) {
+            Log.d("InformacionGeneralFragment", "applyInitialArguments: Esperando que ambos spinners estén listos (Operarios: $operariosSpinnerReady, Lotes: $lotesSpinnerReady)")
+            return
+        }
+        
+        if (_binding == null) {
+            Log.w("InformacionGeneralFragment", "applyInitialArguments: Binding es nulo, no se pueden aplicar selecciones")
+            return
+        }
+        
+        Log.d("InformacionGeneralFragment", "applyInitialArguments: Aplicando selecciones desde Argumentos...")
+        
+        initialOperarioId?.let { id ->
+            Log.d("InformacionGeneralFragment", "Intentando aplicar Operario ID inicial: $id")
             val position = operarios.indexOfFirst { it.second.id == id }
-            if (position != -1 && position < binding.spinnerPolinizador.adapter.count) {
-                isUpdatingFromSharedViewModel = true
-                binding.spinnerPolinizador.setSelection(position)
-                isUpdatingFromSharedViewModel = false
+            Log.d("InformacionGeneralFragment", "Posición encontrada para Operario ID inicial $id: $position")
+            if (position != -1 && binding.spinnerPolinizador.adapter != null && position < binding.spinnerPolinizador.adapter.count) {
+                if (binding.spinnerPolinizador.selectedItemPosition != position) {
+                    Log.d("InformacionGeneralFragment", "Estableciendo selección de Polinizador inicial en posición: $position")
+                    isUpdatingFromSharedViewModel = true
+                    binding.spinnerPolinizador.setSelection(position, false) // false para no animar
+                    isUpdatingFromSharedViewModel = false
+                } else {
+                    Log.d("InformacionGeneralFragment", "Polinizador ya está en la posición inicial correcta ($position)")
+                }
+            } else {
+                 Log.w("InformacionGeneralFragment", "No se pudo establecer la selección inicial para Operario ID $id. Posición: $position, Adapter Count: ${binding.spinnerPolinizador.adapter?.count}")
             }
-        }
+        } ?: Log.d("InformacionGeneralFragment", "No hay Operario ID inicial para aplicar.")
 
-        sharedViewModel.selectedLoteId.value?.let { id ->
+        initialLoteId?.let { id ->
+             Log.d("InformacionGeneralFragment", "Intentando aplicar Lote ID inicial: $id")
             val position = lotes.indexOfFirst { it.second.id == id }
-            if (position != -1 && position < binding.spinnerLote.adapter.count) {
-                isUpdatingFromSharedViewModel = true
-                binding.spinnerLote.setSelection(position)
-                isUpdatingFromSharedViewModel = false
+            Log.d("InformacionGeneralFragment", "Posición encontrada para Lote ID inicial $id: $position")
+            if (position != -1 && binding.spinnerLote.adapter != null && position < binding.spinnerLote.adapter.count) {
+                if (binding.spinnerLote.selectedItemPosition != position) {
+                     Log.d("InformacionGeneralFragment", "Estableciendo selección de Lote inicial en posición: $position")
+                    isUpdatingFromSharedViewModel = true
+                    binding.spinnerLote.setSelection(position, false) // false para no animar
+                    isUpdatingFromSharedViewModel = false
+                } else {
+                     Log.d("InformacionGeneralFragment", "Lote ya está en la posición inicial correcta ($position)")
+                }
+            } else {
+                Log.w("InformacionGeneralFragment", "No se pudo establecer la selección inicial para Lote ID $id. Posición: $position, Adapter Count: ${binding.spinnerLote.adapter?.count}")
             }
-        }
+        } ?: Log.d("InformacionGeneralFragment", "No hay Lote ID inicial para aplicar.")
 
-        sharedViewModel.selectedSeccion.value?.let {
-            isUpdatingFromSharedViewModel = true
-            binding.etSeccion.setText(it.toString())
-            isUpdatingFromSharedViewModel = false
-        }
+        initialSeccion?.let {
+            Log.d("InformacionGeneralFragment", "Intentando aplicar Sección inicial: $it")
+            if (binding.etSeccion.text.toString() != it.toString()) {
+                isUpdatingFromSharedViewModel = true
+                binding.etSeccion.setText(it.toString())
+                isUpdatingFromSharedViewModel = false
+                 Log.d("InformacionGeneralFragment", "Sección inicial establecida a: $it")
+            } else {
+                 Log.d("InformacionGeneralFragment", "Sección inicial ya está establecida a: $it")
+            }
+        } ?: Log.d("InformacionGeneralFragment", "No hay Sección inicial para aplicar.")
     }
 
     override fun onResume() {
         super.onResume()
-        applySavedSelections()
+        // Ya no es necesario aplicar selecciones aquí
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         Log.d("InformacionGeneralFragment", "onDestroyView")
-        checkPalmRunnable?.let { handler.removeCallbacks(it) } // Cancelar el Runnable
+        checkPalmRunnable?.let { handler.removeCallbacks(it) }
         _binding = null
     }
 }

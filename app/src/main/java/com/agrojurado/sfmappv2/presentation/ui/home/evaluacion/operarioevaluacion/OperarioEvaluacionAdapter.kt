@@ -7,11 +7,14 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.EvaluacionTableDialog
+import com.agrojurado.sfmappv2.utils.ExcelUtils
+import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -19,10 +22,11 @@ import kotlinx.coroutines.launch
 class OperarioEvaluacionAdapter(
     private val semana: Int,
     private val onItemClick: (Int, String, Int?) -> Unit,
-    private val countUniquePalms: (List<EvaluacionPolinizacion>, Int?) -> Int, // Modificado para incluir evaluacionGeneralId
+    private val countUniquePalms: (List<EvaluacionPolinizacion>, Int?) -> Int,
     private val getEvaluadorMap: () -> Map<Int, String>,
     private val getLoteMap: () -> Map<Int, String>,
-    private val getPhotoUrl: suspend (Int, Int, Int) -> String?
+    private val getPhotoUrl: suspend (Int, Int, Int) -> String?,
+    private val fragmentReference: Fragment
 ) : RecyclerView.Adapter<OperarioEvaluacionAdapter.ViewHolder>() {
 
     private var evaluacionesPorPolinizadorYEvaluacion: Map<Triple<Int, String, Int>, List<EvaluacionPolinizacion>> = emptyMap()
@@ -52,7 +56,7 @@ class OperarioEvaluacionAdapter(
         val evaluaciones = evaluacionesPorPolinizadorYEvaluacion[key] ?: emptyList()
         val evaluacionGeneralId = key.third
 
-        val totalPalmas = countUniquePalms(evaluaciones, evaluacionGeneralId) // Pasamos evaluacionGeneralId
+        val totalPalmas = countUniquePalms(evaluaciones, evaluacionGeneralId)
         val totalEventos = evaluaciones
             .filter { it.evaluacionGeneralId == evaluacionGeneralId }
             .sumOf { it.inflorescencia ?: 0 }
@@ -89,6 +93,33 @@ class OperarioEvaluacionAdapter(
             }
             true
         }
+
+        // Configurar el botón de exportar a Excel
+        holder.btnExportToExcel.setOnClickListener {
+            if (evaluaciones.isNotEmpty()) {
+                // Exportar a Excel usando ExcelUtils
+                ExcelUtils.run {
+                    fragmentReference.exportToExcel(
+                        evaluaciones = evaluaciones,
+                        evaluadorMap = getEvaluadorMap(),
+                        operarioMap = mapOf(key.first to key.second), // Mapeamos el ID del polinizador a su nombre
+                        loteMap = getLoteMap()
+                    )
+                }
+                
+                Toast.makeText(
+                    holder.itemView.context,
+                    "Exportando ${evaluaciones.size} evaluaciones a Excel...",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                Toast.makeText(
+                    holder.itemView.context,
+                    "No hay datos para exportar",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 
     override fun getItemCount(): Int = evaluacionesPorPolinizadorYEvaluacion.size
@@ -98,6 +129,7 @@ class OperarioEvaluacionAdapter(
         private val tvTotalPalmas: TextView = itemView.findViewById(R.id.tvPalmas)
         private val tvTotalEventos: TextView = itemView.findViewById(R.id.tvEventos)
         private val ivEvaluacionFoto: ImageView = itemView.findViewById(R.id.ivEvaluacionFoto)
+        val btnExportToExcel: MaterialButton = itemView.findViewById(R.id.btnExportToExcel)
 
         @SuppressLint("SetTextI18n")
         fun bind(nombreCompleto: String, totalPalmas: Int, totalEventos: Int) {

@@ -255,6 +255,7 @@ class EvaluacionGeneralFragment : Fragment() {
         viewModel.saveResult.observe(viewLifecycleOwner) { success ->
             if (success == true) {
                 Toast.makeText(requireContext(), "Evaluación General guardada con éxito", Toast.LENGTH_SHORT).show()
+                sharedViewModel.clearSelections()
                 viewModel.clearSaveResult()
                 findNavController().popBackStack(R.id.listaEvaluacionFragment, false)
             }
@@ -282,34 +283,32 @@ class EvaluacionGeneralFragment : Fragment() {
 
     private fun setupListeners() {
         fabAddEvaluacion.setOnClickListener {
-            guardarSeleccionesActuales()
-            val intent = Intent(requireContext(), EvaluacionActivity::class.java)
-            val evaluacionGeneralId = viewModel.temporaryEvaluacionId.value
-            if (evaluacionGeneralId != null) {
-                intent.putExtra("evaluacionGeneralId", evaluacionGeneralId)
+            // Ya no llamamos a guardarSeleccionesActuales aquí para este flujo
+            // guardarSeleccionesActuales()
+            
+            // Obtener los IDs seleccionados directamente
+            val selectedOperarioId = sharedViewModel.operarios.value?.getOrNull(spinnerPolinizador.selectedItemPosition)?.second?.id
+            val selectedLoteId = sharedViewModel.lotes.value?.getOrNull(spinnerLote.selectedItemPosition)?.second?.id
+            val selectedSeccion = etSeccion.text.toString().toIntOrNull()
+            
+            Log.d("EvaluacionGeneralFragment", "Iniciando EvaluacionActivity con Operario=$selectedOperarioId, Lote=$selectedLoteId, Seccion=$selectedSeccion")
+
+            if (checkCameraPermission()) {
+                val intent = Intent(requireContext(), EvaluacionActivity::class.java).apply {
+                    putExtra("evaluacionGeneralId", viewModel.temporaryEvaluacionId.value ?: -1)
+                    // Pasar los IDs como extras
+                    selectedOperarioId?.let { putExtra("operarioId", it) }
+                    selectedLoteId?.let { putExtra("loteId", it) }
+                    selectedSeccion?.let { putExtra("seccion", it) }
+                }
+                startActivity(intent)
             } else {
-                Toast.makeText(requireContext(), "Error: No active general evaluation", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+                requestCameraPermission()
             }
-            val operarioId = sharedViewModel.selectedOperarioId.value
-            val loteId = sharedViewModel.selectedLoteId.value
-            val seccion = sharedViewModel.selectedSeccion.value
-            if (operarioId != null) intent.putExtra("operarioId", operarioId)
-            if (loteId != null) intent.putExtra("loteId", loteId)
-            if (seccion != null) intent.putExtra("seccion", seccion)
-            startActivity(intent)
         }
 
         btnGuardarGeneral.setOnClickListener {
-            if (viewModel.hasEvaluacionesIndividuales()) {
-                if (firmaPath == null) {
-                    Toast.makeText(requireContext(), "Por favor, agregue una firma antes de guardar", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-                viewModel.guardarEvaluacionGeneral(fotoPath, firmaPath, requireContext())
-            } else {
-                Toast.makeText(requireContext(), "Agregue al menos una evaluación individual", Toast.LENGTH_SHORT).show()
-            }
+            guardarEvaluacion()
         }
 
         btnCancelar.setOnClickListener {
@@ -351,52 +350,24 @@ class EvaluacionGeneralFragment : Fragment() {
 
         btnAddFoto.setOnClickListener {
             if (checkCameraPermission()) {
-                if (isCameraAvailable()) {
-                    val cameraDialog = CameraDialogFragment.newInstance { photoPath ->
-                        photoPath?.let { path ->
-                            this.fotoPath = path
-                            ivFoto.setImageBitmap(BitmapFactory.decodeFile(path))
-                            Log.d("EvaluacionGeneralFragment", "Photo loaded from dialog: $path")
-                        } ?: run {
-                            Toast.makeText(requireContext(), "No se pudo capturar la foto", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    cameraDialog.show(childFragmentManager, CameraDialogFragment.TAG)
-                } else {
-                    Toast.makeText(requireContext(), "No hay cámara disponible", Toast.LENGTH_SHORT).show()
-                }
+                takePhoto()
             } else {
                 requestCameraPermission()
             }
         }
 
-        // Listener para abrir el BottomSheet al tocar el área de firma
         signatureContainer.setOnClickListener {
-            val signatureBottomSheet = SignatureBottomSheetFragment.newInstance { signaturePath ->
-                signaturePath?.let { path ->
-                    firmaPath = path
-                    ivSignature.setImageBitmap(BitmapFactory.decodeFile(path))
-                    ivSignature.visibility = View.VISIBLE
-                    tvTapToSign.visibility = View.GONE
-                    btnClearFirma.visibility = View.VISIBLE
-                } ?: run {
-                    Toast.makeText(requireContext(), "Error al guardar la firma", Toast.LENGTH_SHORT).show()
-                }
-            }
-            signatureBottomSheet.show(childFragmentManager, SignatureBottomSheetFragment.TAG)
+            openSignatureBottomSheet()
         }
 
         btnClearFirma.setOnClickListener {
-            firmaPath = null
-            ivSignature.setImageBitmap(null)
             ivSignature.visibility = View.GONE
             tvTapToSign.visibility = View.VISIBLE
-            btnClearFirma.visibility = View.GONE
+            firmaPath = null
         }
 
-        // Si decides mantener btnSaveFirma, puedes usarlo para guardar manualmente, pero no es necesario si ya se guarda desde el BottomSheet
         btnSaveFirma.setOnClickListener {
-            Toast.makeText(requireContext(), "Firma ya guardada", Toast.LENGTH_SHORT).show()
+            // No action needed, signature is saved by the bottomsheet
         }
     }
 
@@ -450,17 +421,30 @@ class EvaluacionGeneralFragment : Fragment() {
 
     private fun guardarSeleccionesActuales() {
         try {
+            // Actualizar el ViewModel de la evaluación general
             val operarioPosition = spinnerPolinizador.selectedItemPosition
             if (operarioPosition != Spinner.INVALID_POSITION) {
-                sharedViewModel.operarios.value?.get(operarioPosition)?.second?.id?.let { sharedViewModel.setSelectedOperarioId(it) }
+                sharedViewModel.operarios.value?.get(operarioPosition)?.second?.id?.let {
+                    viewModel.setSelectedPolinizadorId(it)
+                    // Actualizar también el SharedViewModel explícitamente
+                    sharedViewModel.setSelectedOperarioId(it)
+                }
             }
             val lotePosition = spinnerLote.selectedItemPosition
             if (lotePosition != Spinner.INVALID_POSITION) {
-                sharedViewModel.lotes.value?.get(lotePosition)?.second?.id?.let { sharedViewModel.setSelectedLoteId(it) }
+                sharedViewModel.lotes.value?.get(lotePosition)?.second?.id?.let {
+                    viewModel.setSelectedLoteId(it)
+                    // Actualizar también el SharedViewModel explícitamente
+                    sharedViewModel.setSelectedLoteId(it)
+                }
             }
             val seccion = etSeccion.text.toString().toIntOrNull()
             sharedViewModel.setSelectedSeccion(seccion)
+            
+            Log.d("EvaluacionGeneralFragment", "Selecciones guardadas en SharedViewModel: Operario=${sharedViewModel.selectedOperarioId.value}, Lote=${sharedViewModel.selectedLoteId.value}, Seccion=${sharedViewModel.selectedSeccion.value}")
+            
         } catch (e: Exception) {
+            Log.e("EvaluacionGeneralFragment", "Error al guardar selecciones", e)
             Toast.makeText(requireContext(), "Error al guardar selecciones: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -481,5 +465,55 @@ class EvaluacionGeneralFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         viewModel.loadEvaluacionesIndividuales()
+    }
+
+    // Método helper para encontrar vistas
+    private fun <T : View> findViewById(id: Int): T? {
+        return view?.findViewById(id)
+    }
+
+    // Implementación de métodos faltantes
+    private fun guardarEvaluacion() {
+        if (viewModel.hasEvaluacionesIndividuales()) {
+            if (firmaPath == null) {
+                Toast.makeText(requireContext(), "Por favor, agregue una firma antes de guardar", Toast.LENGTH_SHORT).show()
+                return
+            }
+            viewModel.guardarEvaluacionGeneral(fotoPath, firmaPath, requireContext())
+        } else {
+            Toast.makeText(requireContext(), "Agregue al menos una evaluación individual", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun takePhoto() {
+        if (isCameraAvailable()) {
+            val cameraDialog = CameraDialogFragment.newInstance { photoPath ->
+                photoPath?.let { path ->
+                    this.fotoPath = path
+                    ivFoto.setImageBitmap(BitmapFactory.decodeFile(path))
+                    Log.d("EvaluacionGeneralFragment", "Photo loaded from dialog: $path")
+                } ?: run {
+                    Toast.makeText(requireContext(), "No se pudo capturar la foto", Toast.LENGTH_SHORT).show()
+                }
+            }
+            cameraDialog.show(childFragmentManager, CameraDialogFragment.TAG)
+        } else {
+            Toast.makeText(requireContext(), "No hay cámara disponible", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun openSignatureBottomSheet() {
+        val signatureBottomSheet = SignatureBottomSheetFragment.newInstance { signaturePath ->
+            signaturePath?.let { path ->
+                firmaPath = path
+                ivSignature.setImageBitmap(BitmapFactory.decodeFile(path))
+                ivSignature.visibility = View.VISIBLE
+                tvTapToSign.visibility = View.GONE
+                btnClearFirma.visibility = View.VISIBLE
+            } ?: run {
+                Toast.makeText(requireContext(), "Error al guardar la firma", Toast.LENGTH_SHORT).show()
+            }
+        }
+        signatureBottomSheet.show(childFragmentManager, SignatureBottomSheetFragment.TAG)
     }
 }

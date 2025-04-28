@@ -22,6 +22,7 @@ import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
 import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
 import com.agrojurado.sfmappv2.data.sync.SyncStatus
 import com.agrojurado.sfmappv2.utils.EvaluacionPdfGenerator
+import com.agrojurado.sfmappv2.utils.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -145,16 +146,17 @@ class EvaluacionViewModel @Inject constructor(
     fun getEvaluacionGeneralId(): Int? = evaluacionGeneralId
 
     private fun observeNetworkState() {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                _isOnline.value = true
+        try {
+            // Usamos el NetworkMonitor singleton en lugar de registrar nuestro propio callback
+            val networkMonitor = NetworkMonitor.getInstance(context)
+            networkMonitor.observeForever { isConnected ->
+                _isOnline.value = isConnected
             }
-            override fun onLost(network: Network) {
-                _isOnline.value = false
-            }
+        } catch (e: Exception) {
+            Log.e("EvaluacionViewModel", "Error al observar el estado de red: ${e.message}", e)
+            // En caso de error, asumimos que hay conexión para evitar bloquear funcionalidades
+            _isOnline.value = true
         }
-        connectivityManager.registerDefaultNetworkCallback(networkCallback)
     }
 
     private fun loadLoggedInUser() {

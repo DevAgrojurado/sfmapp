@@ -9,6 +9,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.agrojurado.sfmappv2.data.repository.EvaluacionGeneralRepositoryImpl
+import com.agrojurado.sfmappv2.domain.repository.EvaluacionPolinizacionRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -25,6 +26,7 @@ class SyncWorker(
     @InstallIn(SingletonComponent::class)
     interface SyncWorkerEntryPoint {
         fun evaluacionGeneralRepository(): EvaluacionGeneralRepositoryImpl
+        fun evaluacionPolinizacionRepository(): EvaluacionPolinizacionRepository
     }
 
     override suspend fun doWork(): Result {
@@ -35,11 +37,23 @@ class SyncWorker(
             SyncWorkerEntryPoint::class.java
         )
         val repository = entryPoint.evaluacionGeneralRepository()
+        val polinizacionRepository = entryPoint.evaluacionPolinizacionRepository()
 
         return try {
             Log.d("SyncWorker", "Iniciando sincronización de evaluaciones generales...")
             repository.syncEvaluacionesGenerales()
-            Log.d("SyncWorker", "Sincronización completada con éxito")
+            Log.d("SyncWorker", "Sincronización de evaluaciones generales completada con éxito")
+            
+            // Sincronizar explícitamente las evaluaciones de polinización
+            try {
+                Log.d("SyncWorker", "Iniciando sincronización de evaluaciones de polinización...")
+                polinizacionRepository.fetchEvaluacionesFromServer()
+                Log.d("SyncWorker", "Sincronización de evaluaciones de polinización completada con éxito")
+            } catch (e: Exception) {
+                Log.e("SyncWorker", "Error durante la sincronización de evaluaciones de polinización: ${e.message}", e)
+                // No fallar todo el trabajo solo por error en polinización
+            }
+            
             Result.success()
         } catch (e: Exception) {
             Log.e("SyncWorker", "Error durante la sincronización: ${e.message}", e)

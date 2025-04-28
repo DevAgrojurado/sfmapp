@@ -31,4 +31,7 @@
 
     <color name="toggle_text_colors">#FFFFFF</color>
 
+    <color name="button_selected_green">#4CAF50</color>
+    <color name="button_selected_red">#F44336</color>
+
 </resources>

@@ -105,6 +105,9 @@ dependencies {
     implementation (libs.androidx.camera.extensions)
 
     implementation (libs.coil.kt.coil)
+    implementation(libs.coil.svg)
+
+    implementation (libs.material.v190)
 
     // Grafico para reporte
     //implementation(libs.mpandroidchart)

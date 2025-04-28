@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -14,6 +17,7 @@ import com.agrojurado.sfmappv2.presentation.common.UiState
 import com.agrojurado.sfmappv2.presentation.ui.crearcuenta.CreateUserActivity
 import com.agrojurado.sfmappv2.presentation.ui.main.MainActivity
 import com.agrojurado.sfmappv2.utils.LocationPermissionHandler
+import com.agrojurado.sfmappv2.utils.NotificationPermissionHandler
 import dagger.hilt.android.AndroidEntryPoint
 import pe.pcs.libpcs.UtilsCommon
 import pe.pcs.libpcs.UtilsMessage
@@ -25,6 +29,29 @@ class LoginActivity : AppCompatActivity() {
     private val viewModel: LoginViewModel by viewModels()
     private var locationString: String? = null
     private lateinit var locationHandler: LocationPermissionHandler
+    private val handler = Handler(Looper.getMainLooper())
+
+    // Launcher para solicitar permiso de notificaciones
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Permiso concedido, podemos mostrar notificaciones
+        } else {
+            // Permiso denegado, informar al usuario sobre la importancia de las notificaciones
+            UtilsMessage.showAlertOk(
+                "ADVERTENCIA",
+                "Las notificaciones son necesarias para ver el progreso de sincronización",
+                this
+            )
+        }
+        
+        // Después de procesar el permiso de notificaciones, solicitar ubicación
+        handler.postDelayed({
+            // Request location después de notificaciones
+            locationHandler.requestLocation()
+        }, 500)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,8 +86,19 @@ class LoginActivity : AppCompatActivity() {
         initListener()
         initObserver()
 
-        // Request location
-        locationHandler.requestLocation()
+        // Primero solicitar permiso de notificaciones
+        requestNotificationPermission()
+    }
+    
+    private fun requestNotificationPermission() {
+        if (!NotificationPermissionHandler.hasNotificationPermission(this)) {
+            NotificationPermissionHandler(this).requestNotificationPermissionIfNeeded(this, notificationPermissionLauncher)
+        } else {
+            // Si ya tenemos el permiso de notificaciones, solicitar ubicación
+            handler.postDelayed({
+                locationHandler.requestLocation()
+            }, 500)
+        }
     }
 
     private fun initListener() {

@@ -3,10 +3,12 @@ package com.agrojurado.sfmappv2.presentation.ui.home.fragmenthome
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.agrojurado.sfmappv2.R
+import com.agrojurado.sfmappv2.utils.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,18 +33,17 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun observeNetworkState() {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                _isOnline.value = true
+        try {
+            // Usamos el NetworkMonitor singleton en lugar de registrar nuestro propio callback
+            val networkMonitor = NetworkMonitor.getInstance(context)
+            networkMonitor.observeForever { isConnected ->
+                _isOnline.value = isConnected
             }
-
-            override fun onLost(network: Network) {
-                _isOnline.value = false
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al observar el estado de red: ${e.message}", e)
+            // En caso de error, asumimos que hay conexión
+            _isOnline.value = true
         }
-
-        connectivityManager.registerDefaultNetworkCallback(networkCallback)
     }
 
     private fun loadItems() {
@@ -52,5 +53,9 @@ class HomeViewModel @Inject constructor(
             HomeItem("Talento Humano", "Agregar formulario", R.drawable.agro_jurado)
         )
         _items.value = sampleItems
+    }
+
+    companion object {
+        private const val TAG = "HomeViewModel"
     }
 }

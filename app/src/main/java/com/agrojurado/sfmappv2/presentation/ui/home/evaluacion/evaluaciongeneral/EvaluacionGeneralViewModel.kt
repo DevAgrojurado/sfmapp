@@ -17,13 +17,18 @@ import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
 import com.agrojurado.sfmappv2.utils.NetworkMonitor
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Calendar
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.agrojurado.sfmappv2.utils.SyncNotificationManager
 
 @HiltViewModel
 class EvaluacionGeneralViewModel @Inject constructor(
@@ -32,7 +37,8 @@ class EvaluacionGeneralViewModel @Inject constructor(
     private val usuarioRepository: UsuarioRepository,
     private val operarioRepository: OperarioRepository,
     private val loteRepository: LoteRepository,
-    private val networkMonitor: NetworkMonitor
+    private val networkMonitor: NetworkMonitor,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _evaluacionesIndividuales = MutableLiveData<List<EvaluacionPolinizacion>>()
@@ -82,17 +88,30 @@ class EvaluacionGeneralViewModel @Inject constructor(
     private var lastSyncTime: Long = 0
     private val SYNC_THROTTLE_MS = 10_000L
 
+    private val notificationManager = SyncNotificationManager.getInstance(context)
+
     init {
         loadLoggedInUser()
         loadOperarioMap()
         loadLoteMap()
         loadEvaluadorMap()
         networkMonitor.observeForever { isConnected ->
-            if (isConnected) {
+            if (isConnected && _temporaryEvaluacionId.value == null) {
                 viewModelScope.launch {
-                    val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
-                    if (unsyncedCount > 0) syncEvaluaciones()
+                    try {
+                        val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
+                        if (unsyncedCount > 0) {
+                            Log.d(TAG, "Conexión detectada con $unsyncedCount evaluaciones pendientes y sin evaluación temporal activa. Iniciando sincronización automática.")
+                            syncEvaluaciones()
+                        } else {
+                            Log.d(TAG, "Conexión detectada, pero no hay evaluaciones pendientes o hay una evaluación temporal activa.")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error al verificar evaluaciones pendientes para sincronización automática: ${e.message}", e)
+                    }
                 }
+            } else if (isConnected) {
+                Log.d(TAG, "Conexión detectada, pero hay una evaluación temporal activa. Sincronización automática omitida.")
             }
         }
     }
@@ -137,9 +156,6 @@ class EvaluacionGeneralViewModel @Inject constructor(
                         val filteredEvaluaciones = filterEvaluacionesByRole(evaluaciones)
                         val groupedBySemana = filteredEvaluaciones.filter { !it.isTemporary }
                             .groupBy { it.semana }
-                        if (groupedBySemana.isEmpty()) {
-                            _errorMessage.value = "No hay evaluaciones disponibles para mostrar"
-                        }
                         cachedEvaluacionesGenerales = groupedBySemana
                         _evaluacionesGeneralesPorSemana.value = groupedBySemana
                         Log.d("EvaluacionGeneralVM", "Datos cargados: $groupedBySemana")
@@ -154,16 +170,53 @@ class EvaluacionGeneralViewModel @Inject constructor(
     }
 
     fun getPhotoUrlForPolinizador(semana: Int, polinizadorId: Int, evaluacionGeneralId: Int): String? {
-        val evaluacionesGenerales = _evaluacionesGeneralesPorSemana.value?.get(semana) ?: emptyList()
+        Log.d(TAG, "Buscando foto para semana=$semana, polinizadorId=$polinizadorId, evaluacionGeneralId=$evaluacionGeneralId")
+        
+        // Primero intentamos obtener las evaluaciones de caché
+        val evaluacionesGenerales = _evaluacionesGeneralesPorSemana.value?.get(semana)
+        
+        if (evaluacionesGenerales == null) {
+            Log.d(TAG, "No hay evaluaciones en caché para la semana $semana")
+            return null
+        }
+        
+        // Buscamos la evaluación específica
         val evaluacion = evaluacionesGenerales.firstOrNull {
             it.idpolinizadorev == polinizadorId && it.id == evaluacionGeneralId
         }
-        return evaluacion?.fotoPath?.let { path ->
-            if (File(path).exists()) {
+        
+        if (evaluacion == null) {
+            Log.d(TAG, "No se encontró evaluación para polinizador=$polinizadorId, evaluacionId=$evaluacionGeneralId")
+            return null
+        }
+        
+        Log.d(TAG, "Evaluación encontrada, fotoPath=${evaluacion.fotoPath}")
+        
+        // Si el path es nulo, no hay foto
+        if (evaluacion.fotoPath == null) {
+            return null
+        }
+        
+        // Verificamos el path
+        val path = evaluacion.fotoPath
+        
+        return when {
+            File(path).exists() -> {
+                Log.d(TAG, "La foto existe localmente en: $path")
                 path // Usa el archivo local si existe
-            } else if (path.startsWith("http")) {
+            }
+            path.startsWith("http") -> {
+                Log.d(TAG, "Usando URL del servidor: $path")
                 path // Usa la URL del servidor si es válida
-            } else {
+            }
+            // Intentamos buscar la foto en otras ubicaciones comunes
+            File(context.filesDir, File(path).name).exists() -> {
+                val alternativePath = File(context.filesDir, File(path).name).absolutePath
+                Log.d(TAG, "Foto encontrada en ubicación alternativa: $alternativePath")
+                alternativePath
+            }
+            else -> {
+                Log.e(TAG, "No se pudo encontrar la foto en: $path")
                 null // No hay un path válido
             }
         }
@@ -348,7 +401,7 @@ class EvaluacionGeneralViewModel @Inject constructor(
                 evaluacionGeneralRepository.finalizeTemporaryEvaluacion(tempEval.id!!)
 
                 // Trigger synchronization after saving
-                //syncEvaluaciones()
+                syncEvaluaciones()
 
                 resetState()
                 clearCache()
@@ -372,24 +425,75 @@ class EvaluacionGeneralViewModel @Inject constructor(
 
     private fun syncEvaluaciones() {
         viewModelScope.launch {
+            // --- Comprobación de Red Primero --- 
+            if (!Utils.isNetworkAvailable(context)) {
+                Log.d(TAG, "syncEvaluaciones: No hay conexión validada. Actualizando estado pendiente.")
+                try {
+                    val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
+                    _syncStatus.value = if (unsyncedCount > 0) SyncStatus.Pending(unsyncedCount) else SyncStatus.Completed
+                    if (unsyncedCount > 0) {
+                         // Opcional: Mostrar un Toast indicando guardado local y pendiente
+                         // Toast.makeText(context, "Guardado localmente, sincronización pendiente", Toast.LENGTH_SHORT).show()
+                    } else {
+                        // Toast.makeText(context, "Guardado localmente", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error al obtener contador de pendientes offline: ${e.message}", e)
+                     _syncStatus.value = SyncStatus.Error("Error al verificar pendientes offline")
+                }
+                return@launch // No continuar con el intento de sincronización
+            }
+            // --- Fin Comprobación de Red ---
+
+            // Si hay conexión, proceder como antes...
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastSyncTime < SYNC_THROTTLE_MS) {
                 val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
                 _syncStatus.value = SyncStatus.Pending(unsyncedCount)
+                Log.d(TAG, "syncEvaluaciones: Throttled, actualizando estado pendiente.")
                 return@launch
             }
 
             try {
                 _isLoading.value = true
-                _syncStatus.value = SyncStatus.Syncing
+                _syncStatus.value = SyncStatus.Syncing // Ahora sí mostramos "Sincronizando..."
+                
+                // Iniciar notificación (solo si estamos online)
+                val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
+                if (unsyncedCount > 0) {
+                    notificationManager.startSyncNotification(
+                        "Sincronizando evaluaciones", 
+                        "Preparando sincronización de $unsyncedCount evaluaciones..."
+                    )
+                } else {
+                    // Si no hay pendientes pero hay conexión, podemos verificar datos del servidor
+                    notificationManager.startSyncNotification(
+                        "Sincronización", 
+                        "Verificando datos con el servidor..."
+                    )
+                }
+                
+                // Mostrar progreso indeterminado mientras se sincroniza (solo si estamos online)
+                notificationManager.updateSyncProgress(0, 1, "Sincronizando evaluaciones...")
+                
+                // Llamar al repositorio (que también verifica la red internamente por si acaso)
                 evaluacionGeneralRepository.syncEvaluacionesGenerales()
                 lastSyncTime = System.currentTimeMillis()
                 clearCache()
-                val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
-                _syncStatus.value = if (unsyncedCount > 0) SyncStatus.Pending(unsyncedCount) else SyncStatus.Completed
+                
+                // Actualizar estado y notificación final
+                val pendingCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
+                _syncStatus.value = if (pendingCount > 0) SyncStatus.Pending(pendingCount) else SyncStatus.Completed
+                
+                if (pendingCount > 0) {
+                    notificationManager.updateSyncMessage("Quedan $pendingCount evaluaciones pendientes")
+                } else {
+                    notificationManager.completeSyncNotification("Sincronización completada")
+                }
             } catch (e: Exception) {
                 _syncStatus.value = SyncStatus.Error(e.message ?: "Sync failed")
                 _errorMessage.value = "Error durante la sincronización: ${e.message}"
+                notificationManager.errorSyncNotification("Error: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -472,5 +576,96 @@ class EvaluacionGeneralViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         clearCache()
+    }
+
+    // Método para forzar la sincronización desde cualquier parte de la app
+    fun forceSync() {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                _syncStatus.value = SyncStatus.Syncing
+                
+                // Obtener cuántas evaluaciones hay pendientes
+                val pendingCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
+                
+                // Iniciar notificación con barra de progreso
+                if (pendingCount > 0) {
+                    _errorMessage.value = "Sincronizando $pendingCount evaluaciones pendientes..."
+                    notificationManager.startSyncNotification(
+                        "Sincronización manual",
+                        "Sincronizando $pendingCount evaluaciones pendientes..."
+                    )
+                } else {
+                    _errorMessage.value = "No hay evaluaciones pendientes, verificando datos del servidor..."
+                    notificationManager.startSyncNotification(
+                        "Sincronización manual",
+                        "Verificando datos con el servidor..."
+                    )
+                }
+
+                // Mostrar progreso
+                notificationManager.updateSyncProgress(0, 100, "Iniciando sincronización...")
+
+                // Realizar la sincronización
+                val result = evaluacionGeneralRepository.syncEvaluacionesGenerales()
+                lastSyncTime = System.currentTimeMillis()
+
+                // Actualizar progreso
+                notificationManager.updateSyncProgress(50, 100, "Procesando resultados...")
+
+                // Sincronizar explícitamente las evaluaciones de polinización
+                try {
+                    notificationManager.updateSyncProgress(75, 100, "Sincronizando evaluaciones de polinización...")
+                    evaluacionPolinizacionRepository.fetchEvaluacionesFromServer()
+                    Log.d(TAG, "✅ Sincronización explícita de evaluaciones de polinización completada")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Error en sincronización explícita de polinización: ${e.message}", e)
+                    // Continuamos a pesar del error para no bloquear el resto del proceso
+                }
+
+                // Limpiar caché para asegurar datos actualizados
+                clearCache()
+
+                // Finalizar progreso
+                notificationManager.updateSyncProgress(100, 100, "Finalizando sincronización...")
+
+                // Verificar si quedaron evaluaciones pendientes
+                val remainingCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
+                _syncStatus.value = if (remainingCount > 0) {
+                    SyncStatus.Pending(remainingCount)
+                } else {
+                    SyncStatus.Completed
+                }
+
+                // Mostrar mensaje apropiado
+                val message = if (remainingCount > 0) {
+                    "Quedan $remainingCount evaluaciones pendientes de sincronización"
+                } else {
+                    "Sincronización de evaluaciones completada"
+                }
+
+                _errorMessage.value = message
+
+                // Actualizar notificación final
+                if (remainingCount > 0) {
+                    notificationManager.updateSyncMessage(message)
+                } else {
+                    notificationManager.completeSyncNotification(message)
+                }
+
+                Log.d(TAG, "Sincronización forzada completada: $message")
+            } catch (e: Exception) {
+                _syncStatus.value = SyncStatus.Error(e.message ?: "Error de sincronización")
+                _errorMessage.value = "Error durante la sincronización: ${e.message}"
+                notificationManager.errorSyncNotification("Error: ${e.message}")
+                Log.e(TAG, "Error al forzar sincronización: ${e.message}", e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    companion object {
+        private const val TAG = "EvaluacionGeneralVM"
     }
 }

@@ -3,6 +3,7 @@ package com.agrojurado.sfmappv2.presentation.ui.main
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -12,6 +13,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
@@ -30,11 +32,13 @@ import com.agrojurado.sfmappv2.databinding.ActivityMainBinding
 import com.agrojurado.sfmappv2.domain.model.UserRoles
 import com.agrojurado.sfmappv2.presentation.ui.login.LoginActivity
 import com.agrojurado.sfmappv2.presentation.ui.login.LoginViewModel
+import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciongeneral.EvaluacionGeneralViewModel
 import com.google.android.material.navigation.NavigationView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -115,16 +119,7 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_sync -> {
-                val progressBar: ProgressBar = binding.appBarMain.progressBar
-                progressBar.visibility = View.VISIBLE
-                CoroutineScope(Dispatchers.Main).launch {
-                    dataSyncManager.syncAllData(progressBar) {
-                        runOnUiThread {
-                            progressBar.visibility = View.GONE
-                            Toast.makeText(this@MainActivity, "Sincronización completada", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
+                startSyncProcess()
                 true
             }
             else -> super.onOptionsItemSelected(item)
@@ -171,6 +166,54 @@ class MainActivity : AppCompatActivity() {
                 ExistingPeriodicWorkPolicy.KEEP,
                 syncWorkRequest
             )
+    }
+
+    // Método mejorado para manejar la sincronización de datos
+    private fun startSyncProcess() {
+        val progressBar: ProgressBar = binding.appBarMain.progressBar
+        progressBar.visibility = View.VISIBLE
+        
+        Toast.makeText(this, "Iniciando sincronización completa...", Toast.LENGTH_SHORT).show()
+        
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                // Intentar obtener el ViewModel
+                val syncViewModel = ViewModelProvider(this@MainActivity)[EvaluacionGeneralViewModel::class.java]
+                
+                try {
+                    // Primero intentar sincronizar las evaluaciones en un hilo de fondo
+                    withContext(Dispatchers.IO) {
+                        syncViewModel.forceSync()
+                    }
+                    
+                    // Luego sincronizar todos los otros datos
+                    dataSyncManager.syncAllData(progressBar) {
+                        // Este callback se ejecutará en el hilo principal gracias a los cambios en DataSyncManager
+                        Toast.makeText(this@MainActivity, "Sincronización completa finalizada", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    progressBar.visibility = View.GONE
+                    val errorMsg = "Error en sincronización: ${e.message}"
+                    Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
+                    Log.e("MainActivity", errorMsg, e)
+                }
+            } catch (e: Exception) {
+                // Si falla la obtención del ViewModel, usar solo la sincronización básica
+                Log.e("MainActivity", "Error creando ViewModel, usando solo sincronización básica", e)
+                
+                try {
+                    dataSyncManager.syncAllData(progressBar) {
+                        // Este callback se ejecutará en el hilo principal gracias a los cambios en DataSyncManager
+                        Toast.makeText(this@MainActivity, "Sincronización básica completada", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    progressBar.visibility = View.GONE
+                    val errorMsg = "Error en sincronización básica: ${e.message}"
+                    Toast.makeText(this@MainActivity, errorMsg, Toast.LENGTH_LONG).show()
+                    Log.e("MainActivity", errorMsg, e)
+                }
+            }
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {

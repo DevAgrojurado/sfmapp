@@ -24,6 +24,9 @@ class EvaluacionActivity : BaseActivity() {
     private lateinit var btnForward: Button
     private val viewModel: EvaluacionViewModel by viewModels()
     private var isSaving = false
+    private var initialOperarioId: Int? = null
+    private var initialLoteId: Int? = null
+    private var initialSeccion: Int? = null
 
     override fun getLayoutResourceId(): Int = R.layout.activity_evaluacion
     override fun getActivityTitle(): String = "Evaluación Polinización"
@@ -37,16 +40,12 @@ class EvaluacionActivity : BaseActivity() {
             }
         }
 
-        initViews()
-        setupViewPager()
-        setupWindowInsets()
-        setupObservers()
-        setupNavigation()
-
         val evaluacionGeneralId = intent.getIntExtra("evaluacionGeneralId", -1)
-        val operarioId = intent.getIntExtra("operarioId", -1).let { if (it == -1) null else it }
-        val loteId = intent.getIntExtra("loteId", -1).let { if (it == -1) null else it }
-        val seccion = intent.getIntExtra("seccion", -1).let { if (it == -1) null else it }
+        initialOperarioId = intent.getIntExtra("operarioId", -1).let { if (it == -1) null else it }
+        initialLoteId = intent.getIntExtra("loteId", -1).let { if (it == -1) null else it }
+        initialSeccion = intent.getIntExtra("seccion", -1).let { if (it == -1) null else it }
+        
+        Log.d("EvaluacionActivity", "IDs iniciales recibidos: Operario=$initialOperarioId, Lote=$initialLoteId, Seccion=$initialSeccion")
 
         if (evaluacionGeneralId == -1) {
             Log.e("EvaluacionActivity", "⚠ Evaluacion General ID is invalid")
@@ -58,9 +57,11 @@ class EvaluacionActivity : BaseActivity() {
         viewModel.setEvaluacionGeneralId(evaluacionGeneralId)
         Log.d("EvaluacionActivity", "✅ Evaluacion General ID received: $evaluacionGeneralId")
 
-        val sharedViewModel: SharedSelectionViewModel by viewModels()
-        sharedViewModel.ensureDataLoaded()
-        sharedViewModel.applySelections(operarioId, loteId, seccion)
+        initViews()
+        setupViewPager()
+        setupWindowInsets()
+        setupObservers()
+        setupNavigation()
 
         savedInstanceState?.let {
             val currentPage = it.getInt("currentPage", 0)
@@ -77,11 +78,7 @@ class EvaluacionActivity : BaseActivity() {
 
     private fun setupViewPager() {
         val evaluacionGeneralId = intent.getIntExtra("evaluacionGeneralId", -1)
-        val operarioId = intent.getIntExtra("operarioId", -1).let { if (it == -1) null else it }
-        val loteId = intent.getIntExtra("loteId", -1).let { if (it == -1) null else it }
-        val seccion = intent.getIntExtra("seccion", -1).let { if (it == -1) null else it }
-
-        val adapter = EvaluacionPagerAdapter(this, evaluacionGeneralId, operarioId, loteId, seccion)
+        val adapter = EvaluacionPagerAdapter(this, evaluacionGeneralId, initialOperarioId, initialLoteId, initialSeccion)
         viewPager.adapter = adapter
         viewPager.isUserInputEnabled = true
         viewPager.isSaveEnabled = false

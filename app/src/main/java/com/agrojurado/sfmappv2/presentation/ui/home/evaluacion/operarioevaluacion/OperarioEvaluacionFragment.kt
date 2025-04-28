@@ -16,6 +16,7 @@ import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.databinding.FragmentListaEvaluacionBinding
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciongeneral.EvaluacionGeneralViewModel
+import com.agrojurado.sfmappv2.utils.StoragePermissionHandler
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -26,6 +27,7 @@ class OperarioEvaluacionFragment : Fragment() {
     private val viewModel: EvaluacionGeneralViewModel by viewModels()
     private val args: OperarioEvaluacionFragmentArgs by navArgs()
     private lateinit var adapter: OperarioEvaluacionAdapter
+    private lateinit var storagePermissionHandler: StoragePermissionHandler
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,6 +41,7 @@ class OperarioEvaluacionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         Log.d("OperarioEvaluacionFragment", "Semana recibida: ${args.semana}")
+        storagePermissionHandler = StoragePermissionHandler(this)
         setupRecyclerView()
         setupObservers()
         setupListeners()
@@ -75,7 +78,8 @@ class OperarioEvaluacionFragment : Fragment() {
             getLoteMap = { viewModel.loteMap.value ?: emptyMap() },
             getPhotoUrl = { semana, polinizadorId, evaluacionGeneralId ->
                 viewModel.getPhotoUrlForPolinizador(semana, polinizadorId, evaluacionGeneralId)
-            }
+            },
+            fragmentReference = this // Pasamos la referencia al fragmento
         )
         binding.rvEvaluacion.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -145,6 +149,21 @@ class OperarioEvaluacionFragment : Fragment() {
         super.onResume()
         if (viewModel.evaluacionesGeneralesPorSemana.value?.isEmpty() != false) {
             loadData()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        if (!storagePermissionHandler.handlePermissionResult(
+                requestCode,
+                permissions,
+                grantResults
+            ) { /* Callback cuando se otorga el permiso - actualmente no hacemos nada */ }
+        ) {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         }
     }
 

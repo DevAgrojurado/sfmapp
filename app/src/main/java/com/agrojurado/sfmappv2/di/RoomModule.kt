@@ -1,7 +1,10 @@
 package com.agrojurado.sfmappv2.di
 
 import android.content.Context
+import androidx.hilt.work.HiltWorkerFactory
 import androidx.room.Room
+import androidx.work.Configuration
+import androidx.work.WorkManager
 import com.agrojurado.sfmappv2.data.local.dao.*
 import com.agrojurado.sfmappv2.data.local.database.AppDatabase
 import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
@@ -137,8 +140,18 @@ object RoomModule {
         dao: EvaluacionPolinizacionDao,
         evaluacionApiService: EvaluacionApiService,
         evaluacionGeneralDao: EvaluacionGeneralDao,
-        @ApplicationContext context: Context): EvaluacionPolinizacionRepository {
-        return EvaluacionPolinizacionRepositoryImpl(dao, evaluacionApiService, evaluacionGeneralDao, context)
+        usuarioRepository: UsuarioRepository,
+        operarioRepository: OperarioRepository,
+        @ApplicationContext context: Context
+    ): EvaluacionPolinizacionRepository {
+        return EvaluacionPolinizacionRepositoryImpl(
+            dao, 
+            evaluacionApiService, 
+            evaluacionGeneralDao, 
+            usuarioRepository,
+            operarioRepository,
+            context
+        )
     }
 
     @Provides
@@ -177,5 +190,19 @@ object RoomModule {
     @Provides
     fun provideNetworkMonitor(@ApplicationContext context: Context): NetworkMonitor {
         return NetworkMonitor(context)
+    }
+
+    @Singleton
+    @Provides
+    fun provideWorkManager(@ApplicationContext context: Context): WorkManager {
+        return WorkManager.getInstance(context)
+    }
+
+    @Singleton
+    @Provides
+    fun provideWorkManagerConfiguration(workerFactory: HiltWorkerFactory): Configuration {
+        return Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
     }
 }

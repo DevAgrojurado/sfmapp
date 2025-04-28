@@ -2,19 +2,21 @@ package com.agrojurado.sfmappv2.data.workers
 
 import android.content.Context
 import android.util.Log
+import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.agrojurado.sfmappv2.data.repository.EvaluacionGeneralRepositoryImpl
-import com.agrojurado.sfmappv2.data.repository.EvaluacionPolinizacionRepositoryImpl
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
+import com.agrojurado.sfmappv2.domain.repository.EvaluacionGeneralRepository
+import com.agrojurado.sfmappv2.domain.repository.EvaluacionPolinizacionRepository
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 
-class SyncEvaluacionesWorker @Inject constructor(
-    @ApplicationContext context: Context,
-    params: WorkerParameters,
-    private val evaluacionPolinizacionRepository: EvaluacionPolinizacionRepositoryImpl,
-    private val evaluacionGeneralRepository: EvaluacionGeneralRepositoryImpl
-) : CoroutineWorker(context, params) {
+@HiltWorker
+class SyncEvaluacionesWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val evaluacionPolinizacionRepository: EvaluacionPolinizacionRepository,
+    private val evaluacionGeneralRepository: EvaluacionGeneralRepository
+) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
         private const val TAG = "SyncEvaluacionesWorker"
