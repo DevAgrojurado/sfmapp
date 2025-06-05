@@ -2,7 +2,6 @@ package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragme
 
 import android.content.Context
 import android.net.ConnectivityManager
-import android.net.Network
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.LiveData
@@ -20,12 +19,10 @@ import com.agrojurado.sfmappv2.domain.repository.EvaluacionGeneralRepository
 import com.agrojurado.sfmappv2.domain.repository.LoteRepository
 import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
 import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
-import com.agrojurado.sfmappv2.data.sync.SyncStatus
 import com.agrojurado.sfmappv2.utils.EvaluacionPdfGenerator
 import com.agrojurado.sfmappv2.utils.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -33,7 +30,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -44,7 +40,6 @@ class EvaluacionViewModel @Inject constructor(
     private val loteRepository: LoteRepository,
     private val evaluacionRepository: EvaluacionPolinizacionRepository,
     private val roleAccessControl: RoleAccessControl,
-    private val evaluacionGeneralRepository: EvaluacionGeneralRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -443,7 +438,7 @@ class EvaluacionViewModel @Inject constructor(
         repaso1 = evaluacion["repaso1"] as? Int,
         repaso2 = evaluacion["repaso2"] as? Int,
         observaciones = evaluacion["observaciones"] as String,
-        isSynced = false,
+        syncStatus = "PENDING",
         evaluacionGeneralId = null, // Este valor se establece con .copy() en saveAllData
         timestamp = System.currentTimeMillis()
     )

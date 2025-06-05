@@ -2,80 +2,100 @@
 package com.agrojurado.sfmappv2.di
 
 import android.content.Context
-import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
-import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
-import com.agrojurado.sfmappv2.data.remote.api.EvaluacionApiService
-import com.agrojurado.sfmappv2.data.remote.api.EvaluacionGeneralApiService
-import com.agrojurado.sfmappv2.data.remote.api.FincaApiService
-import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
-import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
-import com.agrojurado.sfmappv2.data.remote.api.RetrofitClient
-import com.agrojurado.sfmappv2.data.remote.api.UsuarioApiService
+import com.agrojurado.sfmappv2.data.remote.api.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import com.google.gson.GsonBuilder
+import com.agrojurado.sfmappv2.data.remote.adapter.BooleanTypeAdapter
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    @Singleton
     @Provides
-    fun provideAreaApiService(): AreaApiService {
-        return RetrofitClient.areaApiService
-    }
-
     @Singleton
-    @Provides
-    fun provideCargoApiService(): CargoApiService {
-        return RetrofitClient.cargoApiService
-    }
-
-    @Singleton
-    @Provides
-    fun provideFincaApiService(): FincaApiService {
-        return RetrofitClient.fincaApiService
-    }
-
-    @Singleton
-    @Provides
-    fun provideLoteApiService(): LoteApiService {
-        return RetrofitClient.loteApiService
-    }
-
-    @Singleton
-    @Provides
-    fun provideOperarioApiService(): OperarioApiService {
-        return RetrofitClient.operarioApiService
-    }
-
-    @Singleton
-    @Provides
-    fun provideEvaluacionApiService(): EvaluacionApiService {
-        return RetrofitClient.evaluacionApiService
+    fun provideOkHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
     }
 
     @Provides
     @Singleton
-    fun provideEvaluacionGeneralApiService(): EvaluacionGeneralApiService {
-        return RetrofitClient.evaluacionGeneralApiService
+    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        val gson = GsonBuilder()
+            .serializeNulls()
+            .registerTypeAdapter(Boolean::class.java, BooleanTypeAdapter())
+            .create()
+
+        return Retrofit.Builder()
+            .baseUrl("https://sfm.agrojurado.com/apisfmtest/")
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create(gson))
+            .build()
     }
 
-    @Singleton
     @Provides
-    fun provideUsuarioApiService(): UsuarioApiService {
-        return RetrofitClient.usuarioApiService
+    @Singleton
+    fun provideAreaApiService(retrofit: Retrofit): AreaApiService {
+        return retrofit.create(AreaApiService::class.java)
     }
 
+    @Provides
+    @Singleton
+    fun provideCargoApiService(retrofit: Retrofit): CargoApiService {
+        return retrofit.create(CargoApiService::class.java)
+    }
 
-    // Agregar para proveer el Context
+    @Provides
+    @Singleton
+    fun provideFincaApiService(retrofit: Retrofit): FincaApiService {
+        return retrofit.create(FincaApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideLoteApiService(retrofit: Retrofit): LoteApiService {
+        return retrofit.create(LoteApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOperarioApiService(retrofit: Retrofit): OperarioApiService {
+        return retrofit.create(OperarioApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideEvaluacionApiService(retrofit: Retrofit): EvaluacionApiService {
+        return retrofit.create(EvaluacionApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideEvaluacionGeneralApiService(retrofit: Retrofit): EvaluacionGeneralApiService {
+        return retrofit.create(EvaluacionGeneralApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUsuarioApiService(retrofit: Retrofit): UsuarioApiService {
+        return retrofit.create(UsuarioApiService::class.java)
+    }
+
     @Provides
     @Singleton
     fun provideContext(@ApplicationContext context: Context): Context {
         return context
     }
-
 }

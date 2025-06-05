@@ -99,7 +99,7 @@ class SharedSelectionViewModel @Inject constructor(
                 _isLoading.value = true
                 loteRepository.getAllLotes().collectLatest { lotesList ->
                     _lotes.value = lotesList.map { lote ->
-                        "Lote ${lote.descripcion}" to lote
+                        "${lote.descripcion}" to lote
                     }
                     // If we have a selected ID but no selected lote object, try to find it
                     updateSelectedLoteIfNeeded()

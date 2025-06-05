@@ -7,18 +7,16 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.agrojurado.sfmappv2.data.mapper.UsuarioMapper
-import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.NetworkManager
 import com.agrojurado.sfmappv2.domain.model.UserRoles
 import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import com.agrojurado.sfmappv2.domain.usecase.usuario.ExistsUserAccountUseCase
 import com.agrojurado.sfmappv2.presentation.common.UiState
-import com.agrojurado.sfmappv2.presentation.common.UiState.Success
 import com.agrojurado.sfmappv2.presentation.common.makeCall
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.launch
-import pe.pcs.libpcs.UtilsSecurity
 import javax.inject.Inject
 
 @HiltViewModel
@@ -49,7 +47,7 @@ class LoginViewModel @Inject constructor(
         Log.d("LoginViewModel", "Iniciando login con email: $email")
 
         try {
-            if (!Utils.isNetworkAvailable(context)) {
+            if (!NetworkManager.isNetworkAvailable(context)) {
                 _uiStateLogin.value = UiState.Error("No hay conexión a internet. Por favor, verifica tu conexión.")
                 return@launch
             }

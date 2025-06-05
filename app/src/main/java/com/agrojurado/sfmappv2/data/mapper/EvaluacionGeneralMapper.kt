@@ -19,7 +19,7 @@ object EvaluacionGeneralMapper {
             idLoteev = entity.idLoteev,
             timestamp = entity.timestamp,
             isTemporary = entity.isTemporary,
-            isSynced = entity.isSynced,
+            syncStatus = entity.syncStatus,
             fotoPath = entity.fotoPath,
             firmaPath = entity.firmaPath
         )
@@ -37,7 +37,7 @@ object EvaluacionGeneralMapper {
             idLoteev = domain.idLoteev,
             timestamp = domain.timestamp,
             isTemporary = domain.isTemporary,
-            isSynced = domain.isSynced,
+            syncStatus = domain.syncStatus,
             fotoPath = domain.fotoPath,
             firmaPath = domain.firmaPath
         )
@@ -55,7 +55,9 @@ object EvaluacionGeneralMapper {
             idLoteev = response.idloteev,
             timestamp = response.timestamp,
             fotoPath = response.fotopath,
-            firmaPath = response.firmapath
+            firmaPath = response.firmapath,
+            syncStatus = "SYNCED",
+            isTemporary = false
         )
     }
 

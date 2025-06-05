@@ -11,6 +11,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -33,10 +34,14 @@ class CameraDialogFragment : BottomSheetDialogFragment() {
     private lateinit var previewView: PreviewView
     private lateinit var btnCapture: MaterialButton
     private lateinit var btnCloseCamera: View
+    private lateinit var btnFlipCamera: ImageButton
     private var imageCapture: ImageCapture? = null
     private lateinit var cameraExecutor: ExecutorService
     private val mainHandler = Handler(Looper.getMainLooper())
     private var onPhotoSavedListener: ((String?) -> Unit)? = null
+
+    // Variable para alternar entre cámara frontal y trasera
+    private var isBackCamera = true
 
     companion object {
         const val TAG = "CameraDialogFragment"
@@ -60,6 +65,7 @@ class CameraDialogFragment : BottomSheetDialogFragment() {
         previewView = view.findViewById(R.id.previewView)
         btnCapture = view.findViewById(R.id.btnCapture)
         btnCloseCamera = view.findViewById(R.id.btnCloseCamera)
+        btnFlipCamera = view.findViewById(R.id.btnFlipCamera)
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         startCamera()
@@ -93,10 +99,15 @@ class CameraDialogFragment : BottomSheetDialogFragment() {
 
                 imageCapture = ImageCapture.Builder()
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                    .setTargetRotation(requireActivity().windowManager.defaultDisplay.rotation) // Ajustar rotación según pantalla
+                    .setTargetRotation(requireActivity().windowManager.defaultDisplay.rotation)
                     .build()
 
-                val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                val cameraSelector = if (isBackCamera) {
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                } else {
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                }
+
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
             } catch (e: Exception) {
@@ -110,8 +121,31 @@ class CameraDialogFragment : BottomSheetDialogFragment() {
 
     private fun setupListeners() {
         btnCapture.setOnClickListener {
-            takePhoto()
+            // Animación de escala
+            it.animate()
+                .scaleX(0.9f)
+                .scaleY(0.9f)
+                .setDuration(100)
+                .withEndAction {
+                    it.animate().scaleX(1f).scaleY(1f).setDuration(100).start()
+                    takePhoto()
+                }
+                .start()
         }
+
+        btnFlipCamera.setOnClickListener {
+            // Animación de rotación al voltear cámara
+            it.animate()
+                .rotationY(180f)
+                .setDuration(300)
+                .withEndAction {
+                    it.rotationY = 0f
+                    isBackCamera = !isBackCamera
+                    startCamera()
+                }
+                .start()
+        }
+
         btnCloseCamera.setOnClickListener {
             dismiss()
         }

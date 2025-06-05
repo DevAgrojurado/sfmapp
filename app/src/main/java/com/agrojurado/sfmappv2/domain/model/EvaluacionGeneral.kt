@@ -9,7 +9,7 @@ data class EvaluacionGeneral(
     val idevaluadorev: Int,
     val idpolinizadorev: Int?,
     val idLoteev: Int?,
-    val isSynced: Boolean = false,
+    var syncStatus: String = "PENDING",
     val isTemporary: Boolean = false,
     val timestamp: Long = System.currentTimeMillis(),
     val fotoPath: String?,

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Círculo blanco central -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#FFFFFF" />
+            <size
+                android:width="56dp"
+                android:height="56dp" />
+        </shape>
+    </item>
+    <!-- Anillo exterior blanco con 50% de transparencia -->
+    <item>
+        <shape android:shape="oval">
+            <stroke
+                android:width="4dp"
+                android:color="#80FFFFFF" /> <!-- 50% de transparencia (#80 = 50%) -->
+            <size
+                android:width="64dp"
+                android:height="64dp" />
+        </shape>
+    </item>
+</layer-list>

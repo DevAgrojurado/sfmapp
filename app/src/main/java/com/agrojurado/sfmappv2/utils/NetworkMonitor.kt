@@ -8,7 +8,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.util.Log
 import androidx.lifecycle.LiveData
-import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.NetworkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,7 +72,7 @@ class NetworkMonitor @Inject constructor(@ApplicationContext private val context
                 connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
                 isCallbackRegistered = true
                 // Actualizamos el estado inicial
-                postValue(Utils.isNetworkAvailable(context))
+                postValue(NetworkManager.isNetworkAvailable(context))
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error al registrar callback de red: ${e.message}", e)
@@ -98,6 +98,6 @@ class NetworkMonitor @Inject constructor(@ApplicationContext private val context
      * Obtiene el estado actual de la conexión
      */
     fun isNetworkAvailable(): Boolean {
-        return Utils.isNetworkAvailable(context)
+        return NetworkManager.isNetworkAvailable(context)
     }
 }

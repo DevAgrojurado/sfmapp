@@ -1,9 +1,7 @@
 package com.agrojurado.sfmappv2.di
 
 import android.content.Context
-import androidx.hilt.work.HiltWorkerFactory
 import androidx.room.Room
-import androidx.work.Configuration
 import androidx.work.WorkManager
 import com.agrojurado.sfmappv2.data.local.dao.*
 import com.agrojurado.sfmappv2.data.local.database.AppDatabase
@@ -77,6 +75,10 @@ object RoomModule {
     @Provides
     fun provideLoteDao(db: AppDatabase): LoteDao = db.loteDao()
 
+    @Singleton
+    @Provides
+    fun provideSyncQueueDao(db: AppDatabase): SyncQueueDao = db.syncQueueDao()
+
     // Proveer Repositorios
     @Singleton
     @Provides
@@ -115,13 +117,15 @@ object RoomModule {
         operarioApiService: OperarioApiService,
         usuarioRepository: UsuarioRepository,
         roleAccessControl: RoleAccessControl,
-        @ApplicationContext context: Context): OperarioRepository {
+        @ApplicationContext context: Context
+    ): OperarioRepository {
         return OperarioRepositoryImpl(
             operarioDao = dao,
             operarioApiService = operarioApiService,
             usuarioRepository = usuarioRepository,
             roleAccessControl = roleAccessControl,
-            context = context)
+            context = context
+        )
     }
 
     @Singleton
@@ -129,7 +133,7 @@ object RoomModule {
     fun provideAreaRepository(
         dao: AreaDao,
         areaApiService: AreaApiService,
-        @ApplicationContext context: Context // Agregar context
+        @ApplicationContext context: Context
     ): AreaRepository {
         return AreaRepositoryImpl(dao, areaApiService, context)
     }
@@ -138,35 +142,20 @@ object RoomModule {
     @Provides
     fun provideEvaluacionPolinizacionRepository(
         dao: EvaluacionPolinizacionDao,
-        evaluacionApiService: EvaluacionApiService,
-        evaluacionGeneralDao: EvaluacionGeneralDao,
-        usuarioRepository: UsuarioRepository,
-        operarioRepository: OperarioRepository,
         @ApplicationContext context: Context
     ): EvaluacionPolinizacionRepository {
-        return EvaluacionPolinizacionRepositoryImpl(
-            dao, 
-            evaluacionApiService, 
-            evaluacionGeneralDao, 
-            usuarioRepository,
-            operarioRepository,
-            context
-        )
+        return EvaluacionPolinizacionRepositoryImpl(dao, context)
     }
 
     @Provides
     @Singleton
     fun provideEvaluacionGeneralRepository(
         dao: EvaluacionGeneralDao,
-        apiService: EvaluacionGeneralApiService,
         evaluacionPolinizacionRepository: EvaluacionPolinizacionRepository,
-        usuarioRepository: UsuarioRepository,
-        operarioRepository: OperarioRepository,
         @ApplicationContext context: Context
     ): EvaluacionGeneralRepository {
-        return EvaluacionGeneralRepositoryImpl(dao, apiService, evaluacionPolinizacionRepository, usuarioRepository, operarioRepository, context)
+        return EvaluacionGeneralRepositoryImpl(dao, evaluacionPolinizacionRepository, context)
     }
-
 
     @Singleton
     @Provides
@@ -196,13 +185,5 @@ object RoomModule {
     @Provides
     fun provideWorkManager(@ApplicationContext context: Context): WorkManager {
         return WorkManager.getInstance(context)
-    }
-
-    @Singleton
-    @Provides
-    fun provideWorkManagerConfiguration(workerFactory: HiltWorkerFactory): Configuration {
-        return Configuration.Builder()
-            .setWorkerFactory(workerFactory)
-            .build()
     }
 }

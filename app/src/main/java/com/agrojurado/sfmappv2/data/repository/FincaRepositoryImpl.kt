@@ -7,7 +7,7 @@ import com.agrojurado.sfmappv2.data.mapper.FincaMapper
 import com.agrojurado.sfmappv2.data.remote.api.FincaApiService
 import com.agrojurado.sfmappv2.domain.model.Finca
 import com.agrojurado.sfmappv2.domain.repository.FincaRepository
-import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.NetworkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -24,14 +24,14 @@ class FincaRepositoryImpl @Inject constructor(
         private const val TAG = "FincaRepository"
     }
 
-    private fun isNetworkAvailable(): Boolean = Utils.isNetworkAvailable(context)
+    private fun isNetworkAvailable(): Boolean = NetworkManager.isNetworkAvailable(context)
 
     private fun showSyncAlert(message: String) {
-        Utils.showAlert(context, message)
+        NetworkManager.showAlert(context, message)
     }
 
     private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
-        Utils.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
+        NetworkManager.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
     }
 
     override fun getAllFincas(): Flow<List<Finca>> {

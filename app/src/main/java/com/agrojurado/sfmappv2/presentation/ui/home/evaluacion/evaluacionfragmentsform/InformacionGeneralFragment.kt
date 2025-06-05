@@ -53,7 +53,7 @@ class InformacionGeneralFragment : Fragment() {
     ): View {
         Log.d("InformacionGeneralFragment", "onCreateView")
         _binding = FragmentInformacionGeneralBinding.inflate(inflater, container, false)
-        
+
         // Leer argumentos aquí
         arguments?.let {
             initialOperarioId = it.getInt("operarioId", -1).let { id -> if (id == -1) null else id }
@@ -136,7 +136,7 @@ class InformacionGeneralFragment : Fragment() {
             if (operariosList.isNotEmpty()) {
                 operarios = operariosList
                 setupOperariosSpinner(operariosList)
-                // Setup listeners solo después de configurar el spinner y tener los datos
+                binding.spinnerPolinizador.isEnabled = false
                 setupListeners()
                 operariosSpinnerReady = true
                 Log.d("InformacionGeneralFragment", "Operarios Spinner listo")
@@ -170,6 +170,8 @@ class InformacionGeneralFragment : Fragment() {
             if (lotesList.isNotEmpty()) {
                 lotes = lotesList
                 setupLotesSpinner(lotesList)
+                binding.spinnerLote.isEnabled = false
+                setupListeners()
                 lotesSpinnerReady = true
                 Log.d("InformacionGeneralFragment", "Lotes Spinner listo")
                 // Intentar aplicar selecciones INICIALES ahora que el spinner está listo
@@ -380,14 +382,14 @@ class InformacionGeneralFragment : Fragment() {
             Log.d("InformacionGeneralFragment", "applyInitialArguments: Esperando que ambos spinners estén listos (Operarios: $operariosSpinnerReady, Lotes: $lotesSpinnerReady)")
             return
         }
-        
+
         if (_binding == null) {
             Log.w("InformacionGeneralFragment", "applyInitialArguments: Binding es nulo, no se pueden aplicar selecciones")
             return
         }
-        
+
         Log.d("InformacionGeneralFragment", "applyInitialArguments: Aplicando selecciones desde Argumentos...")
-        
+
         initialOperarioId?.let { id ->
             Log.d("InformacionGeneralFragment", "Intentando aplicar Operario ID inicial: $id")
             val position = operarios.indexOfFirst { it.second.id == id }

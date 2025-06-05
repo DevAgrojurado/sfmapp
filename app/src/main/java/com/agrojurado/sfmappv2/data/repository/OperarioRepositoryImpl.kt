@@ -7,7 +7,7 @@ import com.agrojurado.sfmappv2.data.mapper.OperarioMapper
 import com.agrojurado.sfmappv2.data.remote.api.OperarioApiService
 import com.agrojurado.sfmappv2.domain.model.Operario
 import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
-import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.NetworkManager
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
 import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
@@ -30,14 +30,14 @@ class OperarioRepositoryImpl @Inject constructor(
         private const val TAG = "OperarioRepository"
     }
 
-    private fun isNetworkAvailable(): Boolean = Utils.isNetworkAvailable(context)
+    private fun isNetworkAvailable(): Boolean = NetworkManager.isNetworkAvailable(context)
 
     private fun showSyncAlert(message: String) {
-        Utils.showAlert(context, message)
+        NetworkManager.showAlert(context, message)
     }
 
     private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
-        Utils.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
+        NetworkManager.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
     }
 
     override fun getAllOperarios(): Flow<List<Operario>> {

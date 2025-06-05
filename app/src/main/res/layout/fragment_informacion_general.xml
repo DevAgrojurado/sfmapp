@@ -82,11 +82,15 @@
 
             <TextView
                 android:id="@+id/tvTotalPalmas"
-                android:layout_width="match_parent"
+                android:layout_width="40dp"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:textSize="16sp"
-                android:visibility="gone" />
+                android:textSize="20sp"
+                android:textAlignment="center"
+                android:textColor="@color/green"
+                android:visibility="gone"
+                android:textStyle="bold"
+                android:background="@drawable/counter_background"/>
 
             <TextView
                 android:layout_width="match_parent"
@@ -109,31 +113,35 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="8dp"
+                android:layout_marginBottom="10dp"
                 android:text="Polinizador"
                 android:textStyle="bold" />
+
 
             <Spinner
                 android:id="@+id/spinnerPolinizador"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp" />
-
+                android:layout_height="48dp"
+                android:background="@drawable/spinner_modern_border"
+                android:padding="10dp"
+                android:enabled="false"/>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Lote"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="10dp"
                 android:layout_marginBottom="8dp"
                 android:textStyle="bold"/>
 
             <Spinner
                 android:id="@+id/spinnerLote"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"/>
+                android:layout_height="48dp"
+                android:layout_marginBottom="10dp"
+                android:padding="10dp"
+                android:background="@drawable/spinner_modern_border"
+                android:enabled="false"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
@@ -146,7 +154,8 @@
                     android:id="@+id/etSeccion"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="number"/>
+                    android:inputType="number"
+                    android:layout_marginBottom="10dp"/>
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout

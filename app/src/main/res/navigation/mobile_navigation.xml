@@ -29,7 +29,8 @@
     <fragment
         android:id="@+id/evaluacionGeneralFragment"
         android:name="com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciongeneral.EvaluacionGeneralFragment"
-        tools:layout="@layout/fragment_evaluacion_general">
+        tools:layout="@layout/fragment_evaluacion_general"
+        android:label="Evaluación Polinización">
         <action
             android:id="@+id/action_evaluacionGeneralFragment_to_cameraFragment"
             app:destination="@id/cameraFragment" />

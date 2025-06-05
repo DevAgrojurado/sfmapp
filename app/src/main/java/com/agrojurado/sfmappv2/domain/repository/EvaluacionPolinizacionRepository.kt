@@ -13,10 +13,11 @@ interface EvaluacionPolinizacionRepository {
     suspend fun getLastEvaluacion(): EvaluacionPolinizacion?
     suspend fun checkPalmExists(semana: Int, lote: Int, palma: Int, idPolinizador: Int, seccion: Int, evaluacionGeneralId: Int): Boolean
     //suspend fun syncEvaluaciones()
-    suspend fun syncEvaluacionesForGeneral(evaluaciones: List<EvaluacionPolinizacion>, serverGeneralId: Int)
+    //suspend fun syncEvaluacionesForGeneral(evaluaciones: List<EvaluacionPolinizacion>, serverGeneralId: Int)
     suspend fun deleteEvaluacionesByEvaluacionGeneralId(evaluacionGeneralId: Int)
-    suspend fun asociarConEvaluacionGeneral(evaluacionId: Int, evaluacionGeneralId: Int)
+    suspend fun associateWithGeneralEvaluation(evaluacionId: Int, evaluacionGeneralId: Int)
     fun getEvaluacionesByEvaluacionGeneralId(evaluacionGeneralId: Int): Flow<List<EvaluacionPolinizacion>>
-    suspend fun fetchEvaluacionesFromServer()
+    //suspend fun fetchEvaluacionesFromServer()
+    suspend fun getUnsyncedEvaluationsCount(): Int
 
 }

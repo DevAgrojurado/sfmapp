@@ -78,7 +78,7 @@
             android:theme="@style/Theme.SfmAppV2" />
         <activity
             android:name=".presentation.ui.main.MainActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/title_activity_main"
             android:theme="@style/Theme.SfmAppV2.NoActionBar"
             android:configChanges="orientation|screenSize|keyboardHidden" />

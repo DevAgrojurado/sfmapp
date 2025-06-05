@@ -8,7 +8,7 @@ import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 
-object Utils {
+object NetworkManager {
 
     private const val TAG = "Utils"
 

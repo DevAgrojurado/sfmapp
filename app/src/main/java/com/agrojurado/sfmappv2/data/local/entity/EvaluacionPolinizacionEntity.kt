@@ -60,6 +60,6 @@ data class EvaluacionPolinizacionEntity(
     @ColumnInfo(name = "repaso1") val repaso1: Int?,
     @ColumnInfo(name = "repaso2") val repaso2: Int?,
     @ColumnInfo(name = "observaciones") val observaciones: String?,
-    @ColumnInfo(name = "isSynced") var isSynced: Boolean = false,
+    @ColumnInfo(name = "syncStatus") var syncStatus: String,
     @ColumnInfo(name = "timestamp") val timestamp: Long
 )

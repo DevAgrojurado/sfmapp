@@ -26,6 +26,11 @@ interface EvaluacionGeneralApiService {
     @DELETE("api/evaluaciongeneral/delete.php")
     suspend fun deleteEvaluacionGeneral(@Query("id") id: Int): Response<EvaluacionGeneralResponse>
 
+    @POST("api/evaluaciongeneral/sync.php")
+    suspend fun syncEvaluacionesGenerales(
+        @Body request: Map<String, List<EvaluacionGeneralRequest>>
+    ): Response<List<EvaluacionGeneralResponse>>
+
     @Multipart
     @POST("api/evaluaciongeneral/upload_photo.php")
     suspend fun uploadPhoto(
@@ -42,4 +47,5 @@ interface EvaluacionGeneralApiService {
         @Query("evaluacionId") evaluacionId: Int,
         @Part signature: MultipartBody.Part
     ): Response<Map<String, String>> // Server returns {"url": "...", "message": "..."}
+
 }

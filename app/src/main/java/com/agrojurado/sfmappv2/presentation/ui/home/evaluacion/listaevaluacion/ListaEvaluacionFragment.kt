@@ -103,7 +103,7 @@ class ListaEvaluacionFragment : Fragment() {
 
     private fun updateEvaluacionesDisplay(evaluacionesPorSemana: Map<Int, List<EvaluacionGeneral>>) {
         try {
-            val semanas = evaluacionesPorSemana.keys.toList().sorted()
+            val semanas = evaluacionesPorSemana.keys.toList().sortedDescending() // Changed to sortedDescending()
             if (semanas.isEmpty()) {
                 binding.rvEvaluacion.visibility = View.GONE
                 showNoRecordsMessage()

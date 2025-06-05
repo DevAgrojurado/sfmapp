@@ -7,7 +7,7 @@ import com.agrojurado.sfmappv2.data.mapper.LoteMapper
 import com.agrojurado.sfmappv2.data.remote.api.LoteApiService
 import com.agrojurado.sfmappv2.domain.model.Lote
 import com.agrojurado.sfmappv2.domain.repository.LoteRepository
-import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.NetworkManager
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import com.agrojurado.sfmappv2.domain.security.RoleAccessControl
 import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
@@ -30,14 +30,14 @@ class LoteRepositoryImpl @Inject constructor(
         private const val TAG = "LoteRepository"
     }
 
-    private fun isNetworkAvailable(): Boolean = Utils.isNetworkAvailable(context)
+    private fun isNetworkAvailable(): Boolean = NetworkManager.isNetworkAvailable(context)
 
     private fun showSyncAlert(message: String) {
-        Utils.showAlert(context, message)
+        NetworkManager.showAlert(context, message)
     }
 
     private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
-        Utils.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
+        NetworkManager.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
     }
 
     override fun getAllLotes(): Flow<List<Lote>> {

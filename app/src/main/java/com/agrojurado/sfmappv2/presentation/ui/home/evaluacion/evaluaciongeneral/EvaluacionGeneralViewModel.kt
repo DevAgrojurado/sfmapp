@@ -2,11 +2,12 @@ package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciongenera
 
 import android.content.Context
 import android.util.Log
+import android.widget.ProgressBar
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.agrojurado.sfmappv2.data.sync.SyncStatus
+import com.agrojurado.sfmappv2.data.sync.DataSyncManager
 import com.agrojurado.sfmappv2.domain.model.EvaluacionGeneral
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.domain.model.Usuario
@@ -17,7 +18,8 @@ import com.agrojurado.sfmappv2.domain.repository.OperarioRepository
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import com.agrojurado.sfmappv2.domain.security.UserRoleConstants
 import com.agrojurado.sfmappv2.utils.NetworkMonitor
-import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.NetworkManager
+import com.agrojurado.sfmappv2.data.sync.SyncStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.collectLatest
@@ -26,9 +28,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Calendar
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import com.agrojurado.sfmappv2.utils.SyncNotificationManager
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @HiltViewModel
 class EvaluacionGeneralViewModel @Inject constructor(
@@ -38,6 +39,7 @@ class EvaluacionGeneralViewModel @Inject constructor(
     private val operarioRepository: OperarioRepository,
     private val loteRepository: LoteRepository,
     private val networkMonitor: NetworkMonitor,
+    private val dataSyncManager: DataSyncManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -95,25 +97,6 @@ class EvaluacionGeneralViewModel @Inject constructor(
         loadOperarioMap()
         loadLoteMap()
         loadEvaluadorMap()
-        networkMonitor.observeForever { isConnected ->
-            if (isConnected && _temporaryEvaluacionId.value == null) {
-                viewModelScope.launch {
-                    try {
-                        val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
-                        if (unsyncedCount > 0) {
-                            Log.d(TAG, "Conexión detectada con $unsyncedCount evaluaciones pendientes y sin evaluación temporal activa. Iniciando sincronización automática.")
-                            syncEvaluaciones()
-                        } else {
-                            Log.d(TAG, "Conexión detectada, pero no hay evaluaciones pendientes o hay una evaluación temporal activa.")
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error al verificar evaluaciones pendientes para sincronización automática: ${e.message}", e)
-                    }
-                }
-            } else if (isConnected) {
-                Log.d(TAG, "Conexión detectada, pero hay una evaluación temporal activa. Sincronización automática omitida.")
-            }
-        }
     }
 
     fun setSelectedPolinizadorId(id: Int) {
@@ -131,13 +114,13 @@ class EvaluacionGeneralViewModel @Inject constructor(
                 email?.let {
                     usuarioRepository.getUserByEmail(it).collectLatest { user ->
                         _loggedInUser.value = user
-                        loadEvaluacionesGeneralesPorSemana()
+                        Log.d("EvaluacionViewModel", "Usuario cargado: $user")
                     }
                 } ?: run {
-                    _errorMessage.value = "No se encontró usuario logueado"
+                    Log.d("EvaluacionViewModel", "No se encontró usuario logueado")
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "Error al cargar usuario: ${e.message}"
+                Log.e("EvaluacionViewModel", "Error al cargar usuario: ${e.message}")
             }
         }
     }
@@ -171,45 +154,40 @@ class EvaluacionGeneralViewModel @Inject constructor(
 
     fun getPhotoUrlForPolinizador(semana: Int, polinizadorId: Int, evaluacionGeneralId: Int): String? {
         Log.d(TAG, "Buscando foto para semana=$semana, polinizadorId=$polinizadorId, evaluacionGeneralId=$evaluacionGeneralId")
-        
-        // Primero intentamos obtener las evaluaciones de caché
+
         val evaluacionesGenerales = _evaluacionesGeneralesPorSemana.value?.get(semana)
-        
+
         if (evaluacionesGenerales == null) {
             Log.d(TAG, "No hay evaluaciones en caché para la semana $semana")
             return null
         }
-        
-        // Buscamos la evaluación específica
+
         val evaluacion = evaluacionesGenerales.firstOrNull {
             it.idpolinizadorev == polinizadorId && it.id == evaluacionGeneralId
         }
-        
+
         if (evaluacion == null) {
             Log.d(TAG, "No se encontró evaluación para polinizador=$polinizadorId, evaluacionId=$evaluacionGeneralId")
             return null
         }
-        
+
         Log.d(TAG, "Evaluación encontrada, fotoPath=${evaluacion.fotoPath}")
-        
-        // Si el path es nulo, no hay foto
+
         if (evaluacion.fotoPath == null) {
             return null
         }
-        
-        // Verificamos el path
+
         val path = evaluacion.fotoPath
-        
+
         return when {
             File(path).exists() -> {
                 Log.d(TAG, "La foto existe localmente en: $path")
-                path // Usa el archivo local si existe
+                path
             }
             path.startsWith("http") -> {
                 Log.d(TAG, "Usando URL del servidor: $path")
-                path // Usa la URL del servidor si es válida
+                path
             }
-            // Intentamos buscar la foto en otras ubicaciones comunes
             File(context.filesDir, File(path).name).exists() -> {
                 val alternativePath = File(context.filesDir, File(path).name).absolutePath
                 Log.d(TAG, "Foto encontrada en ubicación alternativa: $alternativePath")
@@ -217,7 +195,7 @@ class EvaluacionGeneralViewModel @Inject constructor(
             }
             else -> {
                 Log.e(TAG, "No se pudo encontrar la foto en: $path")
-                null // No hay un path válido
+                null
             }
         }
     }
@@ -303,23 +281,34 @@ class EvaluacionGeneralViewModel @Inject constructor(
         }
     }
 
+    fun setTemporaryEvaluacionId(id: Int) {
+        _temporaryEvaluacionId.value = id
+        Log.d(TAG, "TemporaryEvaluacionId establecido: $id")
+    }
+
+    private val sharedPreferences by lazy {
+        context.getSharedPreferences("EvaluacionPrefs", Context.MODE_PRIVATE)
+    }
+
+    private fun saveActiveTemporaryEvaluationId(id: Int?) {
+        sharedPreferences.edit().putInt("activeTempEvalId", id ?: -1).apply()
+    }
+
+    private fun getActiveTemporaryEvaluationId(): Int? {
+        val id = sharedPreferences.getInt("activeTempEvalId", -1)
+        return if (id != -1) id else null
+    }
+
     fun initTemporaryEvaluacion() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val activeEvaluacion = evaluacionGeneralRepository.getActiveTemporaryEvaluacion()
-                activeEvaluacion?.let {
-                    if (it.isTemporary) {
-                        evaluacionPolinizacionRepository.deleteEvaluacionesByEvaluacionGeneralId(it.id!!)
-                        evaluacionGeneralRepository.deleteEvaluacionGeneral(it)
-                    }
-                }
-
+                Log.d(TAG, "Inicializando nueva evaluación temporal")
+                resetState()
+                clearCache()
                 val user = _loggedInUser.value ?: run {
-                    _errorMessage.value = "No hay usuario logueado"
                     return@launch
                 }
-
                 val nuevaEvaluacion = EvaluacionGeneral(
                     serverId = null,
                     fecha = getCurrentDate(),
@@ -328,25 +317,29 @@ class EvaluacionGeneralViewModel @Inject constructor(
                     idevaluadorev = user.id,
                     idpolinizadorev = null,
                     idLoteev = null,
-                    isSynced = false,
+                    syncStatus = "PENDING",
                     isTemporary = true,
                     timestamp = System.currentTimeMillis(),
                     fotoPath = null,
                     firmaPath = null
                 )
-
                 val tempId = evaluacionGeneralRepository.insertEvaluacionGeneral(nuevaEvaluacion).toInt()
                 if (tempId <= 0) {
                     _errorMessage.value = "Fallo al crear evaluación temporal"
+                    Log.e(TAG, "Fallo al crear evaluación temporal")
+                    _isLoading.value = false
                     return@launch
                 }
-
                 val insertedEval = nuevaEvaluacion.copy(id = tempId)
                 _temporaryEvaluacionId.value = tempId
                 _evaluacionGeneral.value = insertedEval
                 _evaluacionesIndividuales.value = emptyList()
+                saveActiveTemporaryEvaluationId(tempId) // Guardar el ID
+                Log.d(TAG, "Evaluación temporal creada con ID: $tempId")
+                loadEvaluacionesIndividuales()
             } catch (e: Exception) {
                 _errorMessage.value = "Error al inicializar evaluación: ${e.message}"
+                Log.e(TAG, "Error al inicializar evaluación: ${e.message}", e)
             } finally {
                 _isLoading.value = false
             }
@@ -355,14 +348,28 @@ class EvaluacionGeneralViewModel @Inject constructor(
 
     fun loadEvaluacionesIndividuales() {
         viewModelScope.launch {
-            val tempId = _temporaryEvaluacionId.value ?: run {
+            val tempId = _temporaryEvaluacionId.value
+            Log.d(TAG, "Cargando evaluaciones individuales para temporaryEvaluacionId: $tempId")
+            if (tempId == null) {
                 _evaluacionesIndividuales.value = emptyList()
+                Log.w(TAG, "No hay temporaryEvaluacionId definido, lista vacía")
                 return@launch
             }
-            evaluacionPolinizacionRepository.getEvaluacionesByEvaluacionGeneralId(tempId)
-                .collectLatest { evaluaciones ->
-                    _evaluacionesIndividuales.value = evaluaciones
-                }
+            try {
+                evaluacionPolinizacionRepository.getEvaluacionesByEvaluacionGeneralId(tempId)
+                    .distinctUntilChanged() // Evita emisiones redundantes
+                    .collect { evaluaciones ->
+                        val filteredEvaluaciones = evaluaciones.filter { it.evaluacionGeneralId == tempId }
+                        if (filteredEvaluaciones != _evaluacionesIndividuales.value) {
+                            Log.d(TAG, "Evaluaciones individuales cargadas: $filteredEvaluaciones")
+                            _evaluacionesIndividuales.value = filteredEvaluaciones
+                        }
+                    }
+            } catch (e: Exception) {
+                _errorMessage.value = "Error al cargar evaluaciones: ${e.message}"
+                Log.e(TAG, "Error al cargar evaluaciones: ${e.message}", e)
+                _evaluacionesIndividuales.value = emptyList()
+            }
         }
     }
 
@@ -386,7 +393,6 @@ class EvaluacionGeneralViewModel @Inject constructor(
                     _saveResult.value = false
                     return@launch
                 }
-
                 val finalFotoPath = fotoPath?.let { moveToPermanentFile(it, "foto_${tempEval.id}", context) }
                 val finalFirmaPath = firmaPath?.let { moveToPermanentFile(it, "firma_${tempEval.id}", context) }
                 val updatedEval = tempEval.copy(
@@ -395,16 +401,14 @@ class EvaluacionGeneralViewModel @Inject constructor(
                     isTemporary = false,
                     fotoPath = finalFotoPath,
                     firmaPath = finalFirmaPath,
-                    isSynced = false
+                    syncStatus = "PENDING"
                 )
                 evaluacionGeneralRepository.updateEvaluacionGeneral(updatedEval)
                 evaluacionGeneralRepository.finalizeTemporaryEvaluacion(tempEval.id!!)
-
-                // Trigger synchronization after saving
-                syncEvaluaciones()
-
+                // Limpieza adicional
                 resetState()
                 clearCache()
+                _evaluacionesIndividuales.value = emptyList()
                 _saveResult.value = true
             } catch (e: Exception) {
                 _errorMessage.value = "Error al guardar: ${e.message}"
@@ -421,83 +425,6 @@ class EvaluacionGeneralViewModel @Inject constructor(
         tempFile.copyTo(permanentFile, overwrite = true)
         tempFile.delete()
         return permanentFile.absolutePath
-    }
-
-    private fun syncEvaluaciones() {
-        viewModelScope.launch {
-            // --- Comprobación de Red Primero --- 
-            if (!Utils.isNetworkAvailable(context)) {
-                Log.d(TAG, "syncEvaluaciones: No hay conexión validada. Actualizando estado pendiente.")
-                try {
-                    val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
-                    _syncStatus.value = if (unsyncedCount > 0) SyncStatus.Pending(unsyncedCount) else SyncStatus.Completed
-                    if (unsyncedCount > 0) {
-                         // Opcional: Mostrar un Toast indicando guardado local y pendiente
-                         // Toast.makeText(context, "Guardado localmente, sincronización pendiente", Toast.LENGTH_SHORT).show()
-                    } else {
-                        // Toast.makeText(context, "Guardado localmente", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error al obtener contador de pendientes offline: ${e.message}", e)
-                     _syncStatus.value = SyncStatus.Error("Error al verificar pendientes offline")
-                }
-                return@launch // No continuar con el intento de sincronización
-            }
-            // --- Fin Comprobación de Red ---
-
-            // Si hay conexión, proceder como antes...
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastSyncTime < SYNC_THROTTLE_MS) {
-                val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
-                _syncStatus.value = SyncStatus.Pending(unsyncedCount)
-                Log.d(TAG, "syncEvaluaciones: Throttled, actualizando estado pendiente.")
-                return@launch
-            }
-
-            try {
-                _isLoading.value = true
-                _syncStatus.value = SyncStatus.Syncing // Ahora sí mostramos "Sincronizando..."
-                
-                // Iniciar notificación (solo si estamos online)
-                val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
-                if (unsyncedCount > 0) {
-                    notificationManager.startSyncNotification(
-                        "Sincronizando evaluaciones", 
-                        "Preparando sincronización de $unsyncedCount evaluaciones..."
-                    )
-                } else {
-                    // Si no hay pendientes pero hay conexión, podemos verificar datos del servidor
-                    notificationManager.startSyncNotification(
-                        "Sincronización", 
-                        "Verificando datos con el servidor..."
-                    )
-                }
-                
-                // Mostrar progreso indeterminado mientras se sincroniza (solo si estamos online)
-                notificationManager.updateSyncProgress(0, 1, "Sincronizando evaluaciones...")
-                
-                // Llamar al repositorio (que también verifica la red internamente por si acaso)
-                evaluacionGeneralRepository.syncEvaluacionesGenerales()
-                lastSyncTime = System.currentTimeMillis()
-                clearCache()
-                
-                // Actualizar estado y notificación final
-                val pendingCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
-                _syncStatus.value = if (pendingCount > 0) SyncStatus.Pending(pendingCount) else SyncStatus.Completed
-                
-                if (pendingCount > 0) {
-                    notificationManager.updateSyncMessage("Quedan $pendingCount evaluaciones pendientes")
-                } else {
-                    notificationManager.completeSyncNotification("Sincronización completada")
-                }
-            } catch (e: Exception) {
-                _syncStatus.value = SyncStatus.Error(e.message ?: "Sync failed")
-                _errorMessage.value = "Error durante la sincronización: ${e.message}"
-                notificationManager.errorSyncNotification("Error: ${e.message}")
-            } finally {
-                _isLoading.value = false
-            }
-        }
     }
 
     fun deleteEvaluacion(evaluacion: EvaluacionPolinizacion) {
@@ -526,6 +453,7 @@ class EvaluacionGeneralViewModel @Inject constructor(
                     evaluacionGeneralRepository.deleteEvaluacionGeneral(tempEval)
                     resetState()
                     clearCache()
+                    saveActiveTemporaryEvaluationId(null) // Limpiar el ID
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error al cancelar evaluación: ${e.message}"
@@ -543,6 +471,7 @@ class EvaluacionGeneralViewModel @Inject constructor(
         selectedLoteId = 0
         _errorMessage.value = null
         _saveResult.value = false
+        cachedEvaluacionesPorPolinizador.clear() // Limpia explícitamente el caché de evaluaciones por polinizador
     }
 
     fun clearErrorMessage() {
@@ -578,17 +507,13 @@ class EvaluacionGeneralViewModel @Inject constructor(
         clearCache()
     }
 
-    // Método para forzar la sincronización desde cualquier parte de la app
     fun forceSync() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _syncStatus.value = SyncStatus.Syncing
-                
-                // Obtener cuántas evaluaciones hay pendientes
+
                 val pendingCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
-                
-                // Iniciar notificación con barra de progreso
                 if (pendingCount > 0) {
                     _errorMessage.value = "Sincronizando $pendingCount evaluaciones pendientes..."
                     notificationManager.startSyncNotification(
@@ -603,62 +528,57 @@ class EvaluacionGeneralViewModel @Inject constructor(
                     )
                 }
 
-                // Mostrar progreso
-                notificationManager.updateSyncProgress(0, 100, "Iniciando sincronización...")
-
-                // Realizar la sincronización
-                val result = evaluacionGeneralRepository.syncEvaluacionesGenerales()
-                lastSyncTime = System.currentTimeMillis()
-
-                // Actualizar progreso
-                notificationManager.updateSyncProgress(50, 100, "Procesando resultados...")
-
-                // Sincronizar explícitamente las evaluaciones de polinización
-                try {
-                    notificationManager.updateSyncProgress(75, 100, "Sincronizando evaluaciones de polinización...")
-                    evaluacionPolinizacionRepository.fetchEvaluacionesFromServer()
-                    Log.d(TAG, "✅ Sincronización explícita de evaluaciones de polinización completada")
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Error en sincronización explícita de polinización: ${e.message}", e)
-                    // Continuamos a pesar del error para no bloquear el resto del proceso
+                if (!NetworkManager.isNetworkAvailable(context)) {
+                    val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
+                    _syncStatus.value = if (unsyncedCount > 0) SyncStatus.Pending(unsyncedCount) else SyncStatus.Completed
+                    _errorMessage.value = "Sin conexión, $unsyncedCount evaluaciones pendientes"
+                    notificationManager.updateSyncMessage("Sin conexión, $unsyncedCount evaluaciones pendientes")
+                    return@launch
                 }
 
-                // Limpiar caché para asegurar datos actualizados
-                clearCache()
-
-                // Finalizar progreso
-                notificationManager.updateSyncProgress(100, 100, "Finalizando sincronización...")
-
-                // Verificar si quedaron evaluaciones pendientes
-                val remainingCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
-                _syncStatus.value = if (remainingCount > 0) {
-                    SyncStatus.Pending(remainingCount)
-                } else {
-                    SyncStatus.Completed
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastSyncTime < SYNC_THROTTLE_MS) {
+                    val unsyncedCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
+                    _syncStatus.value = SyncStatus.Pending(unsyncedCount)
+                    _errorMessage.value = "Espere un momento antes de intentar sincronizar de nuevo"
+                    notificationManager.updateSyncMessage("Espere un momento antes de intentar sincronizar de nuevo")
+                    return@launch
                 }
 
-                // Mostrar mensaje apropiado
-                val message = if (remainingCount > 0) {
-                    "Quedan $remainingCount evaluaciones pendientes de sincronización"
-                } else {
-                    "Sincronización de evaluaciones completada"
+                // Usar DataSyncManager para sincronizar
+                val dummyProgressBar = ProgressBar(context).apply { visibility = ProgressBar.GONE }
+                dataSyncManager.syncAllData(dummyProgressBar) {
+                    viewModelScope.launch {
+                        val remainingCount = evaluacionGeneralRepository.getUnsyncedEvaluationsCount()
+                        _syncStatus.value = if (remainingCount > 0) {
+                            SyncStatus.Pending(remainingCount)
+                        } else {
+                            SyncStatus.Completed
+                        }
+
+                        val message = if (remainingCount > 0) {
+                            "Quedan $remainingCount evaluaciones pendientes de sincronización. Reintente manualmente."
+                        } else {
+                            "Sincronización de evaluaciones completada"
+                        }
+
+                        _errorMessage.value = message
+                        if (remainingCount > 0) {
+                            notificationManager.updateSyncMessage(message)
+                        } else {
+                            notificationManager.completeSyncNotification(message)
+                        }
+
+                        Log.d(TAG, "✅ Sincronización forzada completada: $message")
+                        clearCache()
+                        lastSyncTime = System.currentTimeMillis()
+                    }
                 }
-
-                _errorMessage.value = message
-
-                // Actualizar notificación final
-                if (remainingCount > 0) {
-                    notificationManager.updateSyncMessage(message)
-                } else {
-                    notificationManager.completeSyncNotification(message)
-                }
-
-                Log.d(TAG, "Sincronización forzada completada: $message")
             } catch (e: Exception) {
                 _syncStatus.value = SyncStatus.Error(e.message ?: "Error de sincronización")
                 _errorMessage.value = "Error durante la sincronización: ${e.message}"
                 notificationManager.errorSyncNotification("Error: ${e.message}")
-                Log.e(TAG, "Error al forzar sincronización: ${e.message}", e)
+                Log.e(TAG, "❌ Error al forzar sincronización: ${e.message}", e)
             } finally {
                 _isLoading.value = false
             }

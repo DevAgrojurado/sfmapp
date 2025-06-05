@@ -157,7 +157,7 @@
                 android:id="@+id/etMarcacion" 
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number" /> <!-- Asumiendo que semana es un número -->
+                android:inputType="text" /> <!-- Asumiendo que semana es un número -->
         </com.google.android.material.textfield.TextInputLayout>
 
         <TextView

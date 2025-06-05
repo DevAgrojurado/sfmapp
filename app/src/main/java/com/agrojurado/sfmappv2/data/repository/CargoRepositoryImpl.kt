@@ -7,7 +7,7 @@ import com.agrojurado.sfmappv2.data.mapper.CargoMapper
 import com.agrojurado.sfmappv2.data.remote.api.CargoApiService
 import com.agrojurado.sfmappv2.domain.model.Cargo
 import com.agrojurado.sfmappv2.domain.repository.CargoRepository
-import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.NetworkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -25,15 +25,15 @@ class CargoRepositoryImpl @Inject constructor(
     }
 
     private fun isNetworkAvailable(): Boolean {
-        return Utils.isNetworkAvailable(context)
+        return NetworkManager.isNetworkAvailable(context)
     }
 
     private fun showSyncAlert(message: String) {
-        Utils.showAlert(context, message)
+        NetworkManager.showAlert(context, message)
     }
 
     private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
-        Utils.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
+        NetworkManager.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
     }
 
     override fun getAllCargos(): Flow<List<Cargo>> {

@@ -52,7 +52,6 @@ class CreateUserActivity : AppCompatActivity() {
         setupFincaSpinner()
         setupRoleSpinner()
         initializeSync(progressBar)
-        dataSyncManager.autoSyncOnReconnect()
     }
 
     private fun setupUI() {

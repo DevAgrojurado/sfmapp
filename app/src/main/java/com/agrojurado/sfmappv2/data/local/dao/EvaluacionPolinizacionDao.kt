@@ -1,7 +1,6 @@
 package com.agrojurado.sfmappv2.data.local.dao
 
 import androidx.room.*
-import com.agrojurado.sfmappv2.data.local.entity.EvaluacionGeneralEntity
 import com.agrojurado.sfmappv2.data.local.entity.EvaluacionPolinizacionEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -42,6 +41,9 @@ interface EvaluacionPolinizacionDao {
 
     @Query("SELECT * FROM evaluacionpolinizacion WHERE evaluacionGeneralId = :evaluacionGeneralId")
     fun getEvaluacionesByEvaluacionGeneralId(evaluacionGeneralId: Int): Flow<List<EvaluacionPolinizacionEntity>>
+
+    @Query("SELECT COUNT(*) FROM evaluacionpolinizacion WHERE syncStatus IN ('PENDING', 'FAILED')")
+    suspend fun getUnsyncedEvaluationsCount(): Int
 
     @Transaction
     suspend fun transaction(block: suspend () -> Unit) = block()

@@ -7,7 +7,7 @@ import com.agrojurado.sfmappv2.data.mapper.UsuarioMapper
 import com.agrojurado.sfmappv2.domain.model.Usuario
 import com.agrojurado.sfmappv2.domain.repository.UsuarioRepository
 import com.agrojurado.sfmappv2.data.remote.api.UsuarioApiService
-import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.NetworkManager
 import com.agrojurado.sfmappv2.data.remote.dto.login.LoginRequest
 import com.agrojurado.sfmappv2.data.remote.dto.login.LoginResponse
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -29,9 +29,9 @@ class UsuarioRepositoryImpl @Inject constructor(
         private const val KEY_EMAIL = "email_usuario"
     }
 
-    private fun isNetworkAvailable(): Boolean = Utils.isNetworkAvailable(context)
+    private fun isNetworkAvailable(): Boolean = NetworkManager.isNetworkAvailable(context)
 
-    private fun showAlert(message: String) = Utils.showAlert(context, message)
+    private fun showAlert(message: String) = NetworkManager.showAlert(context, message)
 
     private fun logError(response: Response<*>, message: String) {
         val errorBody = response.errorBody()?.string() ?: "No error body"

@@ -3,19 +3,29 @@ package com.agrojurado.sfmappv2.data.remote.api
 
 import com.agrojurado.sfmappv2.data.remote.adapter.BooleanTypeAdapter
 import com.google.gson.GsonBuilder
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
-    private const val BASE_URL = "https://sfm.agrojurado.com/apisfmtest/" // Url del api
+    private const val BASE_URL = "https://sfm.agrojurado.com/apisfm/"
 
     private val gson = GsonBuilder()
         .serializeNulls()
         .registerTypeAdapter(Boolean::class.java, BooleanTypeAdapter())
         .create()
 
+    // Configurar OkHttpClient con tiempos de espera extendidos
+    private val okHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
     private val retrofit: Retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
+        .client(okHttpClient) // Usar el OkHttpClient personalizado
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 

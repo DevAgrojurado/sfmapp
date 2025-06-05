@@ -38,7 +38,7 @@ data class EvaluacionGeneralEntity(
     @ColumnInfo(name = "idevaluadorev") val idevaluadorev: Int,
     @ColumnInfo(name = "idpolinizadorev") val idpolinizadorev: Int?,
     @ColumnInfo(name = "idloteev") val idLoteev: Int?,
-    @ColumnInfo(name = "isSynced") var isSynced: Boolean = false,
+    @ColumnInfo(name = "syncStatus") var syncStatus: String,
     @ColumnInfo(name = "isTemporary") var isTemporary: Boolean = false,
     @ColumnInfo(name = "timestamp") val timestamp: Long,
     @ColumnInfo(name = "fotoPath") var fotoPath: String? = null,

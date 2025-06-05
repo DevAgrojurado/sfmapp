@@ -1,5 +1,7 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform
 
+import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.os.Parcel
 import android.util.Log
@@ -11,7 +13,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.viewpager2.widget.ViewPager2
 import com.agrojurado.sfmappv2.R
 import com.agrojurado.sfmappv2.presentation.ui.base.BaseActivity
-import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.shared.SharedSelectionViewModel
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,7 +45,7 @@ class EvaluacionActivity : BaseActivity() {
         initialOperarioId = intent.getIntExtra("operarioId", -1).let { if (it == -1) null else it }
         initialLoteId = intent.getIntExtra("loteId", -1).let { if (it == -1) null else it }
         initialSeccion = intent.getIntExtra("seccion", -1).let { if (it == -1) null else it }
-        
+
         Log.d("EvaluacionActivity", "IDs iniciales recibidos: Operario=$initialOperarioId, Lote=$initialLoteId, Seccion=$initialSeccion")
 
         if (evaluacionGeneralId == -1) {
@@ -112,7 +113,7 @@ class EvaluacionActivity : BaseActivity() {
             if (!isSaving) {
                 when (viewPager.currentItem) {
                     0 -> finish()
-                    else -> viewPager.currentItem = viewPager.currentItem - 1
+                    else -> viewPager.currentItem -= 1
                 }
             }
         }
@@ -120,7 +121,7 @@ class EvaluacionActivity : BaseActivity() {
         btnForward.setOnClickListener {
             if (!isSaving) {
                 if (viewPager.currentItem < 2) {
-                    viewPager.currentItem = viewPager.currentItem + 1
+                    viewPager.currentItem += 1
                 } else {
                     startSaveProcess()
                 }
@@ -140,6 +141,7 @@ class EvaluacionActivity : BaseActivity() {
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateNavigationButtons(position: Int) {
         when (position) {
             0 -> {
@@ -183,7 +185,12 @@ class EvaluacionActivity : BaseActivity() {
     private fun setupObservers() {
         viewModel.saveResult.observe(this) { success ->
             if (success) {
-                Toast.makeText(this, "Evaluación guardada exitosamente", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "✅ Evento agregado", Toast.LENGTH_SHORT).show()
+                // Devolver un resultado a EvaluacionGeneralFragment
+                val resultIntent = Intent().apply {
+                    putExtra("SAVE_SUCCESS", true)
+                }
+                setResult(RESULT_OK, resultIntent)
                 finish()
             }
         }

@@ -24,6 +24,6 @@ data class EvaluacionPolinizacion(
     val repaso1: Int?,
     val repaso2: Int?,
     val observaciones: String?,
-    var isSynced: Boolean = false,
+    var syncStatus: String = "PENDING",
     val timestamp: Long = System.currentTimeMillis()
 )

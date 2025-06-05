@@ -16,9 +16,11 @@ interface EvaluacionGeneralRepository {
     suspend fun getActiveTemporaryEvaluacion(): EvaluacionGeneral?
     suspend fun finalizeTemporaryEvaluacion(evaluacionId: Int)
     suspend fun deleteTemporaryEvaluaciones()
+    suspend fun getLatestTemporaryEvaluationId(): Int?
 
     // Operaciones de sincronización
     suspend fun getUnsyncedEvaluationsCount(): Int
-    suspend fun syncEvaluacionesGenerales(): Map<Int, Int>
-    suspend fun fetchEvaluacionesFromServer() // Obtiene evaluaciones del servidor
+    //suspend fun syncEvaluacionesGenerales(): Map<Int, Int>
+    //suspend fun fetchEvaluacionesFromServer() // Obtiene evaluaciones del servidor
+    //suspend fun syncPendingPhotosAndSignatures()
 }

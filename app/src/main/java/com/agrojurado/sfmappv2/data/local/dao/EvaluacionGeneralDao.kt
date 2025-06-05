@@ -8,7 +8,6 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.agrojurado.sfmappv2.data.local.entity.EvaluacionGeneralEntity
-import com.agrojurado.sfmappv2.data.local.relation.EvaluacionGeneralWithEvaluaciones
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -22,14 +21,6 @@ interface EvaluacionGeneralDao {
     @Delete
     suspend fun deleteEvaluacionGeneral(evaluacionGeneral: EvaluacionGeneralEntity)
 
-    @Transaction
-    @Query("SELECT * FROM evaluaciongeneral WHERE id = :id")
-    fun getEvaluacionGeneralWithEvaluaciones(id: Int): Flow<EvaluacionGeneralWithEvaluaciones>
-
-    @Transaction
-    @Query("SELECT * FROM evaluaciongeneral")
-    fun getAllEvaluacionesGeneralesWithEvaluaciones(): Flow<List<EvaluacionGeneralWithEvaluaciones>>
-
     @Query("SELECT * FROM evaluaciongeneral WHERE isTemporary = 1 LIMIT 1")
     suspend fun getTemporalEvaluacionGeneral(): EvaluacionGeneralEntity?
 
@@ -42,30 +33,25 @@ interface EvaluacionGeneralDao {
     @Query("SELECT * FROM evaluaciongeneral")
     fun getAllEvaluacionesGenerales(): Flow<List<EvaluacionGeneralEntity>>
 
-    @Query("SELECT * FROM evaluaciongeneral WHERE isSynced = 0 AND isTemporary = 0")
+    @Query("SELECT * FROM evaluaciongeneral WHERE syncStatus IN ('PENDING', 'FAILED') AND isTemporary = 0")
     suspend fun getUnsyncedEvaluaciones(): List<EvaluacionGeneralEntity>
 
-    @Query("SELECT MAX(timestamp) FROM evaluaciongeneral WHERE isSynced = 1")
+    @Query("SELECT MAX(timestamp) FROM evaluaciongeneral WHERE syncStatus = 'SYNCED'")
     suspend fun getLastSyncTimestamp(): Long?
 
     @Query("SELECT * FROM evaluaciongeneral WHERE serverId = :serverId LIMIT 1")
     suspend fun getEvaluacionGeneralByServerId(serverId: Int): EvaluacionGeneralEntity?
 
-    @Query("SELECT COUNT(*) FROM evaluaciongeneral WHERE isSynced = 0")
+    @Query("SELECT COUNT(*) FROM evaluaciongeneral WHERE syncStatus IN ('PENDING', 'FAILED')")
     suspend fun getUnsyncedEvaluationsCount(): Int
 
-    @Query("SELECT * FROM evaluaciongeneral WHERE isSynced = 0")
-    suspend fun getUnsyncedEvaluacionesGenerales(): List<EvaluacionGeneralEntity>
+    @Query("SELECT * FROM evaluaciongeneral WHERE syncStatus = 'SYNCED' AND (fotoPath IS NOT NULL AND fotoPath NOT LIKE 'http%' OR firmaPath IS NOT NULL AND firmaPath NOT LIKE 'http%')")
+    fun getSyncedEvaluacionesWithLocalPaths(): List<EvaluacionGeneralEntity>
 
-    @Query("SELECT * FROM evaluaciongeneral WHERE fecha = :fecha AND hora = :hora AND idevaluadorev = :idevaluadorev AND idpolinizadorev = :idpolinizadorev AND idLoteev = :idLoteev LIMIT 1")
-    suspend fun getEvaluacionGeneralByUniqueFields(
-        fecha: String,
-        hora: String,
-        idevaluadorev: Int,
-        idpolinizadorev: Int?,
-        idLoteev: Int?
-    ): EvaluacionGeneralEntity?
+    @Query("SELECT id FROM evaluaciongeneral WHERE isTemporary = 1 ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatestTemporaryEvaluationId(): Int?
 
     @Transaction
     suspend fun transaction(block: suspend () -> Unit) = block()
+
 }

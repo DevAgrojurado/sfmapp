@@ -7,7 +7,7 @@ import com.agrojurado.sfmappv2.data.mapper.AreaMapper
 import com.agrojurado.sfmappv2.data.remote.api.AreaApiService
 import com.agrojurado.sfmappv2.domain.model.Area
 import com.agrojurado.sfmappv2.domain.repository.AreaRepository
-import com.agrojurado.sfmappv2.data.remote.dto.common.utils.Utils
+import com.agrojurado.sfmappv2.data.remote.dto.common.utils.NetworkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -24,14 +24,14 @@ class AreaRepositoryImpl @Inject constructor(
         private const val TAG = "AreaRepository"
     }
 
-    private fun isNetworkAvailable(): Boolean = Utils.isNetworkAvailable(context)
+    private fun isNetworkAvailable(): Boolean = NetworkManager.isNetworkAvailable(context)
 
     private fun showSyncAlert(message: String) {
-        Utils.showAlert(context, message)
+        NetworkManager.showAlert(context, message)
     }
 
     private fun logServerError(response: retrofit2.Response<*>, logMessage: String) {
-        Utils.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
+        NetworkManager.logError(TAG, Exception("Server error (${response.code()}): ${response.errorBody()?.string()}"), logMessage)
     }
 
     override fun getAllAreas(): Flow<List<Area>> {

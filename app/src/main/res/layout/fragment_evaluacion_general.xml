@@ -19,236 +19,387 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <!-- Sección 1: Polinizador, Lote y Sección -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Seleccione valores para la evaluación"
-                android:textColor="@color/black"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                android:textAlignment="center"
-                android:layout_marginBottom="16dp"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Polinizador:"
-                android:textColor="@color/black"/>
-
-            <Spinner
-                android:id="@+id/spinnerPolinizador"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:padding="8dp"
-                android:background="@drawable/spinner_border"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Lote:"
-                android:textColor="@color/black"/>
-
-            <Spinner
-                android:id="@+id/spinnerLote"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:padding="8dp"
-                android:background="@drawable/spinner_border"/>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/textInputLayoutSeccion"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:hint="Sección"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etSeccion"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="number"
-                    android:maxLines="1"/>
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Divisor -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/grayColor"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- Sección 2: Evaluaciones -->
-            <TextView
-                android:id="@+id/tvTotalEvaluaciones"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Total: 0 eventos"
-                android:textStyle="bold"
-                android:textColor="@color/black"/>
-
-            <TextView
-                android:id="@+id/tvNoEvaluaciones"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="No hay eventos agregados."
-                android:gravity="center"
-                android:textColor="@color/grayColor"
-                android:padding="32dp"
-                android:visibility="visible"/>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerViewEvaluaciones"
-                android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:layout_marginTop="8dp"
-                tools:listitem="@layout/item_evaluacion"
-                android:visibility="gone"/>
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/fabAddEvaluacion"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:layout_margin="16dp"
-                android:src="@android:drawable/ic_input_add"
-                android:contentDescription="Agregar Evaluación Individual"
-                android:backgroundTint="@color/green"
-                app:tint="@color/white"/>
-
-            <!-- Divisor -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/grayColor"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="16dp"/>
-
-            <!-- Sección 3: Foto y Firma -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:text="Foto y firma del operario"
-                android:textAlignment="center"
-                android:textColor="@color/black"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Foto:"
-                android:textColor="@color/black"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp"/>
+            android:orientation="vertical">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="16dp">
+                android:orientation="vertical"
+                android:padding="20dp">
 
-                <com.google.android.material.imageview.ShapeableImageView
-                    android:id="@+id/ivFoto"
-                    android:layout_width="100dp"
-                    android:layout_height="100dp"
-                    android:scaleType="centerCrop"
-                    android:background="@drawable/image_border"
-                    android:contentDescription="Foto de evaluación"
-                    app:shapeAppearanceOverlay="@style/imageViewRounded"
+                <!-- Sección 1: Configuración Inicial -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardElevation="2dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardBackgroundColor="@color/white"
                     app:strokeColor="@color/grayColor"
                     app:strokeWidth="1dp"
-                    android:saveEnabled="false"/>
+                    android:layout_marginBottom="20dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAddFoto"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Agregar Foto"
-                    android:layout_marginStart="16dp"
-                    android:backgroundTint="@color/green"
-                    android:textColor="@color/white"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Firma:"
-                android:textColor="@color/black"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp"/>
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Configuración Inicial"
+                            android:textColor="@color/black"
+                            android:textStyle="bold"
+                            android:textSize="16sp"
+                            android:layout_marginBottom="16dp"
+                            android:drawableStart="@android:drawable/ic_menu_edit"
+                            android:drawablePadding="8dp"
+                            android:gravity="center_vertical"/>
 
-            <!-- Área para mostrar la firma o abrir el BottomSheet -->
-            <LinearLayout
-                android:id="@+id/signatureContainer"
-                android:layout_width="match_parent"
-                android:layout_height="150dp"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:background="@drawable/signature_border"
-                android:layout_marginBottom="8dp"
-                android:clickable="true"
-                android:focusable="true">
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="16dp"
+                            android:hint="Polinizador"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                            app:endIconMode="dropdown_menu">
 
-                <!-- ImageView para mostrar la firma guardada -->
-                <ImageView
-                    android:id="@+id/ivSignature"
+                            <AutoCompleteTextView
+                                android:id="@+id/spinnerPolinizador"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text"
+                                android:maxLines="1"
+                                android:completionThreshold="1"
+                                android:dropDownHeight="200dp"
+                                android:focusable="true"
+                                android:focusableInTouchMode="true"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="16dp"
+                            android:hint="Lote"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                            app:endIconMode="dropdown_menu">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/spinnerLote"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text"
+                                android:maxLines="1"
+                                android:completionThreshold="1"
+                                android:dropDownHeight="200dp"
+                                android:focusable="true"
+                                android:focusableInTouchMode="true"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/textInputLayoutSeccion"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Sección"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etSeccion"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number"
+                                android:maxLines="1"/>
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Sección 2: Evaluaciones -->
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:scaleType="fitCenter"
-                    android:visibility="gone"
-                    android:contentDescription="Firma guardada" />
-
-                <!-- Texto que se muestra si no hay firma -->
-                <TextView
-                    android:id="@+id/tvTapToSign"
-                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Toque para agregar firma"
-                    android:textColor="@color/grayColor"
-                    android:visibility="visible" />
+                    app:cardElevation="2dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:strokeColor="@color/grayColor"
+                    app:strokeWidth="1dp"
+                    android:layout_marginBottom="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="16dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Eventos de Evaluación"
+                                android:textColor="@color/black"
+                                android:textStyle="bold"
+                                android:textSize="16sp"
+                                android:drawableStart="@android:drawable/ic_menu_agenda"
+                                android:drawablePadding="8dp"
+                                android:gravity="center_vertical"/>
+
+                            <TextView
+                                android:id="@+id/tvTotalEvaluaciones"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0 eventos"
+                                android:textStyle="bold"
+                                android:textColor="@color/green"
+                                android:background="@drawable/counter_background"
+                                android:paddingHorizontal="12dp"
+                                android:paddingVertical="4dp"
+                                android:textSize="12sp"/>
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvNoEvaluaciones"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="No hay eventos agregados.\nToque el botón + para añadir eventos"
+                            android:gravity="center"
+                            android:textColor="@color/grayColor"
+                            android:padding="32dp"
+                            android:visibility="visible"
+                            android:drawablePadding="16dp"
+                            android:textSize="14sp"
+                            android:lineSpacingExtra="4dp"
+                            app:drawableTint="@color/grayColor"
+                            app:drawableTopCompat="@android:drawable/ic_input_add" />
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/recyclerViewEvaluaciones"
+                            android:layout_width="match_parent"
+                            android:layout_height="120dp"
+                            android:layout_marginTop="4dp"
+                            tools:listitem="@layout/item_evaluacion"
+                            android:visibility="gone"
+                            android:background="@drawable/recycler_background"/>
+
+                        <com.google.android.material.floatingactionbutton.FloatingActionButton
+                            android:id="@+id/fabAddEvaluacion"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="end"
+                            android:layout_marginTop="16dp"
+                            android:src="@android:drawable/ic_input_add"
+                            android:contentDescription="Agregar Evaluación Individual"
+                            android:backgroundTint="@color/green"
+                            app:tint="@color/white"
+                            app:fabSize="normal"
+                            app:elevation="6dp"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Sección 3: Documentación -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardElevation="2dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:strokeColor="@color/grayColor"
+                    app:strokeWidth="1dp"
+                    android:layout_marginBottom="20dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Documentación del Operario"
+                            android:textColor="@color/black"
+                            android:textStyle="bold"
+                            android:textSize="16sp"
+                            android:layout_marginBottom="20dp"
+                            android:drawablePadding="8dp"
+                            android:gravity="center_vertical"
+                            app:drawableStartCompat="@android:drawable/ic_menu_camera" />
+
+                        <!-- Sección Foto -->
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Fotografía"
+                            android:textColor="@color/black"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="12dp"
+                            android:textSize="14sp"/>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:cardElevation="1dp"
+                            app:cardCornerRadius="8dp"
+                            app:cardBackgroundColor="#FAFAFA"
+                            android:layout_marginBottom="20dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:padding="16dp">
+
+                                <com.google.android.material.imageview.ShapeableImageView
+                                    android:id="@+id/ivFoto"
+                                    android:layout_width="80dp"
+                                    android:layout_height="80dp"
+                                    android:scaleType="centerCrop"
+                                    android:background="@drawable/image_border"
+                                    android:contentDescription="Foto de evaluación"
+                                    app:shapeAppearanceOverlay="@style/imageViewRounded"
+                                    app:strokeColor="@color/grayColor"
+                                    app:strokeWidth="1dp"
+                                    android:saveEnabled="false"/>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginStart="16dp">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Agregue una fotografía"
+                                        android:textColor="@color/black"
+                                        android:textStyle="bold"
+                                        android:textSize="14sp"/>
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="Capture una imagen del operario evaluado"
+                                        android:textColor="@color/grayColor"
+                                        android:textSize="12sp"
+                                        android:layout_marginTop="4dp"/>
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnAddFoto"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Tomar Foto"
+                                        android:textAllCaps="false"
+                                        android:layout_marginTop="8dp"
+                                        android:textColor="@color/green"
+                                        app:strokeColor="@color/green"
+                                        android:textSize="12sp"
+                                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                        app:icon="@android:drawable/ic_menu_camera"
+                                        app:iconTint="@color/green"
+                                        app:iconSize="16dp"/>
+                                </LinearLayout>
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- Sección Firma -->
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Firma Digital"
+                            android:textColor="@color/black"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="12dp"
+                            android:textSize="14sp"/>
+
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:cardElevation="1dp"
+                            app:cardCornerRadius="8dp"
+                            app:cardBackgroundColor="#FAFAFA">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <LinearLayout
+                                    android:id="@+id/signatureContainer"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="140dp"
+                                    android:orientation="vertical"
+                                    android:gravity="center"
+                                    android:background="@drawable/signature_border"
+                                    android:layout_marginBottom="12dp"
+                                    android:clickable="true"
+                                    android:focusable="true">
+
+                                    <ImageView
+                                        android:id="@+id/ivSignature"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        android:scaleType="fitCenter"
+                                        android:visibility="gone"
+                                        android:contentDescription="Firma guardada" />
+
+                                    <LinearLayout
+                                        android:id="@+id/emptySignatureLayout"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="vertical"
+                                        android:gravity="center"
+                                        android:visibility="visible">
+
+                                        <TextView
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="✍"
+                                            android:textSize="32sp"
+                                            android:textColor="@color/grayColor"
+                                            android:layout_marginBottom="8dp"/>
+
+                                        <TextView
+                                            android:id="@+id/tvTapToSign"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:text="Toque para agregar firma"
+                                            android:textColor="@color/grayColor"
+                                            android:textSize="12sp"/>
+                                    </LinearLayout>
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="end">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btnClearFirma"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="Limpiar"
+                                        android:textAllCaps="false"
+                                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                        android:layout_marginEnd="8dp"
+                                        android:textColor="@color/green"
+                                        app:strokeColor="@color/green"
+                                        android:textSize="12sp"/>
+                                </LinearLayout>
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="end">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnClearFirma"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Limpiar"
-                    android:textAllCaps="false"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_marginEnd="8dp"
-                    android:textColor="@color/green"
-                    app:strokeColor="@color/green"/>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSaveFirma"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Guardar"
-                    android:textAllCaps="false"
-                    android:backgroundTint="@color/green"
-                    android:textColor="@color/white"
-                    android:layout_marginEnd="8dp"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
-            </LinearLayout>
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

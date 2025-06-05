@@ -40,7 +40,7 @@ class EvaluacionesListAdapter(
             tvFecha.text = "Fecha: ${evaluacion.fecha} ${evaluacion.hora}"
 
             // Estado de sincronización
-            if (evaluacion.isSynced) {
+            if (evaluacion.syncStatus == "SYNCED") {
                 tvEstadoSync.text = "Sincronizado"
                 tvEstadoSync.setTextColor(itemView.context.getColor(R.color.green))
             } else {

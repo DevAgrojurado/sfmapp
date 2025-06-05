@@ -33,7 +33,7 @@ object EvaluacionPolinizacionMapper {
             observaciones = entity.observaciones,
             evaluacionGeneralId = entity.evaluacionGeneralId,
             timestamp = entity.timestamp,
-            isSynced = entity.isSynced,
+            syncStatus = entity.syncStatus
         )
     }
 
@@ -63,7 +63,7 @@ object EvaluacionPolinizacionMapper {
             observaciones = domain.observaciones,
             evaluacionGeneralId = domain.evaluacionGeneralId,
             timestamp = domain.timestamp,
-            isSynced = domain.isSynced
+            syncStatus = domain.syncStatus
         )
     }
 
@@ -71,7 +71,7 @@ object EvaluacionPolinizacionMapper {
         return EvaluacionPolinizacion(
             id = 0, // El id local se generará automáticamente
             serverId = response.id, // Guardamos el id del servidor en serverId
-            evaluacionGeneralId = response.evaluaciongeneralid,
+            evaluacionGeneralId = null, // Se asignará en DataSyncManager
             fecha = response.fecha,
             hora = response.hora,
             semana = response.semana,
@@ -93,7 +93,7 @@ object EvaluacionPolinizacionMapper {
             repaso2 = response.repaso2,
             observaciones = response.observaciones,
             timestamp = response.timestamp,
-            isSynced = true,
+            syncStatus = "SYNCED"
         )
     }
 

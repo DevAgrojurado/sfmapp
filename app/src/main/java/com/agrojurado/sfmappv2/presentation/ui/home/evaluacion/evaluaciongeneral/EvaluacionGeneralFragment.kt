@@ -1,6 +1,8 @@
 package com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluaciongeneral
 
 import android.Manifest
+import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
@@ -12,7 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
@@ -27,10 +29,8 @@ import com.agrojurado.sfmappv2.data.sync.SyncStatus
 import com.agrojurado.sfmappv2.domain.model.EvaluacionPolinizacion
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.evaluacionfragmentsform.EvaluacionActivity
 import com.agrojurado.sfmappv2.presentation.ui.home.evaluacion.shared.SharedSelectionViewModel
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import dagger.hilt.android.AndroidEntryPoint
-import java.io.File
 
 @AndroidEntryPoint
 class EvaluacionGeneralFragment : Fragment() {
@@ -43,8 +43,11 @@ class EvaluacionGeneralFragment : Fragment() {
     private lateinit var fabAddEvaluacion: FloatingActionButton
     private lateinit var tvNoEvaluaciones: TextView
     private lateinit var tvTotalEvaluaciones: TextView
-    private lateinit var spinnerPolinizador: Spinner
-    private lateinit var spinnerLote: Spinner
+
+    // Cambiado de Spinner a AutoCompleteTextView
+    private lateinit var autoCompletePolinizador: AutoCompleteTextView
+    private lateinit var autoCompleteLote: AutoCompleteTextView
+
     private lateinit var etSeccion: EditText
     private lateinit var ivFoto: ImageView
     private lateinit var btnAddFoto: Button
@@ -52,11 +55,26 @@ class EvaluacionGeneralFragment : Fragment() {
     private lateinit var ivSignature: ImageView
     private lateinit var tvTapToSign: TextView
     private lateinit var btnClearFirma: Button
-    private lateinit var btnSaveFirma: Button
 
     private var isUpdatingFromSharedViewModel = false
     private var fotoPath: String? = null
     private var firmaPath: String? = null
+
+    // Adaptadores para AutoCompleteTextView
+    private var polinizadorAdapter: ArrayAdapter<String>? = null
+    private var loteAdapter: ArrayAdapter<String>? = null
+
+    // Lanzador para iniciar EvaluacionActivity y recibir el resultado
+    private val startEvaluacionActivity = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            if (data?.getBooleanExtra("SAVE_SUCCESS", false) == true) {
+                // La evaluación se guardó correctamente, recargar las evaluaciones individuales
+                viewModel.loadEvaluacionesIndividuales()
+                //Toast.makeText(requireContext(), "Evaluación individual agregada", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     companion object {
         private const val CAMERA_PERMISSION_REQUEST_CODE = 100
@@ -73,22 +91,48 @@ class EvaluacionGeneralFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         initViews(view)
         setupRecyclerView()
-
-        // Enable options menu in this fragment
         setHasOptionsMenu(true)
 
-        if (viewModel.temporaryEvaluacionId.value == null) {
-            viewModel.initTemporaryEvaluacion()
+        // Restaurar estado si existe
+        savedInstanceState?.let {
+            val restoredTempId = it.getInt("temporaryEvaluacionId", -1)
+            if (restoredTempId != -1 && viewModel.temporaryEvaluacionId.value == null) {
+                viewModel.setTemporaryEvaluacionId(restoredTempId)
+                Log.d("EvaluacionGeneralFragment", "Restored temporaryEvaluacionId: $restoredTempId")
+            }
+            val restoredOperarioId = it.getInt("selectedOperarioId", 0)
+            val restoredLoteId = it.getInt("selectedLoteId", 0)
+            val restoredSeccion = it.getString("selectedSeccion") ?: ""
+            if (restoredOperarioId > 0) sharedViewModel.setSelectedOperarioId(restoredOperarioId)
+            if (restoredLoteId > 0) sharedViewModel.setSelectedLoteId(restoredLoteId)
+            if (restoredSeccion.isNotEmpty()) etSeccion.setText(restoredSeccion)
         }
-        viewModel.loadEvaluacionesIndividuales()
+
+        // Observar el usuario logueado
+        viewModel.loggedInUser.observe(viewLifecycleOwner) { user ->
+            if (user == null) {
+                Log.w("EvaluacionGeneralFragment", "Usuario no cargado, esperando...")
+                Toast.makeText(requireContext(), "Cargando usuario, por favor espera...", Toast.LENGTH_SHORT).show()
+            } else {
+                // Solo inicializar si no hay un ID temporal activo
+                if (viewModel.temporaryEvaluacionId.value == null) {
+                    viewModel.initTemporaryEvaluacion()
+                    Log.d("EvaluacionGeneralFragment", "Initialized new temporary evaluation")
+                }
+            }
+        }
+
         sharedViewModel.loadOperarios()
         sharedViewModel.loadLotes()
-
         setupObservers()
         setupListeners()
+
+        // Verificar estado inicial de los widgets
+        viewModel.evaluacionesIndividuales.value?.let { evaluaciones ->
+            updateEvaluacionesList(evaluaciones)
+        }
 
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -126,11 +170,9 @@ class EvaluacionGeneralFragment : Fragment() {
         }
     }
 
-    // Override to handle toolbar back button presses
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
-                // Handle the Up/Home button in the toolbar
                 handleCancelAction()
                 true
             }
@@ -142,6 +184,11 @@ class EvaluacionGeneralFragment : Fragment() {
         super.onSaveInstanceState(outState)
         outState.putString("fotoPath", fotoPath)
         outState.putString("firmaPath", firmaPath)
+        viewModel.temporaryEvaluacionId.value?.let { outState.putInt("temporaryEvaluacionId", it) }
+        // Guardar las selecciones actuales
+        outState.putInt("selectedOperarioId", sharedViewModel.selectedOperarioId.value ?: 0)
+        outState.putInt("selectedLoteId", sharedViewModel.selectedLoteId.value ?: 0)
+        outState.putString("selectedSeccion", etSeccion.text.toString())
     }
 
     private fun initViews(view: View) {
@@ -151,8 +198,11 @@ class EvaluacionGeneralFragment : Fragment() {
         fabAddEvaluacion = view.findViewById(R.id.fabAddEvaluacion)
         tvNoEvaluaciones = view.findViewById(R.id.tvNoEvaluaciones)
         tvTotalEvaluaciones = view.findViewById(R.id.tvTotalEvaluaciones)
-        spinnerPolinizador = view.findViewById(R.id.spinnerPolinizador)
-        spinnerLote = view.findViewById(R.id.spinnerLote)
+
+        // Inicializar AutoCompleteTextView en lugar de Spinner
+        autoCompletePolinizador = view.findViewById(R.id.spinnerPolinizador)
+        autoCompleteLote = view.findViewById(R.id.spinnerLote)
+
         etSeccion = view.findViewById(R.id.etSeccion)
         ivFoto = view.findViewById(R.id.ivFoto)
         btnAddFoto = view.findViewById(R.id.btnAddFoto)
@@ -160,7 +210,6 @@ class EvaluacionGeneralFragment : Fragment() {
         ivSignature = view.findViewById(R.id.ivSignature)
         tvTapToSign = view.findViewById(R.id.tvTapToSign)
         btnClearFirma = view.findViewById(R.id.btnClearFirma)
-        btnSaveFirma = view.findViewById(R.id.btnSaveFirma)
     }
 
     private fun setupRecyclerView() {
@@ -175,20 +224,26 @@ class EvaluacionGeneralFragment : Fragment() {
     }
 
     private fun setupObservers() {
+        // Observer para operarios - actualizado para AutoCompleteTextView
         sharedViewModel.operarios.observe(viewLifecycleOwner) { operariosList ->
             if (operariosList.isNotEmpty()) {
-                val adapter = ArrayAdapter(
+                val operariosNames = operariosList.map { it.first }
+                polinizadorAdapter = ArrayAdapter(
                     requireContext(),
-                    android.R.layout.simple_spinner_item,
-                    operariosList.map { it.first }
+                    android.R.layout.simple_dropdown_item_1line,
+                    operariosNames
                 )
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                spinnerPolinizador.adapter = adapter
+                autoCompletePolinizador.setAdapter(polinizadorAdapter)
+
+                // Configurar filtrado automático
+                autoCompletePolinizador.threshold = 1 // Mostrar sugerencias desde el primer carácter
+
+                // Establecer valor seleccionado si existe
                 sharedViewModel.selectedOperarioId.value?.let { id ->
-                    val position = operariosList.indexOfFirst { it.second.id == id }
-                    if (position != -1) {
+                    val selectedOperario = operariosList.find { it.second.id == id }
+                    selectedOperario?.let {
                         isUpdatingFromSharedViewModel = true
-                        spinnerPolinizador.setSelection(position)
+                        autoCompletePolinizador.setText(it.first, false)
                         isUpdatingFromSharedViewModel = false
                     }
                 }
@@ -198,29 +253,37 @@ class EvaluacionGeneralFragment : Fragment() {
         sharedViewModel.selectedOperarioId.observe(viewLifecycleOwner) { id ->
             id?.let {
                 val operariosList = sharedViewModel.operarios.value ?: return@let
-                val position = operariosList.indexOfFirst { pair -> pair.second.id == it }
-                if (position != -1 && spinnerPolinizador.selectedItemPosition != position) {
-                    isUpdatingFromSharedViewModel = true
-                    spinnerPolinizador.setSelection(position)
-                    isUpdatingFromSharedViewModel = false
+                val selectedOperario = operariosList.find { pair -> pair.second.id == it }
+                selectedOperario?.let { operario ->
+                    if (autoCompletePolinizador.text.toString() != operario.first) {
+                        isUpdatingFromSharedViewModel = true
+                        autoCompletePolinizador.setText(operario.first, false)
+                        isUpdatingFromSharedViewModel = false
+                    }
                 }
             }
         }
 
+        // Observer para lotes - actualizado para AutoCompleteTextView
         sharedViewModel.lotes.observe(viewLifecycleOwner) { lotesList ->
             if (lotesList.isNotEmpty()) {
-                val adapter = ArrayAdapter(
+                val lotesNames = lotesList.map { it.first }
+                loteAdapter = ArrayAdapter(
                     requireContext(),
-                    android.R.layout.simple_spinner_item,
-                    lotesList.map { it.first }
+                    android.R.layout.simple_dropdown_item_1line,
+                    lotesNames
                 )
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                spinnerLote.adapter = adapter
+                autoCompleteLote.setAdapter(loteAdapter)
+
+                // Configurar filtrado automático
+                autoCompleteLote.threshold = 1 // Mostrar sugerencias desde el primer carácter
+
+                // Establecer valor seleccionado si existe
                 sharedViewModel.selectedLoteId.value?.let { id ->
-                    val position = lotesList.indexOfFirst { it.second.id == id }
-                    if (position != -1) {
+                    val selectedLote = lotesList.find { it.second.id == id }
+                    selectedLote?.let {
                         isUpdatingFromSharedViewModel = true
-                        spinnerLote.setSelection(position)
+                        autoCompleteLote.setText(it.first, false)
                         isUpdatingFromSharedViewModel = false
                     }
                 }
@@ -230,11 +293,13 @@ class EvaluacionGeneralFragment : Fragment() {
         sharedViewModel.selectedLoteId.observe(viewLifecycleOwner) { id ->
             id?.let {
                 val lotesList = sharedViewModel.lotes.value ?: return@let
-                val position = lotesList.indexOfFirst { pair -> pair.second.id == it }
-                if (position != -1 && spinnerLote.selectedItemPosition != position) {
-                    isUpdatingFromSharedViewModel = true
-                    spinnerLote.setSelection(position)
-                    isUpdatingFromSharedViewModel = false
+                val selectedLote = lotesList.find { pair -> pair.second.id == it }
+                selectedLote?.let { lote ->
+                    if (autoCompleteLote.text.toString() != lote.first) {
+                        isUpdatingFromSharedViewModel = true
+                        autoCompleteLote.setText(lote.first, false)
+                        isUpdatingFromSharedViewModel = false
+                    }
                 }
             }
         }
@@ -283,25 +348,36 @@ class EvaluacionGeneralFragment : Fragment() {
 
     private fun setupListeners() {
         fabAddEvaluacion.setOnClickListener {
-            // Ya no llamamos a guardarSeleccionesActuales aquí para este flujo
-            // guardarSeleccionesActuales()
-            
-            // Obtener los IDs seleccionados directamente
-            val selectedOperarioId = sharedViewModel.operarios.value?.getOrNull(spinnerPolinizador.selectedItemPosition)?.second?.id
-            val selectedLoteId = sharedViewModel.lotes.value?.getOrNull(spinnerLote.selectedItemPosition)?.second?.id
+            // Obtener IDs basados en el texto seleccionado en AutoCompleteTextView
+            val selectedOperarioId = getSelectedOperarioId()
+            val selectedLoteId = getSelectedLoteId()
             val selectedSeccion = etSeccion.text.toString().toIntOrNull()
-            
+
+            // Validar que el polinizador y el lote sean válidos
+            if (selectedOperarioId == null) {
+                Toast.makeText(requireContext(), "Seleccione un polinizador válido", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (selectedLoteId == null) {
+                Toast.makeText(requireContext(), "Seleccione un lote válido", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            // Opcional: Validar que la sección no esté vacía y sea un número válido
+            if (selectedSeccion == null) {
+                Toast.makeText(requireContext(), "Ingrese una sección válida", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             Log.d("EvaluacionGeneralFragment", "Iniciando EvaluacionActivity con Operario=$selectedOperarioId, Lote=$selectedLoteId, Seccion=$selectedSeccion")
 
             if (checkCameraPermission()) {
                 val intent = Intent(requireContext(), EvaluacionActivity::class.java).apply {
                     putExtra("evaluacionGeneralId", viewModel.temporaryEvaluacionId.value ?: -1)
-                    // Pasar los IDs como extras
-                    selectedOperarioId?.let { putExtra("operarioId", it) }
-                    selectedLoteId?.let { putExtra("loteId", it) }
-                    selectedSeccion?.let { putExtra("seccion", it) }
+                    putExtra("operarioId", selectedOperarioId)
+                    putExtra("loteId", selectedLoteId)
+                    putExtra("seccion", selectedSeccion)
                 }
-                startActivity(intent)
+                startEvaluacionActivity.launch(intent)
             } else {
                 requestCameraPermission()
             }
@@ -315,31 +391,89 @@ class EvaluacionGeneralFragment : Fragment() {
             handleCancelAction()
         }
 
-        spinnerPolinizador.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (!isUpdatingFromSharedViewModel) {
-                    val operarioId = sharedViewModel.operarios.value?.get(position)?.second?.id
-                    operarioId?.let { sharedViewModel.setSelectedOperarioId(it); viewModel.setSelectedPolinizadorId(it) }
+        // Listener para AutoCompleteTextView de Polinizador
+        autoCompletePolinizador.setOnItemClickListener { _, _, position, _ ->
+            if (!isUpdatingFromSharedViewModel) {
+                val adapter = autoCompletePolinizador.adapter as? ArrayAdapter<String>
+                val selectedText = adapter?.getItem(position)
+                selectedText?.let { text ->
+                    val operariosList = sharedViewModel.operarios.value
+                    val operario = operariosList?.find { it.first == text }
+                    operario?.let {
+                        sharedViewModel.setSelectedOperarioId(it.second.id)
+                        viewModel.setSelectedPolinizadorId(it.second.id)
+                    }
                 }
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                sharedViewModel.setSelectedOperarioId(null)
-                viewModel.setSelectedPolinizadorId(0)
             }
         }
 
-        spinnerLote.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (!isUpdatingFromSharedViewModel) {
-                    val loteId = sharedViewModel.lotes.value?.get(position)?.second?.id
-                    loteId?.let { sharedViewModel.setSelectedLoteId(it); viewModel.setSelectedLoteId(it) }
+        // También escuchar cambios de texto para validación manual
+        autoCompletePolinizador.doAfterTextChanged { text ->
+            if (!isUpdatingFromSharedViewModel) {
+                val inputText = text.toString()
+                val operariosList = sharedViewModel.operarios.value
+                val exactMatch = operariosList?.find { it.first.equals(inputText, ignoreCase = true) }
+
+                if (exactMatch != null) {
+                    // Coincidencia exacta encontrada
+                    sharedViewModel.setSelectedOperarioId(exactMatch.second.id)
+                    viewModel.setSelectedPolinizadorId(exactMatch.second.id)
+                } else {
+                    // No hay coincidencia exacta, limpiar selección
+                    sharedViewModel.setSelectedOperarioId(null)
+                    viewModel.setSelectedPolinizadorId(0)
                 }
             }
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                sharedViewModel.setSelectedLoteId(null)
-                viewModel.setSelectedLoteId(0)
+        }
+
+// Listener para AutoCompleteTextView de Lote
+        autoCompleteLote.setOnItemClickListener { _, _, position, _ ->
+            if (!isUpdatingFromSharedViewModel) {
+                val adapter = autoCompleteLote.adapter as? ArrayAdapter<String>
+                val selectedText = adapter?.getItem(position)
+                selectedText?.let { text ->
+                    val lotesList = sharedViewModel.lotes.value
+                    val lote = lotesList?.find { it.first == text }
+                    lote?.let {
+                        sharedViewModel.setSelectedLoteId(it.second.id)
+                        viewModel.setSelectedLoteId(it.second.id)
+                    }
+                }
             }
         }
+
+        // Listener para cambios de texto en Lote
+        autoCompleteLote.doAfterTextChanged { text ->
+            if (!isUpdatingFromSharedViewModel) {
+                val inputText = text.toString()
+                val lotesList = sharedViewModel.lotes.value
+                val exactMatch = lotesList?.find { it.first.equals(inputText, ignoreCase = true) }
+
+                if (exactMatch != null) {
+                    // Coincidencia exacta encontrada
+                    sharedViewModel.setSelectedLoteId(exactMatch.second.id)
+                    viewModel.setSelectedLoteId(exactMatch.second.id)
+                } else {
+                    // No hay coincidencia exacta, limpiar selección
+                    sharedViewModel.setSelectedLoteId(null)
+                    viewModel.setSelectedLoteId(0)
+                }
+            }
+        }
+
+        // Agregar listener para mostrar dropdown al hacer focus
+        autoCompletePolinizador.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && polinizadorAdapter != null) {
+                autoCompletePolinizador.showDropDown()
+            }
+        }
+
+        autoCompleteLote.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && loteAdapter != null) {
+                autoCompleteLote.showDropDown()
+            }
+        }
+
 
         etSeccion.doAfterTextChanged { text ->
             if (!isUpdatingFromSharedViewModel) {
@@ -365,10 +499,18 @@ class EvaluacionGeneralFragment : Fragment() {
             tvTapToSign.visibility = View.VISIBLE
             firmaPath = null
         }
+    }
 
-        btnSaveFirma.setOnClickListener {
-            // No action needed, signature is saved by the bottomsheet
-        }
+    // Función auxiliar para obtener ID del operario seleccionado
+    private fun getSelectedOperarioId(): Int? {
+        val selectedText = autoCompletePolinizador.text.toString()
+        return sharedViewModel.operarios.value?.find { it.first == selectedText }?.second?.id
+    }
+
+    // Función auxiliar para obtener ID del lote seleccionado
+    private fun getSelectedLoteId(): Int? {
+        val selectedText = autoCompleteLote.text.toString()
+        return sharedViewModel.lotes.value?.find { it.first == selectedText }?.second?.id
     }
 
     private fun checkCameraPermission(): Boolean {
@@ -395,23 +537,31 @@ class EvaluacionGeneralFragment : Fragment() {
 
     private fun handleCancelAction() {
         val tempId = viewModel.temporaryEvaluacionId.value
-        if (tempId != null) {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Cancelar Evaluación")
-                .setMessage("¿Desea cancelar la evaluación en curso? Se perderán todos los datos no guardados.")
+        if (tempId != null && viewModel.hasEvaluacionesIndividuales()) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("⚠\uFE0F Cancelar Evaluación")
+                .setMessage("Hay ${viewModel.evaluacionesIndividuales.value?.size ?: 0} evaluaciones individuales pendientes. Si cancelas, se perderán todos los datos. ¿Estás seguro?")
                 .setPositiveButton("Sí") { _, _ ->
-                    if (isAdded) { // Verifica si el fragmento está adjunto
+                    if (isAdded) {
                         viewModel.cleanUpTemporary()
                         Toast.makeText(requireContext(), "Evaluación cancelada", Toast.LENGTH_SHORT).show()
+                        sharedViewModel.clearSelections()
                         findNavController().popBackStack(R.id.listaEvaluacionFragment, false)
                     } else {
                         Log.w("EvaluacionGeneralFragment", "Fragment not attached, skipping navigation")
                     }
                 }
                 .setNegativeButton("No", null)
+                .setNeutralButton("Guardar y Salir") { _, _ ->
+                    if (isAdded) {
+                        guardarEvaluacion()
+                    }
+                }
                 .show()
         } else {
             if (isAdded) {
+                viewModel.cleanUpTemporary()
+                sharedViewModel.clearSelections()
                 findNavController().popBackStack(R.id.listaEvaluacionFragment, false)
             } else {
                 Log.w("EvaluacionGeneralFragment", "Fragment not attached, skipping navigation")
@@ -419,43 +569,32 @@ class EvaluacionGeneralFragment : Fragment() {
         }
     }
 
-    private fun guardarSeleccionesActuales() {
-        try {
-            // Actualizar el ViewModel de la evaluación general
-            val operarioPosition = spinnerPolinizador.selectedItemPosition
-            if (operarioPosition != Spinner.INVALID_POSITION) {
-                sharedViewModel.operarios.value?.get(operarioPosition)?.second?.id?.let {
-                    viewModel.setSelectedPolinizadorId(it)
-                    // Actualizar también el SharedViewModel explícitamente
-                    sharedViewModel.setSelectedOperarioId(it)
-                }
-            }
-            val lotePosition = spinnerLote.selectedItemPosition
-            if (lotePosition != Spinner.INVALID_POSITION) {
-                sharedViewModel.lotes.value?.get(lotePosition)?.second?.id?.let {
-                    viewModel.setSelectedLoteId(it)
-                    // Actualizar también el SharedViewModel explícitamente
-                    sharedViewModel.setSelectedLoteId(it)
-                }
-            }
-            val seccion = etSeccion.text.toString().toIntOrNull()
-            sharedViewModel.setSelectedSeccion(seccion)
-            
-            Log.d("EvaluacionGeneralFragment", "Selecciones guardadas en SharedViewModel: Operario=${sharedViewModel.selectedOperarioId.value}, Lote=${sharedViewModel.selectedLoteId.value}, Seccion=${sharedViewModel.selectedSeccion.value}")
-            
-        } catch (e: Exception) {
-            Log.e("EvaluacionGeneralFragment", "Error al guardar selecciones", e)
-            Toast.makeText(requireContext(), "Error al guardar selecciones: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     private fun updateEvaluacionesList(evaluaciones: List<EvaluacionPolinizacion>) {
-        evaluacionesAdapter.submitList(evaluaciones)
-        tvTotalEvaluaciones.text = "Total: ${evaluaciones.size} eventos"
-        tvNoEvaluaciones.visibility = if (evaluaciones.isEmpty()) View.VISIBLE else View.GONE
-        recyclerView.visibility = if (evaluaciones.isEmpty()) View.GONE else View.VISIBLE
-        btnGuardarGeneral.isEnabled = evaluaciones.isNotEmpty()
-        btnCancelar.isEnabled = true
+        val tempId = viewModel.temporaryEvaluacionId.value
+        Log.d("EvaluacionGeneralFragment", "Actualizando RecyclerView con evaluaciones: $evaluaciones, temporaryEvaluacionId: $tempId")
+        if (tempId == null) {
+            evaluacionesAdapter.submitList(emptyList())
+            tvTotalEvaluaciones.text = "Total: 0 eventos"
+            tvNoEvaluaciones.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
+            btnGuardarGeneral.isEnabled = false
+            return
+        }
+        val filteredEvaluaciones = evaluaciones.filter { it.evaluacionGeneralId == tempId }
+        recyclerView.post {
+            evaluacionesAdapter.submitList(filteredEvaluaciones)
+            tvTotalEvaluaciones.text = "Total: ${filteredEvaluaciones.size} eventos"
+            tvNoEvaluaciones.visibility = if (filteredEvaluaciones.isEmpty()) View.VISIBLE else View.GONE
+            recyclerView.visibility = if (filteredEvaluaciones.isEmpty()) View.GONE else View.VISIBLE
+            btnGuardarGeneral.isEnabled = filteredEvaluaciones.isNotEmpty()
+            btnCancelar.isEnabled = true
+
+            // Deshabilitar widgets si hay evaluaciones individuales
+            val hasEvaluaciones = filteredEvaluaciones.isNotEmpty()
+            autoCompletePolinizador.isEnabled = !hasEvaluaciones
+            autoCompleteLote.isEnabled = !hasEvaluaciones
+            etSeccion.isEnabled = !hasEvaluaciones
+        }
     }
 
     private fun showEvaluacionDetails(evaluacion: EvaluacionPolinizacion) {
@@ -467,24 +606,26 @@ class EvaluacionGeneralFragment : Fragment() {
         viewModel.loadEvaluacionesIndividuales()
     }
 
-    // Método helper para encontrar vistas
-    private fun <T : View> findViewById(id: Int): T? {
-        return view?.findViewById(id)
-    }
-
-    // Implementación de métodos faltantes
     private fun guardarEvaluacion() {
         if (viewModel.hasEvaluacionesIndividuales()) {
-            if (firmaPath == null) {
-                Toast.makeText(requireContext(), "Por favor, agregue una firma antes de guardar", Toast.LENGTH_SHORT).show()
+            if (firmaPath == null || fotoPath == null) {
+                Toast.makeText(requireContext(), "Por favor, agregue una firma y foto antes de guardar", Toast.LENGTH_SHORT).show()
                 return
             }
             viewModel.guardarEvaluacionGeneral(fotoPath, firmaPath, requireContext())
+            fotoPath = null
+            firmaPath = null
+            ivFoto.setImageDrawable(null)
+            ivSignature.setImageDrawable(null)
+            ivSignature.visibility = View.GONE
+            tvTapToSign.visibility = View.VISIBLE
+            btnClearFirma.visibility = View.GONE
+            sharedViewModel.clearSelections() // Limpia las selecciones después de guardar
         } else {
             Toast.makeText(requireContext(), "Agregue al menos una evaluación individual", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     private fun takePhoto() {
         if (isCameraAvailable()) {
             val cameraDialog = CameraDialogFragment.newInstance { photoPath ->
@@ -501,7 +642,7 @@ class EvaluacionGeneralFragment : Fragment() {
             Toast.makeText(requireContext(), "No hay cámara disponible", Toast.LENGTH_SHORT).show()
         }
     }
-    
+
     private fun openSignatureBottomSheet() {
         val signatureBottomSheet = SignatureBottomSheetFragment.newInstance { signaturePath ->
             signaturePath?.let { path ->
