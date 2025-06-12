@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
@@ -102,12 +103,6 @@ class EvaluacionGeneralFragment : Fragment() {
                 viewModel.setTemporaryEvaluacionId(restoredTempId)
                 Log.d("EvaluacionGeneralFragment", "Restored temporaryEvaluacionId: $restoredTempId")
             }
-            val restoredOperarioId = it.getInt("selectedOperarioId", 0)
-            val restoredLoteId = it.getInt("selectedLoteId", 0)
-            val restoredSeccion = it.getString("selectedSeccion") ?: ""
-            if (restoredOperarioId > 0) sharedViewModel.setSelectedOperarioId(restoredOperarioId)
-            if (restoredLoteId > 0) sharedViewModel.setSelectedLoteId(restoredLoteId)
-            if (restoredSeccion.isNotEmpty()) etSeccion.setText(restoredSeccion)
         }
 
         // Observar el usuario logueado
@@ -180,15 +175,17 @@ class EvaluacionGeneralFragment : Fragment() {
         }
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu) {
+        super.onPrepareOptionsMenu(menu)
+        // Ocultar el botón de sincronización
+        menu.findItem(R.id.action_sync)?.isVisible = false
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putString("fotoPath", fotoPath)
         outState.putString("firmaPath", firmaPath)
         viewModel.temporaryEvaluacionId.value?.let { outState.putInt("temporaryEvaluacionId", it) }
-        // Guardar las selecciones actuales
-        outState.putInt("selectedOperarioId", sharedViewModel.selectedOperarioId.value ?: 0)
-        outState.putInt("selectedLoteId", sharedViewModel.selectedLoteId.value ?: 0)
-        outState.putString("selectedSeccion", etSeccion.text.toString())
     }
 
     private fun initViews(view: View) {
@@ -540,23 +537,17 @@ class EvaluacionGeneralFragment : Fragment() {
         if (tempId != null && viewModel.hasEvaluacionesIndividuales()) {
             AlertDialog.Builder(requireContext())
                 .setTitle("⚠\uFE0F Cancelar Evaluación")
-                .setMessage("Hay ${viewModel.evaluacionesIndividuales.value?.size ?: 0} evaluaciones individuales pendientes. Si cancelas, se perderán todos los datos. ¿Estás seguro?")
+                .setMessage("Hay eventos pendientes. ¿Desea cancelar y perder estos registros?")
                 .setPositiveButton("Sí") { _, _ ->
                     if (isAdded) {
                         viewModel.cleanUpTemporary()
                         Toast.makeText(requireContext(), "Evaluación cancelada", Toast.LENGTH_SHORT).show()
-                        sharedViewModel.clearSelections()
                         findNavController().popBackStack(R.id.listaEvaluacionFragment, false)
                     } else {
                         Log.w("EvaluacionGeneralFragment", "Fragment not attached, skipping navigation")
                     }
                 }
                 .setNegativeButton("No", null)
-                .setNeutralButton("Guardar y Salir") { _, _ ->
-                    if (isAdded) {
-                        guardarEvaluacion()
-                    }
-                }
                 .show()
         } else {
             if (isAdded) {
@@ -601,10 +592,9 @@ class EvaluacionGeneralFragment : Fragment() {
         Toast.makeText(requireContext(), "Lote: ${evaluacion.idlote}, Palma: ${evaluacion.palma ?: "N/A"}, Sección: ${evaluacion.seccion}", Toast.LENGTH_SHORT).show()
     }
 
-    override fun onResume() {
+/*    override fun onResume() {
         super.onResume()
-        viewModel.loadEvaluacionesIndividuales()
-    }
+    }*/
 
     private fun guardarEvaluacion() {
         if (viewModel.hasEvaluacionesIndividuales()) {

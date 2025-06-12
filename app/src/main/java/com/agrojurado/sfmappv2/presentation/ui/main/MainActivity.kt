@@ -1,7 +1,6 @@
 package com.agrojurado.sfmappv2.presentation.ui.main
 
 import android.app.AlertDialog
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -70,19 +69,18 @@ class MainActivity : AppCompatActivity() {
         syncText = binding.syncText
         syncSubtitle = binding.syncSubtitle
 
-        // Verificar si hay una evaluación temporal en curso antes de eliminar
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val activeTempEvalId = getActiveTemporaryEvaluationIdFromPrefs() ?: getActiveTemporaryEvaluationId()
-                if (activeTempEvalId == null) {
+        // Limpiar evaluaciones temporales al iniciar la aplicación
+        if (savedInstanceState == null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
                     evaluacionGeneralRepository.deleteTemporaryEvaluaciones()
-                    Log.d("MainActivity", "Evaluaciones temporales eliminadas al iniciar la aplicación porque no hay una activa")
-                } else {
-                    Log.d("MainActivity", "No se eliminaron evaluaciones temporales, hay una activa con ID: $activeTempEvalId")
+                    Log.d("MainActivity", "Evaluaciones temporales eliminadas al iniciar la aplicación")
+                } catch (e: Exception) {
+                    Log.e("MainActivity", "Error al eliminar evaluaciones temporales al iniciar: ${e.message}", e)
                 }
-            } catch (e: Exception) {
-                Log.e("MainActivity", "Error al verificar o eliminar evaluaciones temporales al iniciar: ${e.message}", e)
             }
+        } else {
+            Log.d("MainActivity", "Restaurando estado, no se eliminan evaluaciones temporales")
         }
 
         val progressBar: ProgressBar = binding.progressBar
@@ -142,18 +140,6 @@ class MainActivity : AppCompatActivity() {
         initializeSync(progressBar, progressContainer)
         // Programar el trabajador de sincronización
         scheduleSyncWorker()
-    }
-
-    // Nueva función para obtener el ID desde SharedPreferences
-    private suspend fun getActiveTemporaryEvaluationIdFromPrefs(): Int? {
-        val sharedPreferences = getSharedPreferences("EvaluacionPrefs", Context.MODE_PRIVATE)
-        val id = sharedPreferences.getInt("activeTempEvalId", -1)
-        return if (id != -1) id else null
-    }
-
-    // Nueva función para verificar si hay una evaluación temporal activa
-    private suspend fun getActiveTemporaryEvaluationId(): Int? {
-        return evaluacionGeneralRepository.getLatestTemporaryEvaluationId()
     }
 
     private fun updateSyncText(mainText: String, subtitle: String = "Por favor espere...") {
@@ -386,13 +372,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-/*        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 evaluacionGeneralRepository.deleteTemporaryEvaluaciones()
                 Log.d("MainActivity", "Evaluaciones temporales eliminadas al cerrar la aplicación")
             } catch (e: Exception) {
                 Log.e("MainActivity", "Error al eliminar evaluaciones temporales al cerrar: ${e.message}", e)
             }
-        }*/
+        }
     }
 }

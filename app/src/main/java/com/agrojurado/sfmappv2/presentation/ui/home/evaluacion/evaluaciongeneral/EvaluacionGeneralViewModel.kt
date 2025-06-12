@@ -286,24 +286,12 @@ class EvaluacionGeneralViewModel @Inject constructor(
         Log.d(TAG, "TemporaryEvaluacionId establecido: $id")
     }
 
-    private val sharedPreferences by lazy {
-        context.getSharedPreferences("EvaluacionPrefs", Context.MODE_PRIVATE)
-    }
-
-    private fun saveActiveTemporaryEvaluationId(id: Int?) {
-        sharedPreferences.edit().putInt("activeTempEvalId", id ?: -1).apply()
-    }
-
-    private fun getActiveTemporaryEvaluationId(): Int? {
-        val id = sharedPreferences.getInt("activeTempEvalId", -1)
-        return if (id != -1) id else null
-    }
-
     fun initTemporaryEvaluacion() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 Log.d(TAG, "Inicializando nueva evaluación temporal")
+                // Limpia explícitamente el estado y el caché
                 resetState()
                 clearCache()
                 val user = _loggedInUser.value ?: run {
@@ -334,8 +322,8 @@ class EvaluacionGeneralViewModel @Inject constructor(
                 _temporaryEvaluacionId.value = tempId
                 _evaluacionGeneral.value = insertedEval
                 _evaluacionesIndividuales.value = emptyList()
-                saveActiveTemporaryEvaluationId(tempId) // Guardar el ID
                 Log.d(TAG, "Evaluación temporal creada con ID: $tempId")
+                // Forzar la recarga de evaluaciones individuales
                 loadEvaluacionesIndividuales()
             } catch (e: Exception) {
                 _errorMessage.value = "Error al inicializar evaluación: ${e.message}"
@@ -453,7 +441,6 @@ class EvaluacionGeneralViewModel @Inject constructor(
                     evaluacionGeneralRepository.deleteEvaluacionGeneral(tempEval)
                     resetState()
                     clearCache()
-                    saveActiveTemporaryEvaluationId(null) // Limpiar el ID
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "Error al cancelar evaluación: ${e.message}"
